@@ -10,7 +10,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
     avatar: 'guild_master',
     username: 'admin',
     password: 'admin',
-    requirePassword: false,
+    requirePassword: true,
   },
   settings: {
     theme: 'sunny_quest',

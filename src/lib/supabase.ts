@@ -239,8 +239,9 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
         heroId: g.hero_id || '',
         questId: g.quest_id || '',
         realmId: g.realm_id || '',
-        score: Number(g.score) || 80,
-        expEarned: Number(g.exp_earned) || 160,
+        score: Number(g.score) || 0,
+        expEarned: Number(g.exp_earned) || 0,
+        status: g.status || ((Number(g.score) || 0) >= 70 ? 'tuntas' : 'remidial'),
         feedback: g.feedback || '',
         gradedDate: g.graded_date || '',
       })),
@@ -258,6 +259,11 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
             title: sRow.gm_title || 'Guild Master of Science',
             specialty: sRow.gm_specialty || 'Guru IPA & Pembina Sains',
             avatar: sRow.gm_avatar || 'guild_master',
+            ...(sRow.gm_username ? { username: sRow.gm_username } : {}),
+            ...(sRow.gm_password ? { password: sRow.gm_password } : {}),
+            ...(typeof sRow.gm_require_password === 'boolean'
+              ? { requirePassword: sRow.gm_require_password }
+              : {}),
           }
         : undefined,
     };
@@ -445,17 +451,31 @@ export async function cloudDeleteQuest(id: string): Promise<void> {
 export async function cloudSyncGrade(grade: ExpGrade): Promise<void> {
   const client = getSupabase();
   if (!client) return;
+  const resolvedStatus = grade.status || (grade.score >= 70 ? 'tuntas' : 'remidial');
   try {
-    await client.from('grades').upsert({
+    const { error } = await client.from('grades').upsert({
       id: grade.id,
       hero_id: grade.heroId,
       quest_id: grade.questId,
       realm_id: grade.realmId,
       score: grade.score,
       exp_earned: grade.expEarned,
+      status: resolvedStatus,
       feedback: grade.feedback || '',
       graded_date: grade.gradedDate,
     });
+    if (error) {
+      await client.from('grades').upsert({
+        id: grade.id,
+        hero_id: grade.heroId,
+        quest_id: grade.questId,
+        realm_id: grade.realmId,
+        score: grade.score,
+        exp_earned: grade.expEarned,
+        feedback: grade.feedback || '',
+        graded_date: grade.gradedDate,
+      });
+    }
   } catch (err) {
     console.warn('Cloud sync grade failed:', err);
   }
@@ -468,7 +488,7 @@ export async function cloudSyncSettings(
   const client = getSupabase();
   if (!client) return;
   try {
-    await client.from('settings').upsert({
+    const { error } = await client.from('settings').upsert({
       id: 'global',
       theme: settings.theme,
       crt_scanlines: settings.crtScanlines,
@@ -478,7 +498,23 @@ export async function cloudSyncSettings(
       gm_title: gmProfile.title,
       gm_specialty: gmProfile.specialty,
       gm_avatar: gmProfile.avatar,
+      gm_username: gmProfile.username || 'admin',
+      gm_password: gmProfile.password || 'admin',
+      gm_require_password: gmProfile.requirePassword ?? true,
     });
+    if (error) {
+      await client.from('settings').upsert({
+        id: 'global',
+        theme: settings.theme,
+        crt_scanlines: settings.crtScanlines,
+        sound_enabled: settings.soundEnabled,
+        academic_term: settings.academicTerm,
+        gm_name: gmProfile.name,
+        gm_title: gmProfile.title,
+        gm_specialty: gmProfile.specialty,
+        gm_avatar: gmProfile.avatar,
+      });
+    }
   } catch (err) {
     console.warn('Cloud sync settings failed:', err);
   }
@@ -585,7 +621,7 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
 
     // 7. Grades
     if (state.grades.length > 0) {
-      await client.from('grades').upsert(
+      const { error: gradeErr } = await client.from('grades').upsert(
         state.grades.map((g) => ({
           id: g.id,
           hero_id: g.heroId,
@@ -593,14 +629,29 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           realm_id: g.realmId,
           score: g.score,
           exp_earned: g.expEarned,
+          status: g.status || (g.score >= 70 ? 'tuntas' : 'remidial'),
           feedback: g.feedback || '',
           graded_date: g.gradedDate,
         }))
       );
+      if (gradeErr) {
+        await client.from('grades').upsert(
+          state.grades.map((g) => ({
+            id: g.id,
+            hero_id: g.heroId,
+            quest_id: g.questId,
+            realm_id: g.realmId,
+            score: g.score,
+            exp_earned: g.expEarned,
+            feedback: g.feedback || '',
+            graded_date: g.gradedDate,
+          }))
+        );
+      }
     }
 
     // 8. Settings
-    await client.from('settings').upsert({
+    const { error: settingsErr } = await client.from('settings').upsert({
       id: 'global',
       theme: state.settings.theme,
       crt_scanlines: state.settings.crtScanlines,
@@ -610,7 +661,23 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
       gm_title: state.gmProfile.title,
       gm_specialty: state.gmProfile.specialty,
       gm_avatar: state.gmProfile.avatar,
+      gm_username: state.gmProfile.username || 'admin',
+      gm_password: state.gmProfile.password || 'admin',
+      gm_require_password: state.gmProfile.requirePassword ?? true,
     });
+    if (settingsErr) {
+      await client.from('settings').upsert({
+        id: 'global',
+        theme: state.settings.theme,
+        crt_scanlines: state.settings.crtScanlines,
+        sound_enabled: state.settings.soundEnabled,
+        academic_term: state.settings.academicTerm,
+        gm_name: state.gmProfile.name,
+        gm_title: state.gmProfile.title,
+        gm_specialty: state.gmProfile.specialty,
+        gm_avatar: state.gmProfile.avatar,
+      });
+    }
 
     return true;
   } catch (err) {

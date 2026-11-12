@@ -76,7 +76,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   const [username, setUsername] = useState(state.gmProfile.username || 'admin');
   const [password, setPassword] = useState(state.gmProfile.password || 'admin');
   const [requirePassword, setRequirePassword] = useState(
-    Boolean(state.gmProfile.requirePassword)
+    state.gmProfile.requirePassword !== false
   );
   const [term, setTerm] = useState(state.settings.academicTerm);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -125,14 +125,15 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username.trim() || !password) return;
     onUpdateGmProfile({
       ...state.gmProfile,
       name: name.trim() || state.gmProfile.name,
       title: title.trim() || state.gmProfile.title,
       specialty: specialty.trim() || state.gmProfile.specialty,
       avatar,
-      username: username.trim() || 'admin',
-      password: password.trim() || 'admin',
+      username: username.trim(),
+      password,
       requirePassword,
     });
     onUpdateSettings({

@@ -4,6 +4,7 @@ import {
   ActiveQuest,
   AncientTome,
   AuthSession,
+  AvatarClass,
   Dungeon,
   ExpGrade,
   GameMasterProfile,
@@ -372,6 +373,11 @@ export default function App() {
     showToast(`Hero "${hero.name}" updated!`);
   };
 
+  const handleUpdateHeroAvatar = (avatar: AvatarClass) => {
+    if (!activeHero) return;
+    handleSaveHero({ ...activeHero, avatar });
+  };
+
   const handleDeleteHero = (id: string) => {
     playRetroSound('confirm', state.settings.soundEnabled);
     setState((prev) => ({
@@ -657,6 +663,7 @@ export default function App() {
                 hero={activeHero}
                 onNavigate={handleSelectHeroMenu}
                 onAttemptRestrictedRoute={handleTriggerAccessDenied}
+                onUpdateAvatar={handleUpdateHeroAvatar}
               />
             )}
             {heroMenu === 'scroll_library' && (
@@ -669,6 +676,7 @@ export default function App() {
               <HeroLog
                 state={state}
                 hero={activeHero}
+                onUpdateAvatar={handleUpdateHeroAvatar}
               />
             )}
           </>

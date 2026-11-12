@@ -126,6 +126,8 @@ export interface ActiveQuest {
   difficulty: QuestDifficulty;
 }
 
+export type GradeStatus = 'tuntas' | 'belum' | 'proses' | 'remidial';
+
 export interface ExpGrade {
   id: string;
   heroId: string;
@@ -133,6 +135,7 @@ export interface ExpGrade {
   realmId: string;
   score: number; // 0 - 100
   expEarned: number;
+  status?: GradeStatus;
   feedback: string;
   gradedDate: string;
 }

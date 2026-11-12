@@ -133,12 +133,13 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !username.trim()) return;
+    const resolvedDungeonId = dungeonId || sortedDungeons[0]?.id || '';
     onSaveHero({
       id: editingHero?.id || `hr-${Date.now()}`,
       name: name.trim(),
       username: username.trim().toLowerCase(),
       studentCode: studentCode.trim() || String(Math.floor(261000 + Math.random() * 900)),
-      dungeonId,
+      dungeonId: resolvedDungeonId,
       avatar,
       heroClass: heroClass.trim() || 'Adventurer',
       active,
@@ -328,7 +329,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
                 <div className="flex items-center justify-between pt-2 border-t border-[var(--border-pixel)]/40">
                   <span className="text-[12.5px] text-[var(--text-secondary)]">
-                    Class: <span className="font-medium text-[var(--text-primary)]">{hero.heroClass}</span> · Status:{' '}
+                    Karakter: <span className="font-medium text-[var(--text-primary)]">{hero.heroClass}</span> · Status:{' '}
                     <strong
                       className={
                         hero.active
@@ -393,18 +394,27 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
             </div>
           </div>
           <div>
-            <PixelFieldLabel htmlFor="hr-dng">Dungeon / Kelas (Urut Abjad)</PixelFieldLabel>
+            <PixelFieldLabel htmlFor="hr-dng">Kelas (Pilih dari Daftar Kelas Guru)</PixelFieldLabel>
             <PixelSelect
               id="hr-dng"
+              required={sortedDungeons.length > 0}
               value={dungeonId}
               onChange={(e) => handleDungeonSelectionChange(e.target.value)}
             >
-              <option value="">-- Belum Ada Kelas --</option>
-              {sortedDungeons.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.guildCode}) — {d.tier}
-                </option>
-              ))}
+              {sortedDungeons.length === 0 ? (
+                <option value="">-- Belum ada kelas. Buat dulu di menu Dungeons/Kelas --</option>
+              ) : (
+                <>
+                  {!sortedDungeons.some((d) => d.id === dungeonId) && (
+                    <option value="">-- Pilih Kelas --</option>
+                  )}
+                  {sortedDungeons.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.guildCode}) — {d.tier}
+                    </option>
+                  ))}
+                </>
+              )}
             </PixelSelect>
           </div>
 
@@ -521,7 +531,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
             </div>
           </div>
           <div>
-            <PixelFieldLabel htmlFor="hr-class">Hero Title</PixelFieldLabel>
+            <PixelFieldLabel htmlFor="hr-class">Julukan Karakter (Opsional)</PixelFieldLabel>
             <PixelInput
               id="hr-class"
               value={heroClass}

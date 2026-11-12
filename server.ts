@@ -104,6 +104,11 @@ app.get('/api/academy', async (req, res) => {
             title: s.gm_title || 'Guild Master of Science',
             specialty: s.gm_specialty || 'Guru IPA & Pembina Sains',
             avatar: s.gm_avatar || 'guild_master',
+            ...(s.gm_username ? { username: s.gm_username } : {}),
+            ...(s.gm_password ? { password: s.gm_password } : {}),
+            ...(typeof s.gm_require_password === 'boolean'
+              ? { requirePassword: s.gm_require_password }
+              : {}),
           },
           settings: {
             theme: s.theme || 'sunny_quest',
@@ -188,6 +193,7 @@ app.get('/api/academy', async (req, res) => {
             realmId: g.realm_id || g.realmId,
             score: g.score,
             expEarned: g.exp_earned || g.expEarned,
+            status: g.status || (g.score >= 70 ? 'tuntas' : 'remidial'),
             feedback: g.feedback || '',
             gradedDate: g.graded_date || g.gradedDate,
           })),
@@ -415,16 +421,30 @@ app.post('/api/grades', async (req, res) => {
   try {
     await upsertGrade(req.body);
     if (supabaseAdmin) {
-      await supabaseAdmin.from('grades').upsert({
+      const resolvedStatus = req.body.status || (req.body.score >= 70 ? 'tuntas' : 'remidial');
+      const { error } = await supabaseAdmin.from('grades').upsert({
         id: req.body.id,
         hero_id: req.body.heroId,
         quest_id: req.body.questId,
         realm_id: req.body.realmId,
         score: req.body.score,
         exp_earned: req.body.expEarned,
+        status: resolvedStatus,
         feedback: req.body.feedback,
         graded_date: req.body.gradedDate,
       });
+      if (error) {
+        await supabaseAdmin.from('grades').upsert({
+          id: req.body.id,
+          hero_id: req.body.heroId,
+          quest_id: req.body.questId,
+          realm_id: req.body.realmId,
+          score: req.body.score,
+          exp_earned: req.body.expEarned,
+          feedback: req.body.feedback,
+          graded_date: req.body.gradedDate,
+        });
+      }
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -438,7 +458,7 @@ app.post('/api/settings', async (req, res) => {
     const { settings: newSettings, gmProfile } = req.body;
     await updateSystemSettings(newSettings || {}, gmProfile || {});
     if (supabaseAdmin) {
-      await supabaseAdmin.from('settings').upsert({
+      const { error } = await supabaseAdmin.from('settings').upsert({
         id: 'global',
         theme: newSettings?.theme || 'sunny_quest',
         crt_scanlines: newSettings?.crtScanlines ?? false,
@@ -448,7 +468,23 @@ app.post('/api/settings', async (req, res) => {
         gm_title: gmProfile?.title || 'Guild Master of Science',
         gm_specialty: gmProfile?.specialty || 'Guru IPA & Pembina Sains',
         gm_avatar: gmProfile?.avatar || 'guild_master',
+        gm_username: gmProfile?.username || 'admin',
+        gm_password: gmProfile?.password || 'admin',
+        gm_require_password: gmProfile?.requirePassword ?? true,
       });
+      if (error) {
+        await supabaseAdmin.from('settings').upsert({
+          id: 'global',
+          theme: newSettings?.theme || 'sunny_quest',
+          crt_scanlines: newSettings?.crtScanlines ?? false,
+          sound_enabled: newSettings?.soundEnabled ?? true,
+          academic_term: newSettings?.academicTerm || 'Semester Ganjil 2026/2027',
+          gm_name: gmProfile?.name || 'Pak Budi Santoso',
+          gm_title: gmProfile?.title || 'Guild Master of Science',
+          gm_specialty: gmProfile?.specialty || 'Guru IPA & Pembina Sains',
+          gm_avatar: gmProfile?.avatar || 'guild_master',
+        });
+      }
     }
     res.json({ success: true });
   } catch (error: any) {

@@ -1,32 +1,48 @@
 import React, { useState } from 'react';
-import { BookOpen, ShieldAlert } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  BookOpen,
+  CheckCircle2,
+  Pencil,
+  ShieldAlert,
+  XCircle,
+} from 'lucide-react';
 import {
   AcademyState,
+  AvatarClass,
   HeroMenuId,
   HeroStudent,
   NoticePriority,
   QuestNotice,
 } from '../../types/lms';
-import { PixelAvatar, PixelCoin, PixelStar } from '../../components/PixelArt';
+import { PixelAvatar, PixelStar } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyChest,
-  PixelExpBar,
   PixelModal,
   PixelSectionTitle,
 } from '../../components/PixelUI';
 import {
   formatRetroDate,
+  getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
-  getHeroLevelProgress,
-  getHeroTotalExp,
 } from '../../utils/exp';
+
+const HERO_AVATAR_OPTIONS: { value: AvatarClass; label: string }[] = [
+  { value: 'knight', label: 'Knight' },
+  { value: 'alchemist', label: 'Alchemist' },
+  { value: 'mage', label: 'Mage' },
+  { value: 'ranger', label: 'Ranger' },
+  { value: 'scholar', label: 'Scholar' },
+];
 
 interface HeroNoticeProps {
   state: AcademyState;
   hero: HeroStudent;
   onNavigate: (menu: HeroMenuId) => void;
   onAttemptRestrictedRoute: (route: string) => void;
+  onUpdateAvatar: (avatar: AvatarClass) => void;
 }
 
 export const HeroNotice: React.FC<HeroNoticeProps> = ({
@@ -34,15 +50,16 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   hero,
   onNavigate,
   onAttemptRestrictedRoute,
+  onUpdateAvatar,
 }) => {
   const [filter, setFilter] = useState<'all' | NoticePriority>('all');
   const [selectedNotice, setSelectedNotice] = useState<QuestNotice | null>(
     null
   );
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarClass>(hero.avatar);
 
   const dungeon = state.dungeons.find((d) => d.id === hero.dungeonId);
-  const totalExp = getHeroTotalExp(hero.id, state.grades);
-  const levelInfo = getHeroLevelProgress(totalExp);
 
   const visibleNotices = [...state.notices]
     .filter(
@@ -53,13 +70,29 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
     .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
 
   const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
-  const upcomingQuests = state.quests
-    .filter(
-      (q) =>
-        (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId) &&
-        (!allowedRealmIds || allowedRealmIds.includes(q.realmId))
-    )
-    .slice(0, 2);
+  const assignedQuests = state.quests.filter(
+    (q) =>
+      (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId) &&
+      (!allowedRealmIds || allowedRealmIds.includes(q.realmId))
+  );
+  const upcomingQuests = assignedQuests.slice(0, 2);
+
+  // Symbol status counts across assigned quests (no points/scores shown)
+  const heroGrades = state.grades.filter((g) => g.heroId === hero.id);
+  const statusCounts = { tuntas: 0, proses: 0, remidial: 0, belum: 0 };
+  const questIdsSeen = new Set<string>();
+  assignedQuests.forEach((q) => {
+    questIdsSeen.add(q.id);
+    const grade = heroGrades.find((g) => g.questId === q.id);
+    const st = getEffectiveGradeStatus(grade);
+    statusCounts[st] += 1;
+  });
+  heroGrades.forEach((g) => {
+    if (!questIdsSeen.has(g.questId)) {
+      const st = getEffectiveGradeStatus(g);
+      statusCounts[st] += 1;
+    }
+  });
 
   const priorityColor = (p: NoticePriority) => {
     if (p === 'Critical') return 'text-[var(--accent-danger)]';
@@ -69,34 +102,64 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Hero Status Header Card */}
+      {/* Hero Status Header Card (with Avatar Editor) */}
       <section className="pixel-box p-4 space-y-3">
-        <div className="flex items-center gap-3">
-          <PixelAvatar avatar={hero.avatar} size={52} className="animate-pixel-bounce" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-success)]">
-              <PixelStar size={12} />
-              LV.{levelInfo.level} · {levelInfo.title.toUpperCase()}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <PixelAvatar avatar={hero.avatar} size={52} className="animate-pixel-bounce shrink-0" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-success)]">
+                <PixelStar size={12} />
+                {hero.heroClass.toUpperCase()}
+              </div>
+              <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] truncate mt-0.5">
+                {hero.name}
+              </h2>
+              <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
+                {dungeon ? `${dungeon.guildCode} · ${dungeon.name}` : 'Belum Ada Kelas'} · NIS {hero.studentCode}
+              </p>
             </div>
-            <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] truncate mt-0.5">
-              {hero.name}
-            </h2>
-            <p className="text-[12.5px] text-[var(--text-secondary)] truncate flex items-center gap-1.5">
-              <span>{dungeon ? `${dungeon.guildCode} · ${dungeon.name}` : 'No Guild'}</span>
-              <span>·</span>
-              <span className="text-[var(--accent-warning)] font-semibold flex items-center gap-1 tabular-nums">
-                <PixelCoin size={13} /> {totalExp} EXP
-              </span>
-            </p>
           </div>
+
+          <PixelButton
+            type="button"
+            size="sm"
+            variant="warning"
+            onClick={() => {
+              setSelectedAvatar(hero.avatar);
+              setAvatarModalOpen(true);
+            }}
+            className="shrink-0"
+          >
+            <Pencil size={13} />
+            Avatar
+          </PixelButton>
         </div>
 
-        <PixelExpBar
-          percent={levelInfo.percent}
-          labelLeft={`Total EXP: ${totalExp}`}
-          labelRight={`${levelInfo.expIntoLevel}/${levelInfo.expForNextLevel} Next LV`}
-          color="var(--accent-warning)"
-        />
+        {/* Quest Status Symbols Summary (No Points) */}
+        <button
+          type="button"
+          onClick={() => onNavigate('hero_log')}
+          className="w-full text-left pixel-box-inset p-2.5 grid grid-cols-4 gap-1.5 hover:border-[var(--accent-warning)] transition-colors cursor-pointer"
+          title="Lihat Detail Status Tugas"
+        >
+          <div className="flex items-center justify-center gap-1 text-emerald-400">
+            <CheckCircle2 size={15} />
+            <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.tuntas}</span>
+          </div>
+          <div className="flex items-center justify-center gap-1 text-lime-300">
+            <AlertCircle size={15} />
+            <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.proses}</span>
+          </div>
+          <div className="flex items-center justify-center gap-1 text-amber-400">
+            <AlertTriangle size={15} className="text-amber-400" />
+            <span className="font-pixel-ui text-[10px] text-rose-400 tabular-nums">{statusCounts.remidial}</span>
+          </div>
+          <div className="flex items-center justify-center gap-1 text-rose-500">
+            <XCircle size={15} />
+            <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.belum}</span>
+          </div>
+        </button>
       </section>
 
       {/* Guild Notice Feed (Read-Only) */}
@@ -189,7 +252,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
             return (
               <div key={q.id} className="pixel-box p-3.5 space-y-1">
                 <p className="font-pixel-body text-[15px] text-[var(--accent-warning)] tabular-nums">
-                  {realm?.name} · +{q.maxExp} EXP · Due {formatRetroDate(q.deadline)}
+                  {realm?.name} · Due {formatRetroDate(q.deadline)}
                 </p>
                 <h3 className="font-pixel-ui text-[11px] text-[var(--text-primary)]">
                   {q.title}
@@ -224,6 +287,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
         </PixelButton>
       </section>
 
+      {/* Notice Detail Modal */}
       <PixelModal
         open={Boolean(selectedNotice)}
         title="Guild Notice Detail"
@@ -251,6 +315,60 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
             </PixelButton>
           </div>
         )}
+      </PixelModal>
+
+      {/* Student Avatar Picker Modal */}
+      <PixelModal
+        open={avatarModalOpen}
+        title="Pilih Avatar Hero"
+        onClose={() => setAvatarModalOpen(false)}
+      >
+        <div className="space-y-4">
+          <p className="text-[13px] text-[var(--text-secondary)]">
+            Pilih karakter avatar pixel yang kamu sukai untuk profil petualanganmu:
+          </p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
+            {HERO_AVATAR_OPTIONS.map((item) => {
+              const active = selectedAvatar === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setSelectedAvatar(item.value)}
+                  className={`p-2.5 flex flex-col items-center justify-center gap-1.5 border-2 cursor-pointer transition-all ${
+                    active
+                      ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)] shadow-sm scale-105'
+                      : 'border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] opacity-75 hover:opacity-100'
+                  }`}
+                >
+                  <PixelAvatar avatar={item.value} size={42} />
+                  <span className="font-pixel-ui text-[9px] text-[var(--text-primary)]">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <PixelButton
+              type="button"
+              variant="neutral"
+              onClick={() => setAvatarModalOpen(false)}
+            >
+              Batal
+            </PixelButton>
+            <PixelButton
+              type="button"
+              variant="success"
+              onClick={() => {
+                onUpdateAvatar(selectedAvatar);
+                setAvatarModalOpen(false);
+              }}
+            >
+              Simpan Avatar
+            </PixelButton>
+          </div>
+        </div>
       </PixelModal>
     </div>
   );

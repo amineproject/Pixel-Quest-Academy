@@ -108,10 +108,13 @@ CREATE TABLE IF NOT EXISTS public.grades (
     realm_id TEXT REFERENCES public.realms(id) ON DELETE CASCADE,
     score INTEGER NOT NULL DEFAULT 80,
     exp_earned INTEGER NOT NULL DEFAULT 160,
+    status TEXT NOT NULL DEFAULT 'tuntas',
     feedback TEXT DEFAULT '',
     graded_date TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE public.grades ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'tuntas';
 
 -- ----------------------------------------------------------------------------
 -- 8. System Settings table (Konfigurasi Tema, CRT Scanlines, Profil GM)
@@ -125,8 +128,15 @@ CREATE TABLE IF NOT EXISTS public.settings (
     gm_name TEXT NOT NULL DEFAULT 'Pak Budi Santoso',
     gm_title TEXT NOT NULL DEFAULT 'Guild Master of Science',
     gm_specialty TEXT NOT NULL DEFAULT 'Guru IPA & Pembina Sains',
-    gm_avatar TEXT NOT NULL DEFAULT 'guild_master'
+    gm_avatar TEXT NOT NULL DEFAULT 'guild_master',
+    gm_username TEXT NOT NULL DEFAULT 'admin',
+    gm_password TEXT NOT NULL DEFAULT 'admin',
+    gm_require_password BOOLEAN NOT NULL DEFAULT true
 );
+
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS gm_username TEXT DEFAULT 'admin';
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS gm_password TEXT DEFAULT 'admin';
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS gm_require_password BOOLEAN DEFAULT true;
 
 -- ----------------------------------------------------------------------------
 -- 9. Row Level Security (RLS) Configuration

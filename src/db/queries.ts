@@ -122,6 +122,7 @@ export async function seedInitialDataIfEmpty() {
           realmId: g.realmId,
           score: g.score,
           expEarned: g.expEarned,
+          status: g.status || (g.score >= 70 ? 'tuntas' : 'remidial'),
           feedback: g.feedback,
           gradedDate: g.gradedDate,
         });
@@ -138,6 +139,9 @@ export async function seedInitialDataIfEmpty() {
         gmTitle: INITIAL_ACADEMY_STATE.gmProfile.title,
         gmSpecialty: INITIAL_ACADEMY_STATE.gmProfile.specialty,
         gmAvatar: INITIAL_ACADEMY_STATE.gmProfile.avatar,
+        gmUsername: INITIAL_ACADEMY_STATE.gmProfile.username || 'admin',
+        gmPassword: INITIAL_ACADEMY_STATE.gmProfile.password || 'admin',
+        gmRequirePassword: INITIAL_ACADEMY_STATE.gmProfile.requirePassword ?? true,
       });
 
       console.log('Seeding completed successfully!');
@@ -178,6 +182,9 @@ export async function getAllAcademyData() {
       gmTitle: 'Guild Master of Science',
       gmSpecialty: 'Guru IPA & Pembina Sains',
       gmAvatar: 'guild_master',
+      gmUsername: 'admin',
+      gmPassword: 'admin',
+      gmRequirePassword: true,
     };
 
     return {
@@ -186,6 +193,9 @@ export async function getAllAcademyData() {
         title: s.gmTitle,
         specialty: s.gmSpecialty,
         avatar: s.gmAvatar as any,
+        username: s.gmUsername || 'admin',
+        password: s.gmPassword || 'admin',
+        requirePassword: s.gmRequirePassword ?? true,
       },
       settings: {
         theme: s.theme as PixelTheme,
@@ -270,6 +280,7 @@ export async function getAllAcademyData() {
         realmId: g.realmId || '',
         score: g.score,
         expEarned: g.expEarned,
+        status: (g.status as any) || (g.score >= 70 ? 'tuntas' : 'remidial'),
         feedback: g.feedback || '',
         gradedDate: g.gradedDate,
       })),
@@ -553,6 +564,7 @@ export async function deleteQuest(id: string) {
 // Grades
 export async function upsertGrade(g: ExpGrade) {
   try {
+    const resolvedStatus = g.status || (g.score >= 70 ? 'tuntas' : 'remidial');
     return await db
       .insert(grades)
       .values({
@@ -562,6 +574,7 @@ export async function upsertGrade(g: ExpGrade) {
         realmId: g.realmId,
         score: g.score,
         expEarned: g.expEarned,
+        status: resolvedStatus,
         feedback: g.feedback,
         gradedDate: g.gradedDate,
       })
@@ -570,6 +583,7 @@ export async function upsertGrade(g: ExpGrade) {
         set: {
           score: g.score,
           expEarned: g.expEarned,
+          status: resolvedStatus,
           feedback: g.feedback,
           gradedDate: g.gradedDate,
         },
@@ -595,6 +609,9 @@ export async function updateSystemSettings(
     if (gm?.title !== undefined) updatePayload.gmTitle = gm.title;
     if (gm?.specialty !== undefined) updatePayload.gmSpecialty = gm.specialty;
     if (gm?.avatar !== undefined) updatePayload.gmAvatar = gm.avatar;
+    if (gm?.username !== undefined) updatePayload.gmUsername = gm.username;
+    if (gm?.password !== undefined) updatePayload.gmPassword = gm.password;
+    if (gm?.requirePassword !== undefined) updatePayload.gmRequirePassword = gm.requirePassword;
 
     return await db
       .insert(settings)
@@ -608,6 +625,9 @@ export async function updateSystemSettings(
         gmTitle: gm?.title || 'Guild Master of Science',
         gmSpecialty: gm?.specialty || 'Guru IPA & Pembina Sains',
         gmAvatar: gm?.avatar || 'guild_master',
+        gmUsername: gm?.username || 'admin',
+        gmPassword: gm?.password || 'admin',
+        gmRequirePassword: gm?.requirePassword ?? true,
       })
       .onConflictDoUpdate({
         target: settings.id,

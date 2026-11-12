@@ -5,11 +5,7 @@ import {
   PixelEmptyChest,
   PixelSectionTitle,
 } from '../../components/PixelUI';
-import {
-  getHeroEffectiveRealmIds,
-  getHeroLevelProgress,
-  getHeroTotalExp,
-} from '../../utils/exp';
+import { getHeroEffectiveRealmIds } from '../../utils/exp';
 
 interface HeroMyGuildProps {
   state: AcademyState;
@@ -24,11 +20,7 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
   );
   const partyMembers = state.heroes
     .filter((h) => h.dungeonId === hero.dungeonId && h.active)
-    .sort(
-      (a, b) =>
-        getHeroTotalExp(b.id, state.grades) -
-        getHeroTotalExp(a.id, state.grades)
-    );
+    .sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
 
   return (
     <div className="space-y-5">
@@ -101,16 +93,14 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
         </div>
       </section>
 
-      {/* Party Roster */}
+      {/* Party Roster (No points/EXP displayed) */}
       <section className="space-y-2.5">
         <PixelSectionTitle
           title={`Party Roster (${partyMembers.length})`}
-          subtitle="Urutan berdasarkan perolehan EXP"
+          subtitle="Daftar rekan petualang sekelas (urut abjad)"
         />
         <div className="space-y-2">
           {partyMembers.map((member, index) => {
-            const exp = getHeroTotalExp(member.id, state.grades);
-            const lvl = getHeroLevelProgress(exp);
             const isMe = member.id === hero.id;
             return (
               <div
@@ -126,15 +116,15 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
                   <PixelAvatar avatar={member.avatar} size={38} />
                   <div className="min-w-0">
                     <p className="font-pixel-ui text-[11px] text-[var(--text-primary)] truncate">
-                      {member.name} {isMe ? '(You)' : ''}
+                      {member.name} {isMe ? '(Kamu)' : ''}
                     </p>
                     <p className="font-pixel-body text-[15px] text-[var(--text-secondary)] truncate">
-                      {member.heroClass} · LV.{lvl.level}
+                      {member.heroClass}
                     </p>
                   </div>
                 </div>
-                <span className="font-pixel-ui text-[11px] text-[var(--accent-success)] tabular-nums shrink-0">
-                  {exp} EXP
+                <span className="font-pixel-ui text-[9px] text-[var(--accent-success)] px-2 py-0.5 border border-[var(--accent-success)]/50 shrink-0">
+                  AKTIF
                 </span>
               </div>
             );

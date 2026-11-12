@@ -190,7 +190,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
             return (
               <article key={quest.id} className="pixel-box p-4 space-y-2">
                 <p className="font-pixel-body text-[15px] text-[var(--accent-warning)] tabular-nums">
-                  {realm?.name} · [{quest.difficulty.toUpperCase()}] · +{quest.maxExp} EXP
+                  {realm?.name} · [{quest.difficulty.toUpperCase()}]
                 </p>
                 <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)]">
                   {quest.title}

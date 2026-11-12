@@ -54,7 +54,7 @@ export const HERO_NAV_ITEMS: {
   { id: 'notice', label: 'Guild Notice', shortLabel: 'Town Hub', standardName: 'Pengumuman' },
   { id: 'scroll_library', label: 'Scroll Library', shortLabel: 'Scrolls', standardName: 'Materi' },
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
-  { id: 'hero_log', label: 'Hero Log / EXP', shortLabel: 'Hero Log', standardName: 'Nilai' },
+  { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
 ];
 
 export function getGmMenuIcon(id: GmMenuId, size = 18) {

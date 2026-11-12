@@ -1,6 +1,19 @@
-import { Dungeon, ExpGrade, HeroStudent } from '../types/lms';
+import { Dungeon, ExpGrade, GradeStatus, HeroStudent } from '../types/lms';
 
 export type LetterRank = 'S' | 'A' | 'B' | 'C' | 'D';
+
+export function getEffectiveGradeStatus(grade?: ExpGrade): GradeStatus {
+  if (!grade) return 'belum';
+  if (
+    grade.status === 'tuntas' ||
+    grade.status === 'belum' ||
+    grade.status === 'proses' ||
+    grade.status === 'remidial'
+  ) {
+    return grade.status;
+  }
+  return grade.score >= 70 ? 'tuntas' : 'remidial';
+}
 
 export function getRankFromScore(score: number): LetterRank {
   if (score >= 92) return 'S';

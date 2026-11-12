@@ -94,6 +94,7 @@ export const grades = pgTable('grades', {
   realmId: text('realm_id').references(() => realms.id, { onDelete: 'cascade' }),
   score: integer('score').notNull().default(80),
   expEarned: integer('exp_earned').notNull().default(160),
+  status: text('status').notNull().default('tuntas'),
   feedback: text('feedback').default(''),
   gradedDate: text('graded_date').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -110,6 +111,9 @@ export const settings = pgTable('settings', {
   gmTitle: text('gm_title').notNull().default('Guild Master of Science'),
   gmSpecialty: text('gm_specialty').notNull().default('Guru IPA & Pembina Sains'),
   gmAvatar: text('gm_avatar').notNull().default('guild_master'),
+  gmUsername: text('gm_username').notNull().default('admin'),
+  gmPassword: text('gm_password').notNull().default('admin'),
+  gmRequirePassword: boolean('gm_require_password').notNull().default(true),
 });
 
 // Relations

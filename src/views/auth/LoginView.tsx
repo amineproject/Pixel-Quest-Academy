@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Crown, Sparkles, UserCheck, Volume2, VolumeX, ShieldCheck, ArrowRight, Lock } from 'lucide-react';
+import {
+  ArrowRight,
+  Crown,
+  Lock,
+  ShieldCheck,
+  UserCheck,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import {
   AcademyState,
   HeroStudent,
@@ -17,7 +25,6 @@ import {
   PixelFieldLabel,
   PixelInput,
 } from '../../components/PixelUI';
-import { getHeroLevelProgress, getHeroTotalExp } from '../../utils/exp';
 import { playRetroSound } from '../../utils/sound';
 
 interface LoginViewProps {
@@ -41,17 +48,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [heroIdentifier, setHeroIdentifier] = useState('');
   const [heroError, setHeroError] = useState<string | null>(null);
 
-  // GM manual input
-  const [gmUsername, setGmUsername] = useState('admin');
-  const [gmPassword, setGmPassword] = useState('••••••••');
+  // GM manual input (start empty, never pre-fill dummy dots or bypass passwords)
+  const [gmUsername, setGmUsername] = useState('');
+  const [gmPassword, setGmPassword] = useState('');
   const [gmError, setGmError] = useState<string | null>(null);
 
-  const activeHeroes = state.heroes.filter((h) => h.active);
-
-  const handleHeroQuickLogin = (hero: HeroStudent) => {
-    playRetroSound('start', state.settings.soundEnabled);
-    onLoginAsHero(hero);
-  };
+  const requireGmPassword = state.gmProfile.requirePassword !== false;
 
   const handleHeroManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,17 +68,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
     const matched = state.heroes.find(
       (h) =>
         h.username.toLowerCase() === query ||
-        h.studentCode.toLowerCase() === query ||
-        h.name.toLowerCase().includes(query)
+        h.studentCode.toLowerCase() === query
     );
 
-    if (matched) {
-      playRetroSound('start', state.settings.soundEnabled);
-      onLoginAsHero(matched);
-    } else {
-      setHeroError('Akun Hero tidak ditemukan di database Guild!');
+    if (!matched) {
+      setHeroError('Akun Hero tidak ditemukan! Periksa kembali NIS atau Username Anda.');
       playRetroSound('error', state.settings.soundEnabled);
+      return;
     }
+
+    if (!matched.active) {
+      setHeroError('Akun Hero ini sedang dinonaktifkan oleh Guru (Game Master).');
+      playRetroSound('error', state.settings.soundEnabled);
+      return;
+    }
+
+    playRetroSound('start', state.settings.soundEnabled);
+    onLoginAsHero(matched);
   };
 
   const handleGmSubmit = (e: React.FormEvent) => {
@@ -86,7 +94,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     const expectedPassword = state.gmProfile.password || 'admin';
 
     const inputUser = gmUsername.trim().toLowerCase();
-    const inputPass = gmPassword.trim();
+    const inputPass = gmPassword;
 
     if (!inputUser) {
       setGmError('Masukkan username Game Master!');
@@ -100,10 +108,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
-    // Verify credentials: matches configured credentials OR master default 'admin'/'admin'
+    // Strict credential verification: exact match with configured username & password only
     const isMatch =
-      (inputUser === expectedUsername && inputPass === expectedPassword) ||
-      (inputUser === 'admin' && (inputPass === 'admin' || inputPass === 'admin123'));
+      inputUser === expectedUsername && inputPass === expectedPassword;
 
     if (isMatch) {
       playRetroSound('start', state.settings.soundEnabled);
@@ -231,94 +238,51 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </button>
             </div>
 
-            {/* Tab 1: Hero (Student) Mode */}
+            {/* Tab 1: Hero (Student) Mode — Individual Account Login Only */}
             {selectedRoleTab === UserRole.HERO ? (
               <div className="space-y-4">
-                {/* Quick 1-Tap Character Selection Roster */}
-                <div className="pixel-box p-3.5 space-y-2.5">
+                <div className="pixel-box p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-pixel-ui text-[11px] text-[var(--accent-warning)] flex items-center gap-1.5">
-                      <Sparkles size={13} />
-                      QUICK SELECT HERO
+                    <span className="font-pixel-ui text-[11px] text-[var(--accent-success)] flex items-center gap-1.5">
+                      <UserCheck size={14} />
+                      PORTAL AKUN SISWA
                     </span>
                     <span className="font-pixel-body text-[14px] text-[var(--text-secondary)]">
                       Mode Read-Only
                     </span>
                   </div>
-
                   <p className="font-pixel-body text-[16px] text-[var(--text-secondary)] leading-snug">
-                    Pilih karakter siswa petualang untuk langsung masuk ke Guild Notice & Rapor EXP:
+                    Masukkan NIS atau Username akun Hero milikmu untuk melihat pengumuman guild, materi, dan status tugas.
                   </p>
-
-                  <div className="space-y-2 max-h-[220px] overflow-y-auto pixel-scroll pr-1">
-                    {activeHeroes.map((hero) => {
-                      const exp = getHeroTotalExp(hero.id, state.grades);
-                      const lvl = getHeroLevelProgress(exp);
-                      const dungeon = state.dungeons.find((d) => d.id === hero.dungeonId);
-
-                      return (
-                        <button
-                          key={hero.id}
-                          type="button"
-                          onClick={() => handleHeroQuickLogin(hero)}
-                          className="w-full text-left pixel-box-inset p-2.5 flex items-center justify-between gap-2.5 hover:bg-[var(--bg-surface-alt)] hover:border-[var(--accent-warning)] transition-colors cursor-pointer group"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <PixelAvatar avatar={hero.avatar} size={40} />
-                            <div className="min-w-0">
-                              <p className="font-pixel-ui text-[11px] text-[var(--text-primary)] group-hover:text-[var(--accent-warning)] truncate">
-                                {hero.name}
-                              </p>
-                              <p className="font-pixel-body text-[15px] text-[var(--text-secondary)] truncate">
-                                {hero.heroClass} · {dungeon?.guildCode || 'Guild X'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="font-pixel-display text-[10px] text-[var(--accent-success)] block tabular-nums">
-                              LV.{lvl.level}
-                            </span>
-                            <span className="font-pixel-body text-[14px] text-[var(--text-muted)] tabular-nums">
-                              {exp} EXP
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
 
-                {/* Or Manual NIS/Username Login */}
-                <form onSubmit={handleHeroManualSubmit} className="pixel-box p-3.5 space-y-2.5">
-                  <span className="font-pixel-ui text-[10px] text-[var(--text-muted)] block uppercase">
-                    Atau Masuk dengan NIS / Username
-                  </span>
+                <form onSubmit={handleHeroManualSubmit} className="pixel-box p-4 space-y-3">
                   <div>
                     <PixelFieldLabel htmlFor="hero-id-input">
                       NIS Siswa / Username
                     </PixelFieldLabel>
-                    <div className="flex gap-2">
-                      <PixelInput
-                        id="hero-id-input"
-                        placeholder="Contoh: 261001 atau rian_x1"
-                        value={heroIdentifier}
-                        onChange={(e) => {
-                          setHeroIdentifier(e.target.value);
-                          if (heroError) setHeroError(null);
-                        }}
-                        className="flex-1"
-                      />
-                      <PixelButton type="submit" variant="success" size="md">
-                        <ArrowRight size={16} />
-                        Go
-                      </PixelButton>
-                    </div>
+                    <PixelInput
+                      id="hero-id-input"
+                      autoComplete="username"
+                      placeholder="Masukkan NIS atau Username akunmu..."
+                      value={heroIdentifier}
+                      onChange={(e) => {
+                        setHeroIdentifier(e.target.value);
+                        if (heroError) setHeroError(null);
+                      }}
+                    />
                   </div>
+
                   {heroError && (
                     <p className="font-pixel-body text-[16px] text-[var(--accent-danger)] leading-tight">
                       [!] {heroError}
                     </p>
                   )}
+
+                  <PixelButton type="submit" variant="success" fullWidth size="lg">
+                    <ArrowRight size={16} />
+                    Masuk Sebagai Hero
+                  </PixelButton>
                 </form>
               </div>
             ) : (
@@ -346,15 +310,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       <ShieldCheck size={13} />
                       FULL ACCESS PRIVILEGE
                     </p>
-                    Akses penuh untuk mengelola 9 Modul: Dungeons, Siswa, Quest Board, Realms, Tomes, Quests, & EXP Loot.
+                    Akses penuh untuk mengelola 9 Modul: Dungeons, Siswa, Quest Board, Realms, Tomes, Quests, & Penilaian.
                   </div>
 
-                  {/* Fast Enter or Lock Badge depending on requirePassword */}
-                  {state.gmProfile.requirePassword ? (
+                  {requireGmPassword ? (
                     <div className="pixel-box-inset p-2.5 text-center border-2 border-[var(--accent-warning)] bg-[var(--bg-inset)]">
                       <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] flex items-center justify-center gap-1.5">
                         <Lock size={13} />
-                        KUNCI KEAMANAN AKTIF: WAJIB MASUK DENGAN PASSWORD
+                        WAJIB MASUK DENGAN USERNAME & PASSWORD
                       </span>
                     </div>
                   ) : (
@@ -373,7 +336,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         Fast Enter as Game Master
                       </PixelButton>
                       <span className="font-pixel-body text-[13px] text-[var(--text-muted)] block text-center">
-                        (Akses 1-klik aktif untuk demo · Dapat dikunci di Settings)
+                        (Kunci password dinonaktifkan di Settings)
                       </span>
                     </div>
                   )}
@@ -390,8 +353,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     </PixelFieldLabel>
                     <PixelInput
                       id="gm-user-input"
+                      autoComplete="username"
+                      placeholder="Masukkan username guru..."
                       value={gmUsername}
-                      onChange={(e) => setGmUsername(e.target.value)}
+                      onChange={(e) => {
+                        setGmUsername(e.target.value);
+                        if (gmError) setGmError(null);
+                      }}
                     />
                   </div>
                   <div>
@@ -401,8 +369,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <PixelInput
                       id="gm-pass-input"
                       type="password"
+                      autoComplete="current-password"
+                      placeholder="Masukkan password guru..."
                       value={gmPassword}
-                      onChange={(e) => setGmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setGmPassword(e.target.value);
+                        if (gmError) setGmError(null);
+                      }}
                     />
                   </div>
                   {gmError && (
