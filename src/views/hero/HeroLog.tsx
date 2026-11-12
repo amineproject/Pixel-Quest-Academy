@@ -23,15 +23,11 @@ import {
 interface HeroLogProps {
   state: AcademyState;
   hero: HeroStudent;
-  onSelectDemoHero: (heroId: string) => void;
-  onSwitchRole: (role: UserRole) => void;
 }
 
 export const HeroLog: React.FC<HeroLogProps> = ({
   state,
   hero,
-  onSelectDemoHero,
-  onSwitchRole,
 }) => {
   const heroGrades = state.grades.filter((g) => g.heroId === hero.id);
   const totalExp = getHeroTotalExp(hero.id, state.grades);
@@ -169,34 +165,6 @@ export const HeroLog: React.FC<HeroLogProps> = ({
             );
           })
         )}
-      </section>
-
-      {/* Demo Persona Switcher */}
-      <section className="pixel-box p-4 space-y-3">
-        <PixelFieldLabel htmlFor="demo-hero-select">
-          Simulasi Akun Hero Aktif
-        </PixelFieldLabel>
-        <PixelSelect
-          id="demo-hero-select"
-          value={hero.id}
-          onChange={(e) => onSelectDemoHero(e.target.value)}
-        >
-          {state.heroes
-            .filter((h) => h.active)
-            .map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name} (@{h.username})
-              </option>
-            ))}
-        </PixelSelect>
-        <PixelButton
-          type="button"
-          variant="primary"
-          fullWidth
-          onClick={() => onSwitchRole(UserRole.GAME_MASTER)}
-        >
-          Switch to Game Master Mode
-        </PixelButton>
       </section>
     </div>
   );

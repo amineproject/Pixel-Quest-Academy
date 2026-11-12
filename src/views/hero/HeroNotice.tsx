@@ -74,13 +74,13 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
               <PixelStar size={12} />
               LV.{levelInfo.level} · {levelInfo.title.toUpperCase()}
             </div>
-            <h2 className="font-pixel-display text-[13px] text-[var(--text-primary)] truncate mt-0.5">
+            <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] truncate mt-0.5">
               {hero.name}
             </h2>
-            <p className="font-pixel-body text-[17px] text-[var(--text-secondary)] truncate flex items-center gap-1.5">
+            <p className="text-[12.5px] text-[var(--text-secondary)] truncate flex items-center gap-1.5">
               <span>{dungeon ? `${dungeon.guildCode} · ${dungeon.name}` : 'No Guild'}</span>
               <span>·</span>
-              <span className="text-[var(--accent-warning)] flex items-center gap-1 tabular-nums">
+              <span className="text-[var(--accent-warning)] font-semibold flex items-center gap-1 tabular-nums">
                 <PixelCoin size={13} /> {totalExp} EXP
               </span>
             </p>
@@ -145,10 +145,10 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
                     {formatRetroDate(notice.releaseDate)}
                   </span>
                 </div>
-                <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)]">
+                <h3 className="text-[14px] font-bold text-[var(--text-primary)]">
                   {notice.title}
                 </h3>
-                <p className="font-pixel-body text-[17px] text-[var(--text-secondary)] line-clamp-2">
+                <p className="text-[13px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
                   {notice.description}
                 </p>
               </button>

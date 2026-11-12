@@ -106,7 +106,6 @@ interface ArcadeShellProps {
   gmAvatar?: AvatarClass;
   onSelectGmMenu: (id: GmMenuId) => void;
   onSelectHeroMenu: (id: HeroMenuId) => void;
-  onToggleRole: (nextRole: UserRole) => void;
   onToggleSound: () => void;
   onOpenGmDrawer: () => void;
   onLogout: () => void;
@@ -126,7 +125,6 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   gmAvatar = 'guild_master',
   onSelectGmMenu,
   onSelectHeroMenu,
-  onToggleRole,
   onToggleSound,
   onOpenGmDrawer,
   onLogout,
@@ -142,66 +140,42 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   return (
     <div
       data-theme={theme}
-      className="min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-5 sm:px-4"
+      className="min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-6 sm:px-4"
     >
-      {/* Desktop Arcade Console Top Switcher (visible on sm+ outside mobile frame) */}
-      <div className="hidden sm:flex items-center justify-between w-full max-w-[480px] mb-3 px-1 gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Desktop Arcade Console Top Switcher */}
+      <div className="hidden sm:flex items-center justify-between w-full max-w-[620px] md:max-w-[680px] mb-3 px-2 gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <PixelStar size={18} className="animate-pixel-float shrink-0" />
           <div className="min-w-0">
-            <p className="font-pixel-display text-[10px] text-[var(--accent-warning)] truncate drop-shadow-sm">
+            <p className="font-pixel-display text-[11px] text-[var(--accent-warning)] truncate drop-shadow-sm">
               PIXEL QUEST ACADEMY
             </p>
-            <p className="font-pixel-body text-[16px] text-[var(--text-secondary)] truncate">
+            <p className="text-[13px] text-[var(--text-secondary)] truncate">
               {isGm ? `Guild Master: ${gmName}` : `Hero: ${activeHeroName} (Read-Only)`}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onLogout}
-            className="pixel-btn min-h-[32px] px-2 py-1 bg-[var(--accent-danger)] text-[#11131E] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer"
+            className="pixel-btn min-h-[34px] px-3 py-1 bg-[var(--accent-danger)] text-[#11131E] font-pixel-ui text-[10px] flex items-center gap-1.5 cursor-pointer font-bold"
             title="Keluar ke Halaman Login"
           >
-            <LogOut size={12} />
-            Exit
+            <LogOut size={13} />
+            Keluar (Logout)
           </button>
-          <div className="flex items-center gap-1 pixel-box-inset p-1">
-            <button
-              type="button"
-              onClick={() => onToggleRole(UserRole.GAME_MASTER)}
-              className={`px-2 py-1 font-pixel-ui text-[9px] whitespace-nowrap cursor-pointer transition-colors ${
-                isGm
-                  ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              GM
-            </button>
-            <button
-              type="button"
-              onClick={() => onToggleRole(UserRole.HERO)}
-              className={`px-2 py-1 font-pixel-ui text-[9px] whitespace-nowrap cursor-pointer transition-colors ${
-                !isGm
-                  ? 'bg-[var(--accent-success)] text-[#11131E] font-bold'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              Hero
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Handheld Arcade Bezel (Centered <= 480px) */}
-      <div className="w-full max-w-[480px] sm:p-3 sm:bg-[var(--bezel-body)] sm:border-4 sm:border-[var(--bezel-trim)] sm:shadow-[0_20px_50px_rgba(0,0,0,0.7)] transition-all">
+      {/* Handheld Arcade Bezel (Proportional: 360px on mobile, up to 680px on desktop) */}
+      <div className="w-full max-w-[560px] sm:max-w-[620px] md:max-w-[680px] sm:p-3 sm:bg-[var(--bezel-body)] sm:border-4 sm:border-[var(--bezel-trim)] sm:shadow-[0_20px_50px_rgba(0,0,0,0.7)] transition-all">
         {/* Console Hardware Top Trim (Desktop only) */}
         <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-warning)] font-bold">
-          <div className="flex items-center gap-1.5 font-pixel-ui text-[9px] tracking-widest uppercase">
-            <PixelCoin size={14} className="animate-coin-shine" />
-            <span>8-BIT RETRO MOBILE LMS</span>
+          <div className="flex items-center gap-2 font-pixel-ui text-[10px] tracking-widest uppercase">
+            <PixelCoin size={15} className="animate-coin-shine" />
+            <span>8-BIT RETRO ACADEMY LMS</span>
           </div>
           <div className="flex items-center gap-1.5" aria-hidden="true">
             <span className="w-4 h-1.5 bg-black/40 inline-block" />
@@ -210,9 +184,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           </div>
         </div>
 
-        {/* Screen Viewport (360px - 480px) */}
+        {/* Screen Viewport */}
         <div
-          className={`relative w-full min-h-screen sm:min-h-[760px] sm:max-h-[820px] flex flex-col bg-[var(--bg-canvas)] sm:border-4 sm:border-black overflow-hidden ${
+          className={`relative w-full min-h-screen sm:min-h-[780px] sm:h-[86vh] sm:max-h-[920px] flex flex-col bg-[var(--bg-canvas)] sm:border-4 sm:border-black overflow-hidden ${
             crtScanlines ? 'crt-scanlines' : ''
           }`}
         >
@@ -260,44 +234,29 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 )}
               </button>
 
-              {/* Role Toggle Button */}
-              <button
-                type="button"
-                onClick={() =>
-                  onToggleRole(isGm ? UserRole.HERO : UserRole.GAME_MASTER)
-                }
-                className={`pixel-btn min-h-[34px] px-2 py-1 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
-                  isGm
-                    ? 'bg-[var(--accent-success)] text-[#11131E]'
-                    : 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
-                }`}
-                title="Switch Role Mode"
-              >
-                {isGm ? 'Hero View' : 'GM View'}
-              </button>
-
               {/* Exit/Logout Button */}
               <button
                 type="button"
                 onClick={onLogout}
-                className="pixel-btn min-w-[34px] min-h-[34px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
-                title="Log Out ke Halaman Utama"
-                aria-label="Log Out"
+                className="pixel-btn min-h-[34px] px-2.5 py-1 bg-[var(--accent-danger)] text-[#11131E] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer font-bold"
+                title="Keluar / Logout"
+                aria-label="Keluar / Logout"
               >
-                <LogOut size={15} />
+                <LogOut size={13} />
+                <span>Logout</span>
               </button>
             </div>
           </header>
 
           {/* Main Scrollable Content Area */}
-          <main className="flex-1 overflow-y-auto pixel-scroll p-4 pb-24 sm:pb-6 space-y-5">
+          <main className="flex-1 overflow-y-auto pixel-scroll p-4 sm:p-5 pb-24 space-y-4">
             {children}
           </main>
 
           {/* Bottom Tab Bar Navigation */}
           <nav
             aria-label={isGm ? 'Game Master Navigation' : 'Hero Navigation'}
-            className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] sm:static sm:translate-x-0 z-30 h-[62px] shrink-0 bg-[var(--bg-surface)] border-t-3 border-[var(--border-pixel)] shadow-lg"
+            className="sticky bottom-0 left-0 w-full z-30 h-[58px] shrink-0 bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)] shadow-[0_-3px_12px_rgba(0,0,0,0.3)]"
           >
             {isGm ? (
               <div className="grid grid-cols-5 h-full">

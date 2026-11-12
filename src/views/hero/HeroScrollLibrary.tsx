@@ -142,15 +142,15 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="font-pixel-body text-[15px] text-[var(--accent-warning)]">
+                      <p className="text-[12px] font-semibold text-[var(--accent-warning)]">
                         Bab {tome.chapter} · {realm?.name} · {tome.readMinutes} min read
                       </p>
-                      <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)] mt-0.5">
+                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] mt-0.5">
                         {tome.title}
                       </h3>
                     </div>
                   </div>
-                  <p className="font-pixel-body text-[17px] text-[var(--text-secondary)]">
+                  <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                     {tome.summary}
                   </p>
                   <div className="flex items-center justify-between pt-2 border-t border-[var(--border-pixel)]/40">
@@ -208,11 +208,11 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
       >
         {readingTome && (
           <div className="space-y-3">
-            <p className="font-pixel-body text-[16px] text-[var(--accent-warning)]">
+            <p className="text-[12.5px] font-semibold text-[var(--accent-warning)]">
               {state.realms.find((r) => r.id === readingTome.realmId)?.name} ·{' '}
               {readingTome.readMinutes} min read
             </p>
-            <div className="pixel-box-inset p-4 font-pixel-body text-[19px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed">
+            <div className="pixel-box-inset p-4 text-[14.5px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed font-normal">
               {readingTome.content}
             </div>
             <PixelButton

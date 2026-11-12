@@ -120,7 +120,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       className="min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-6 sm:px-4"
     >
       {/* Desktop Arcade Cabinet Exterior Trim */}
-      <div className="w-full max-w-[480px] sm:p-3 sm:bg-[var(--bezel-body)] sm:border-4 sm:border-[var(--bezel-trim)] sm:shadow-[0_20px_50px_rgba(0,0,0,0.7)]">
+      <div className="w-full max-w-[560px] sm:max-w-[620px] md:max-w-[680px] sm:p-3 sm:bg-[var(--bezel-body)] sm:border-4 sm:border-[var(--bezel-trim)] sm:shadow-[0_20px_50px_rgba(0,0,0,0.7)] transition-all">
         {/* Hardware Trim Top */}
         <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-warning)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
           <span>★ ARCADE ADVENTURE CONSOLE ★</span>

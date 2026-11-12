@@ -22,7 +22,7 @@ interface GmDungeonsProps {
 
 const EMPTY_FORM: Omit<Dungeon, 'id'> = {
   name: '',
-  tier: 'Kelas X',
+  tier: 'Kelas X SMA',
   guildCode: '',
   capacity: 30,
   description: '',
@@ -38,6 +38,11 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Dungeon, 'id'>>(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<Dungeon | null>(null);
+
+  const uniqueTiers = Array.from(
+    new Set(state.dungeons.map((d) => d.tier).filter(Boolean))
+  );
+  const tierFilterOptions = ['all', ...uniqueTiers];
 
   const filtered = state.dungeons.filter(
     (d) => tierFilter === 'all' || d.tier === tierFilter
@@ -63,11 +68,11 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.guildCode.trim()) return;
+    if (!form.name.trim() || !form.guildCode.trim() || !form.tier.trim()) return;
     onSaveDungeon({
       id: editingId || `dng-${Date.now()}`,
       name: form.name.trim(),
-      tier: form.tier,
+      tier: form.tier.trim(),
       guildCode: form.guildCode.trim().toUpperCase(),
       capacity: Math.max(1, Number(form.capacity) || 30),
       description: form.description.trim(),
@@ -79,7 +84,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
     <div className="space-y-4">
       <PixelSectionTitle
         title="Dungeons / Guilds"
-        subtitle="Kelola rombel kelas dan kapasitas hero"
+        subtitle="Kelola rombel kelas (SD, SMP, SMA, SMK, dll.) dan kuota siswa"
         action={
           <PixelButton type="button" size="sm" variant="success" onClick={openCreate}>
             <Plus size={15} />
@@ -88,17 +93,17 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
         }
       />
 
-      {/* Tier Filter */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {['all', 'Kelas X', 'Kelas XI', 'Kelas XII'].map((tier) => (
+      {/* Dynamic Tier Filter */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll">
+        {tierFilterOptions.map((tier) => (
           <button
             key={tier}
             type="button"
             onClick={() => setTierFilter(tier)}
-            className={`pixel-btn min-h-[40px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
               tierFilter === tier
-                ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
-                : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             {tier === 'all' ? 'All Tiers' : tier}
@@ -202,16 +207,68 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
               />
             </div>
             <div>
-              <PixelFieldLabel htmlFor="dng-tier">Tingkat</PixelFieldLabel>
-              <PixelSelect
+              <PixelFieldLabel htmlFor="dng-tier">
+                Tingkat Kelas (Manual: SD, SMP, SMA, dll.)
+              </PixelFieldLabel>
+              <input
                 id="dng-tier"
+                list="tier-preset-options"
+                required
+                placeholder="Ketik manual misal: Kelas 5 SD, Kelas VIII SMP..."
                 value={form.tier}
                 onChange={(e) => setForm({ ...form, tier: e.target.value })}
-              >
-                <option value="Kelas X">Kelas X</option>
-                <option value="Kelas XI">Kelas XI</option>
-                <option value="Kelas XII">Kelas XII</option>
-              </PixelSelect>
+                className="pixel-box-inset pixel-focus w-full min-h-[40px] px-3 py-1.5 text-[14px] font-medium text-[var(--text-primary)] bg-[var(--bg-inset)] outline-none"
+              />
+              <datalist id="tier-preset-options">
+                {/* SD / MI */}
+                <option value="Kelas 1 SD" />
+                <option value="Kelas 2 SD" />
+                <option value="Kelas 3 SD" />
+                <option value="Kelas 4 SD" />
+                <option value="Kelas 5 SD" />
+                <option value="Kelas 6 SD" />
+                <option value="Madrasah Ibtidaiyah (MI)" />
+                {/* SMP / MTs */}
+                <option value="Kelas VII SMP" />
+                <option value="Kelas VIII SMP" />
+                <option value="Kelas IX SMP" />
+                <option value="Madrasah Tsanawiyah (MTs)" />
+                {/* SMA / SMK / MA */}
+                <option value="Kelas X SMA" />
+                <option value="Kelas XI SMA" />
+                <option value="Kelas XII SMA" />
+                <option value="Kelas X SMK" />
+                <option value="Kelas XI SMK" />
+                <option value="Kelas XII SMK" />
+                <option value="Madrasah Aliyah (MA)" />
+                <option value="Pendidikan Kesetaraan (Paket A/B/C)" />
+              </datalist>
+
+              {/* Quick preset chips */}
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {[
+                  'Kelas 1-6 SD',
+                  'Kelas VII SMP',
+                  'Kelas VIII SMP',
+                  'Kelas IX SMP',
+                  'Kelas X SMA',
+                  'Kelas XI SMA',
+                  'Kelas XII SMA',
+                  'SMK',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      const actual = preset === 'Kelas 1-6 SD' ? 'Kelas 5 SD' : preset;
+                      setForm({ ...form, tier: actual });
+                    }}
+                    className="text-[9.5px] px-1.5 py-0.5 border border-[var(--border-pixel)]/50 bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-warning)] cursor-pointer"
+                  >
+                    +{preset}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div>

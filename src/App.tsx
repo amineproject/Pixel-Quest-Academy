@@ -28,6 +28,23 @@ import {
   PixelToast,
 } from './components/PixelUI';
 import { playRetroSound } from './utils/sound';
+import {
+  cloudDeleteDungeon,
+  cloudDeleteHero,
+  cloudDeleteNotice,
+  cloudDeleteQuest,
+  cloudDeleteRealm,
+  cloudDeleteTome,
+  cloudSyncDungeon,
+  cloudSyncGrade,
+  cloudSyncHero,
+  cloudSyncNotice,
+  cloudSyncQuest,
+  cloudSyncRealm,
+  cloudSyncSettings,
+  cloudSyncTome,
+  fetchAcademyFromSupabase,
+} from './lib/supabase';
 
 // Login Title View
 import { LoginView } from './views/auth/LoginView';
@@ -223,23 +240,6 @@ export default function App() {
     window.location.hash = `#/hero/${id}`;
   };
 
-  const handleToggleRole = (nextRole: UserRole) => {
-    if (nextRole === role) return;
-    playRetroSound('switch', state.settings.soundEnabled);
-    setRole(nextRole);
-    setAuthSession((prev) => ({ ...prev, role: nextRole }));
-    setGmDrawerOpen(false);
-    setDeniedRoute(null);
-    if (nextRole === UserRole.GAME_MASTER) {
-      window.location.hash = `#/gm/${gmMenu}`;
-      showToast('Entered Game Master Mode (Full Access)', 'success');
-    } else {
-      setHeroMenu('notice');
-      window.location.hash = '#/hero/notice';
-      showToast(`Entered Hero Mode: ${activeHero?.name || 'Adventurer'}`, 'warning');
-    }
-  };
-
   const handleToggleSound = () => {
     const nextVal = !state.settings.soundEnabled;
     playRetroSound('blip', true);
@@ -272,13 +272,30 @@ export default function App() {
     window.location.hash = '#/hero/notice';
   };
 
-  // Sync from Cloud SQL PostgreSQL Backend
-  useEffect(() => {
-    let isMounted = true;
-    fetch('/api/academy')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (isMounted && data && Array.isArray(data.dungeons) && Array.isArray(data.heroes)) {
+  // Sync from Cloud (Supabase) and Backend (Express / Cloud SQL if running)
+  const syncFromRemote = useCallback(async () => {
+    // 1. Try Supabase Cloud first (works across all devices anywhere)
+    try {
+      const cloudData = await fetchAcademyFromSupabase();
+      if (cloudData && Array.isArray(cloudData.dungeons) && Array.isArray(cloudData.heroes)) {
+        setState((prev) => ({
+          ...prev,
+          ...cloudData,
+          settings: { ...prev.settings, ...(cloudData.settings || {}) },
+          gmProfile: { ...prev.gmProfile, ...(cloudData.gmProfile || {}) },
+        }));
+        return;
+      }
+    } catch (err) {
+      console.warn('Supabase sync error:', err);
+    }
+
+    // 2. Fallback to Express backend if running
+    try {
+      const res = await fetch('/api/academy');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.dungeons) && Array.isArray(data.heroes)) {
           setState((prev) => ({
             ...prev,
             ...data,
@@ -286,14 +303,27 @@ export default function App() {
             gmProfile: { ...prev.gmProfile, ...(data.gmProfile || {}) },
           }));
         }
-      })
-      .catch((err) => {
-        console.warn('Backend sync skipped or local mode:', err);
-      });
-    return () => {
-      isMounted = false;
-    };
+      }
+    } catch {
+      // Local mode or offline
+    }
   }, []);
+
+  useEffect(() => {
+    syncFromRemote();
+
+    // Cross-device auto-sync on tab focus or visibility change
+    const handleRecheck = () => {
+      syncFromRemote();
+    };
+    window.addEventListener('focus', handleRecheck);
+    window.addEventListener('visibilitychange', handleRecheck);
+
+    return () => {
+      window.removeEventListener('focus', handleRecheck);
+      window.removeEventListener('visibilitychange', handleRecheck);
+    };
+  }, [syncFromRemote]);
 
   // CRUD Upsert & Delete Handlers
   const upsertItem = <T extends { id: string }>(list: T[], item: T): T[] => {
@@ -307,6 +337,7 @@ export default function App() {
       ...prev,
       dungeons: upsertItem(prev.dungeons, dungeon),
     }));
+    cloudSyncDungeon(dungeon).catch(() => {});
     fetch('/api/dungeons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -321,6 +352,7 @@ export default function App() {
       ...prev,
       dungeons: prev.dungeons.filter((d) => d.id !== id),
     }));
+    cloudDeleteDungeon(id).catch(() => {});
     fetch(`/api/dungeons/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Dungeon deleted.', 'warning');
   };
@@ -331,6 +363,7 @@ export default function App() {
       ...prev,
       heroes: upsertItem(prev.heroes, hero),
     }));
+    cloudSyncHero(hero).catch(() => {});
     fetch('/api/heroes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -346,6 +379,7 @@ export default function App() {
       heroes: prev.heroes.filter((h) => h.id !== id),
       grades: prev.grades.filter((g) => g.heroId !== id),
     }));
+    cloudDeleteHero(id).catch(() => {});
     fetch(`/api/heroes/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Hero removed from roster.', 'warning');
   };
@@ -356,6 +390,7 @@ export default function App() {
       ...prev,
       notices: upsertItem(prev.notices, notice),
     }));
+    cloudSyncNotice(notice).catch(() => {});
     fetch('/api/notices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -370,6 +405,7 @@ export default function App() {
       ...prev,
       notices: prev.notices.filter((n) => n.id !== id),
     }));
+    cloudDeleteNotice(id).catch(() => {});
     fetch(`/api/notices/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Notice deleted.', 'warning');
   };
@@ -380,6 +416,7 @@ export default function App() {
       ...prev,
       realms: upsertItem(prev.realms, realm),
     }));
+    cloudSyncRealm(realm).catch(() => {});
     fetch('/api/realms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -394,6 +431,7 @@ export default function App() {
       ...prev,
       realms: prev.realms.filter((r) => r.id !== id),
     }));
+    cloudDeleteRealm(id).catch(() => {});
     fetch(`/api/realms/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Realm deleted.', 'warning');
   };
@@ -404,6 +442,7 @@ export default function App() {
       ...prev,
       tomes: upsertItem(prev.tomes, tome),
     }));
+    cloudSyncTome(tome).catch(() => {});
     fetch('/api/tomes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -418,6 +457,7 @@ export default function App() {
       ...prev,
       tomes: prev.tomes.filter((t) => t.id !== id),
     }));
+    cloudDeleteTome(id).catch(() => {});
     fetch(`/api/tomes/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Tome deleted.', 'warning');
   };
@@ -428,6 +468,7 @@ export default function App() {
       ...prev,
       quests: upsertItem(prev.quests, quest),
     }));
+    cloudSyncQuest(quest).catch(() => {});
     fetch('/api/quests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -443,6 +484,7 @@ export default function App() {
       quests: prev.quests.filter((q) => q.id !== id),
       grades: prev.grades.filter((g) => g.questId !== id),
     }));
+    cloudDeleteQuest(id).catch(() => {});
     fetch(`/api/quests/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Quest deleted.', 'warning');
   };
@@ -458,6 +500,7 @@ export default function App() {
         : [grade, ...prev.grades];
       return { ...prev, grades: nextGrades };
     });
+    cloudSyncGrade(grade).catch(() => {});
     fetch('/api/grades', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -470,6 +513,7 @@ export default function App() {
   const handleUpdateGmProfile = (gmProfile: GameMasterProfile) => {
     playRetroSound('save', state.settings.soundEnabled);
     setState((prev) => ({ ...prev, gmProfile }));
+    cloudSyncSettings(state.settings, gmProfile).catch(() => {});
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -481,6 +525,7 @@ export default function App() {
   const handleUpdateSettings = (settings: SystemSettings) => {
     playRetroSound('blip', settings.soundEnabled);
     setState((prev) => ({ ...prev, settings }));
+    cloudSyncSettings(settings, state.gmProfile).catch(() => {});
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -529,7 +574,6 @@ export default function App() {
       gmAvatar={state.gmProfile.avatar}
       onSelectGmMenu={handleSelectGmMenu}
       onSelectHeroMenu={handleSelectHeroMenu}
-      onToggleRole={handleToggleRole}
       onToggleSound={handleToggleSound}
       onLogout={handleLogout}
       onOpenGmDrawer={() => {
@@ -545,7 +589,6 @@ export default function App() {
             <GmDashboard
               state={state}
               onNavigate={handleSelectGmMenu}
-              onSwitchRole={handleToggleRole}
             />
           )}
           {gmMenu === 'dungeons' && (
@@ -599,7 +642,6 @@ export default function App() {
               onUpdateGmProfile={handleUpdateGmProfile}
               onUpdateSettings={handleUpdateSettings}
               onResetDemoData={handleResetDemoData}
-              onSwitchRole={handleToggleRole}
               onTestAccessDenied={() =>
                 handleTriggerAccessDenied('#/gm/exp-loot/edit')
               }
@@ -627,11 +669,6 @@ export default function App() {
               <HeroLog
                 state={state}
                 hero={activeHero}
-                onSelectDemoHero={(id) => {
-                  playRetroSound('switch', state.settings.soundEnabled);
-                  setActiveHeroId(id);
-                }}
-                onSwitchRole={handleToggleRole}
               />
             )}
           </>

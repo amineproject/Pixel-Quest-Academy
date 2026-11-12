@@ -16,12 +16,21 @@ import {
   PixelSectionTitle,
 } from '../../components/PixelUI';
 
+import {
+  clearSupabaseConfig,
+  getStoredSupabaseAnonKey,
+  getStoredSupabaseUrl,
+  isSupabaseConfigured,
+  saveSupabaseConfig,
+  uploadAllLocalToSupabase,
+} from '../../lib/supabase';
+import { Check, Cloud, RefreshCw } from 'lucide-react';
+
 interface GmSettingsProps {
   state: AcademyState;
   onUpdateGmProfile: (profile: GameMasterProfile) => void;
   onUpdateSettings: (settings: SystemSettings) => void;
   onResetDemoData: () => void;
-  onSwitchRole: (role: UserRole) => void;
   onTestAccessDenied: () => void;
 }
 
@@ -58,7 +67,6 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   onUpdateGmProfile,
   onUpdateSettings,
   onResetDemoData,
-  onSwitchRole,
   onTestAccessDenied,
 }) => {
   const [name, setName] = useState(state.gmProfile.name);
@@ -73,6 +81,47 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   const [term, setTerm] = useState(state.settings.academicTerm);
   const [confirmReset, setConfirmReset] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Supabase Cloud Sync State
+  const [cloudUrl, setCloudUrl] = useState(getStoredSupabaseUrl);
+  const [cloudKey, setCloudKey] = useState(getStoredSupabaseAnonKey);
+  const [isCloudConfigured, setIsCloudConfigured] = useState(isSupabaseConfigured);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSaveCloudConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cloudUrl.trim() || !cloudKey.trim()) {
+      setSyncStatusMsg('Harap isi URL Proyek dan Anon Key Supabase!');
+      return;
+    }
+    saveSupabaseConfig(cloudUrl, cloudKey);
+    const configured = isSupabaseConfigured();
+    setIsCloudConfigured(configured);
+    if (configured) {
+      setSyncStatusMsg('✓ Berhasil terhubung ke Supabase Cloud!');
+    } else {
+      setSyncStatusMsg('Format URL atau Anon Key tidak valid.');
+    }
+    setTimeout(() => setSyncStatusMsg(null), 3000);
+  };
+
+  const handleSyncAllToCloud = async () => {
+    if (!isCloudConfigured) {
+      setSyncStatusMsg('Hubungkan ke Supabase Cloud terlebih dahulu!');
+      return;
+    }
+    setIsSyncing(true);
+    setSyncStatusMsg('Sedang mengunggah seluruh data ke Supabase Cloud...');
+    const ok = await uploadAllLocalToSupabase(state);
+    setIsSyncing(false);
+    if (ok) {
+      setSyncStatusMsg('✓ Seluruh data sukses tersinkronisasi ke Supabase Cloud!');
+    } else {
+      setSyncStatusMsg('Gagal mengunggah data. Pastikan tabel di Supabase sudah dibuat.');
+    }
+    setTimeout(() => setSyncStatusMsg(null), 4000);
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +242,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         {/* GM Avatar Selection */}
         <div>
           <PixelFieldLabel>Pilih Avatar Guild Master</PixelFieldLabel>
-          <div className="grid grid-cols-6 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {[
               { id: 'guild_master' as const, label: 'Master' },
               { id: 'knight' as const, label: 'Knight' },
@@ -206,14 +255,14 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                 key={av.id}
                 type="button"
                 onClick={() => setAvatar(av.id)}
-                className={`p-1.5 flex flex-col items-center gap-1 border-2 cursor-pointer ${
+                className={`p-2 flex flex-col items-center justify-center gap-1.5 border-2 cursor-pointer transition-all ${
                   avatar === av.id
-                    ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)]'
-                    : 'border-[var(--border-pixel)] bg-[var(--bg-inset)] opacity-70 hover:opacity-100'
+                    ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)] shadow-sm'
+                    : 'border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] opacity-75 hover:opacity-100'
                 }`}
               >
-                <PixelAvatar avatar={av.id} size={32} />
-                <span className="font-pixel-ui text-[8px] text-[var(--text-primary)]">
+                <PixelAvatar avatar={av.id} size={36} />
+                <span className="font-pixel-ui text-[9px] text-[var(--text-primary)]">
                   {av.label}
                 </span>
               </button>
@@ -221,43 +270,45 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-3">
           <div>
             <PixelFieldLabel htmlFor="gm-name">Nama Game Master (Guru)</PixelFieldLabel>
             <PixelInput
               id="gm-name"
               required
-              placeholder="Contoh: Pak Budi Santoso, S.Pd"
+              placeholder="Contoh: Amin Wahyudi, S.Pd."
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div>
-            <PixelFieldLabel htmlFor="gm-title">Gelar / Posisi di Guild</PixelFieldLabel>
-            <PixelInput
-              id="gm-title"
-              required
-              placeholder="Contoh: Guild Master of Science"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <PixelFieldLabel htmlFor="gm-spec">Mata Pelajaran / Keahlian</PixelFieldLabel>
-            <PixelInput
-              id="gm-spec"
-              placeholder="Contoh: Guru IPA & Pembina Sains"
-              value={specialty}
-              onChange={(e) => setSpecialty(e.target.value)}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <PixelFieldLabel htmlFor="gm-title">Gelar / Posisi di Guild</PixelFieldLabel>
+              <PixelInput
+                id="gm-title"
+                required
+                placeholder="Contoh: Guild Master of Science"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div>
+              <PixelFieldLabel htmlFor="gm-spec">Mata Pelajaran / Keahlian</PixelFieldLabel>
+              <PixelInput
+                id="gm-spec"
+                placeholder="Contoh: Guru Bahasa Indonesia"
+                value={specialty}
+                onChange={(e) => setSpecialty(e.target.value)}
+              />
+            </div>
           </div>
+
           <div>
             <PixelFieldLabel htmlFor="gm-term">Periode Akademik</PixelFieldLabel>
             <PixelInput
               id="gm-term"
+              placeholder="Contoh: Semester Ganjil 2026/2027"
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
@@ -326,43 +377,94 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         </PixelButton>
       </form>
 
-      {/* Database & Supabase Integration Status */}
-      <section className="pixel-box p-4 space-y-2.5">
-        <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)] flex items-center justify-between">
-          <span>DATABASE & SUPABASE</span>
-          <span className="text-[var(--accent-success)] font-pixel-body text-[14px]">POSTGRES READY</span>
-        </h3>
-        <div className="pixel-box-inset p-3 space-y-1.5 font-pixel-body text-[16px] text-[var(--text-secondary)]">
-          <p className="text-[var(--text-primary)] font-pixel-ui text-[10px]">
-            ⚡ CLOUD SQL POSTGRESQL: <span className="text-[var(--accent-success)]">ACTIVE</span>
+      {/* Interactive Supabase Cloud Sync Manager */}
+      <section className="pixel-box p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Cloud size={18} className="text-[var(--accent-warning)]" />
+            <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
+              SUPABASE CLOUD SYNC (SINKRONISASI SEMUA PERANGKAT)
+            </h3>
+          </div>
+          <span
+            className={`font-pixel-ui text-[9px] px-2 py-0.5 border ${
+              isCloudConfigured
+                ? 'bg-emerald-950/40 text-[var(--accent-success)] border-[var(--accent-success)]'
+                : 'bg-amber-950/40 text-[var(--accent-warning)] border-[var(--accent-warning)]'
+            }`}
+          >
+            {isCloudConfigured ? '☁️ CLOUD AKTIF' : '⚠️ MODE LOKAL'}
+          </span>
+        </div>
+
+        <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+          Agar data yang diinput oleh Guru (Game Master) langsung tersimpan dan dapat dibaca oleh siswa di perangkat lain (HP, laptop, tablet), hubungkan ke Supabase Cloud:
+        </p>
+
+        <form onSubmit={handleSaveCloudConfig} className="space-y-3 pt-1">
+          <div>
+            <PixelFieldLabel htmlFor="sb-url">Supabase Project URL</PixelFieldLabel>
+            <PixelInput
+              id="sb-url"
+              placeholder="https://your-project-id.supabase.co"
+              value={cloudUrl}
+              onChange={(e) => setCloudUrl(e.target.value)}
+            />
+          </div>
+          <div>
+            <PixelFieldLabel htmlFor="sb-key">Supabase Anon Key (Public API Key)</PixelFieldLabel>
+            <PixelInput
+              id="sb-key"
+              type="password"
+              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+              value={cloudKey}
+              onChange={(e) => setCloudKey(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <PixelButton type="submit" variant="primary" size="sm" className="flex-1">
+              <Check size={14} />
+              Simpan & Hubungkan Cloud
+            </PixelButton>
+
+            {isCloudConfigured && (
+              <PixelButton
+                type="button"
+                variant="success"
+                size="sm"
+                disabled={isSyncing}
+                onClick={handleSyncAllToCloud}
+                className="flex-1"
+              >
+                <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                {isSyncing ? 'Mengunggah...' : 'Sinkronkan Data ke Cloud'}
+              </PixelButton>
+            )}
+          </div>
+        </form>
+
+        {syncStatusMsg && (
+          <p className="text-[13.5px] font-semibold text-[var(--accent-warning)] bg-[var(--bg-inset)] p-2.5 border border-[var(--border-pixel)]">
+            {syncStatusMsg}
+          </p>
+        )}
+
+        <div className="pixel-box-inset p-2.5 text-[12.5px] text-[var(--text-muted)] leading-normal space-y-1">
+          <p>
+            💡 <strong>Panduan:</strong> Masukkan URL & Anon Key dari Dashboard Supabase Anda (<strong>Project Settings &gt; API</strong>). Skrip tabel SQL tersimpan di berkas <span className="text-[var(--accent-warning)]">supabase-schema.sql</span>.
           </p>
           <p>
-            Database relasional aktif dengan 9 tabel Drizzle (`dungeons`, `heroes`, `notices`, `realms`, `tomes`, `quests`, `grades`, `settings`).
+            Setelah terhubung, setiap pembuatan kelas, hero siswa, tugas, dan nilai akan otomatis tersimpan di cloud dan langsung terbaca di HP/laptop siswa!
           </p>
-          <div className="pt-2 border-t border-[var(--border-pixel)]/40 space-y-1">
-            <p className="text-[var(--text-primary)] font-pixel-ui text-[10px]">
-              🔗 SUPABASE ADAPTER: <span className="text-[var(--accent-warning)]">CONNECTED</span>
-            </p>
-            <p className="text-[14px] text-[var(--text-muted)]">
-              File migrasi <span className="text-[var(--accent-warning)]">`supabase-schema.sql`</span> telah siap di root project untuk di-paste langsung ke Supabase SQL Editor.
-            </p>
-          </div>
         </div>
       </section>
 
-      {/* Role & RBAC Edge Case Simulation */}
+      {/* Security & RBAC Guard Testing */}
       <section className="pixel-box p-4 space-y-2.5">
         <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
-          SIMULATION & RBAC GUARD
+          PENGUJIAN KEAMANAN & RESET
         </h3>
-        <PixelButton
-          type="button"
-          variant="success"
-          fullWidth
-          onClick={() => onSwitchRole(UserRole.HERO)}
-        >
-          Switch to Hero Mode (Read-Only)
-        </PixelButton>
         <PixelButton
           type="button"
           variant="warning"

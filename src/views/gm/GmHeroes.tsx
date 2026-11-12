@@ -153,13 +153,13 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   <div className="flex items-center gap-3 min-w-0">
                     <PixelAvatar avatar={hero.avatar} size={44} />
                     <div className="min-w-0">
-                      <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)] truncate">
+                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
                         {hero.name}
                       </h3>
-                      <p className="font-pixel-body text-[16px] text-[var(--text-secondary)] truncate">
+                      <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
                         @{hero.username} · NIS {hero.studentCode}
                       </p>
-                      <p className="font-pixel-body text-[15px] text-[var(--accent-warning)] tabular-nums">
+                      <p className="text-[12px] font-semibold text-[var(--accent-warning)] tabular-nums">
                         LV.{lvl.level} ({exp} EXP) · {dungeon?.guildCode || 'Unassigned'}
                       </p>
                     </div>
@@ -185,8 +185,8 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-[var(--border-pixel)]/40">
-                  <span className="font-pixel-body text-[16px] text-[var(--text-secondary)]">
-                    Class: {hero.heroClass} · Status:{' '}
+                  <span className="text-[12.5px] text-[var(--text-secondary)]">
+                    Class: <span className="font-medium text-[var(--text-primary)]">{hero.heroClass}</span> · Status:{' '}
                     <strong
                       className={
                         hero.active
@@ -275,13 +275,16 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                     setAvatar(item.value);
                     setHeroClass(item.label);
                   }}
-                  className={`p-1.5 flex flex-col items-center gap-1 border-2 cursor-pointer ${
+                  className={`p-1.5 flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all ${
                     avatar === item.value
-                      ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)]'
-                      : 'border-[var(--border-pixel)] bg-[var(--bg-inset)]'
+                      ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)] shadow-sm'
+                      : 'border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] opacity-75 hover:opacity-100'
                   }`}
                 >
-                  <PixelAvatar avatar={item.value} size={34} />
+                  <PixelAvatar avatar={item.value} size={32} />
+                  <span className="font-pixel-ui text-[8.5px] text-[var(--text-primary)] capitalize">
+                    {item.value}
+                  </span>
                 </button>
               ))}
             </div>

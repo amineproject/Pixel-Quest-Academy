@@ -18,13 +18,11 @@ import { formatRetroDate, getHeroTotalExp } from '../../utils/exp';
 interface GmDashboardProps {
   state: AcademyState;
   onNavigate: (menu: GmMenuId) => void;
-  onSwitchRole: (role: UserRole) => void;
 }
 
 export const GmDashboard: React.FC<GmDashboardProps> = ({
   state,
   onNavigate,
-  onSwitchRole,
 }) => {
   const activeHeroes = state.heroes.filter((h) => h.active).length;
   const totalExpAwarded = state.grades.reduce((sum, g) => sum + g.expEarned, 0);
@@ -44,10 +42,10 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
               <PixelStar size={12} />
               GUILD MASTER ONLINE
             </div>
-            <h2 className="font-pixel-display text-[13px] text-[var(--text-primary)] truncate mt-0.5">
+            <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] truncate mt-0.5">
               {state.gmProfile.name}
             </h2>
-            <p className="font-pixel-body text-[17px] text-[var(--text-secondary)] truncate">
+            <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
               {state.gmProfile.title} · {state.settings.academicTerm}
             </p>
           </div>
@@ -124,19 +122,7 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
 
       {/* Top Hero & Recent Broadcast Snapshot */}
       <section className="space-y-3">
-        <PixelSectionTitle
-          title="Tavern Highlights"
-          action={
-            <PixelButton
-              type="button"
-              size="sm"
-              variant="success"
-              onClick={() => onSwitchRole(UserRole.HERO)}
-            >
-              Preview Hero
-            </PixelButton>
-          }
-        />
+        <PixelSectionTitle title="Tavern Highlights" />
 
         {topHero && (
           <div className="pixel-box p-3.5 flex items-center justify-between gap-3">
@@ -146,12 +132,12 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
                 <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)]">
                   TOP EXP HERO
                 </p>
-                <p className="font-pixel-body text-[20px] text-[var(--text-primary)] truncate">
+                <p className="text-[15px] font-bold text-[var(--text-primary)] truncate">
                   {topHero.name}
                 </p>
-                <p className="font-pixel-body text-[15px] text-[var(--text-secondary)]">
+                <p className="text-[13px] text-[var(--text-secondary)]">
                   {topHero.heroClass} ·{' '}
-                  <span className="tabular-nums">
+                  <span className="font-semibold text-[var(--accent-warning)] tabular-nums">
                     {getHeroTotalExp(topHero.id, state.grades)} EXP
                   </span>
                 </p>

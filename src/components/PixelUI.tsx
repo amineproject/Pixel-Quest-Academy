@@ -53,13 +53,13 @@ export const PixelSectionTitle: React.FC<{
   subtitle?: string;
   action?: React.ReactNode;
 }> = ({ title, subtitle, action }) => (
-  <div className="flex items-start justify-between gap-3 mb-3">
+  <div className="flex items-start justify-between gap-3 mb-2.5">
     <div className="min-w-0">
-      <h2 className="font-pixel-display text-[13px] tracking-wide text-[var(--text-primary)]">
+      <h2 className="font-pixel-display text-[12px] sm:text-[13px] tracking-wide text-[var(--text-primary)]">
         {title}
       </h2>
       {subtitle && (
-        <p className="font-pixel-body text-[17px] text-[var(--text-secondary)] mt-0.5 leading-snug">
+        <p className="text-[13px] text-[var(--text-secondary)] mt-0.5 leading-snug">
           {subtitle}
         </p>
       )}
@@ -74,7 +74,7 @@ export const PixelFieldLabel: React.FC<{
 }> = ({ htmlFor, children }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-pixel-ui text-[11px] uppercase tracking-wider text-[var(--text-secondary)] mb-1.5"
+    className="block font-pixel-ui text-[9.5px] uppercase tracking-wider text-[var(--text-secondary)] mb-1"
   >
     {children}
   </label>
@@ -84,7 +84,7 @@ export const PixelInput: React.FC<
   React.InputHTMLAttributes<HTMLInputElement>
 > = ({ className = '', ...rest }) => (
   <input
-    className={`pixel-box-inset pixel-focus w-full min-h-[44px] px-3 py-2 font-pixel-body text-[19px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] ${className}`}
+    className={`pixel-box-inset pixel-focus w-full min-h-[40px] px-3 py-1.5 text-[14px] font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] bg-[var(--bg-inset)] outline-none ${className}`}
     {...rest}
   />
 );
@@ -93,7 +93,7 @@ export const PixelSelect: React.FC<
   React.SelectHTMLAttributes<HTMLSelectElement>
 > = ({ className = '', children, ...rest }) => (
   <select
-    className={`pixel-box-inset pixel-focus w-full min-h-[44px] px-3 py-2 font-pixel-body text-[19px] text-[var(--text-primary)] ${className}`}
+    className={`pixel-box-inset pixel-focus w-full min-h-[40px] px-3 py-1.5 text-[14px] font-medium text-[var(--text-primary)] bg-[var(--bg-inset)] outline-none cursor-pointer ${className}`}
     {...rest}
   >
     {children}
@@ -104,7 +104,7 @@ export const PixelTextarea: React.FC<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
 > = ({ className = '', ...rest }) => (
   <textarea
-    className={`pixel-box-inset pixel-focus w-full px-3 py-2 font-pixel-body text-[19px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-snug ${className}`}
+    className={`pixel-box-inset pixel-focus w-full px-3 py-2 text-[14px] font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] bg-[var(--bg-inset)] outline-none leading-relaxed ${className}`}
     {...rest}
   />
 );
@@ -177,7 +177,7 @@ export const PixelModal: React.FC<{
       aria-modal="true"
       aria-label={title}
     >
-      <div className="pixel-box w-full max-w-[468px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)]">
+      <div className="pixel-box w-full max-w-[468px] sm:max-w-[540px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)]">
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] bg-[var(--bg-surface)]">
           <h3 className="font-pixel-display text-[11px] text-[var(--text-primary)] truncate">
             {title}
