@@ -1,0 +1,6 @@
+{
+  "name": "Pixel Quest Academy",
+  "description": "Retro 8-Bit Mobile-First Learning Management System with Game Master (Admin) and Hero (Read-Only Student) roles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

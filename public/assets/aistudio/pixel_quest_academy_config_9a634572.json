@@ -1,0 +1,101 @@
+{
+    "app_name": "Pixel Quest Academy",
+    "theme": "Retro 8-Bit Mobile LMS",
+    "version": "1.0.0",
+    "viewport": {
+        "type": "mobile-first",
+        "max_width": "480px"
+    },
+    "roles": {
+        "admin": {
+            "title": "Game Master (GM) / Guild Master",
+            "access": "full_access",
+            "menu": [
+                {
+                    "id": "hq",
+                    "name": "HQ / Tavern Hall",
+                    "standard_name": "Dashboard",
+                    "icon": "🎮"
+                },
+                {
+                    "id": "dungeons",
+                    "name": "Dungeons / Guilds",
+                    "standard_name": "Kelas",
+                    "icon": "🏰"
+                },
+                {
+                    "id": "heroes",
+                    "name": "Adventurers / Heroes",
+                    "standard_name": "Siswa",
+                    "icon": "🧙‍♂️"
+                },
+                {
+                    "id": "quest_board",
+                    "name": "Quest Board / Broadcast",
+                    "standard_name": "Pengumuman",
+                    "icon": "📜"
+                },
+                {
+                    "id": "realms",
+                    "name": "Realms / Skill Trees",
+                    "standard_name": "Mapel",
+                    "icon": "🗺️"
+                },
+                {
+                    "id": "scrolls",
+                    "name": "Ancient Tomes / Scrolls",
+                    "standard_name": "Materi",
+                    "icon": "📚"
+                },
+                {
+                    "id": "active_quests",
+                    "name": "Active Quests",
+                    "standard_name": "Tugas",
+                    "icon": "⚔️"
+                },
+                {
+                    "id": "exp_loot",
+                    "name": "EXP & Loot",
+                    "standard_name": "Penilaian",
+                    "icon": "🏆"
+                },
+                {
+                    "id": "settings",
+                    "name": "System Settings",
+                    "standard_name": "Pengaturan",
+                    "icon": "⚙️"
+                }
+            ]
+        },
+        "student": {
+            "title": "Hero / Adventurer",
+            "access": "read_only",
+            "menu": [
+                {
+                    "id": "notice",
+                    "name": "Guild Notice (Town Hub)",
+                    "standard_name": "Dashboard (Pengumuman)",
+                    "icon": "📜"
+                },
+                {
+                    "id": "scroll_library",
+                    "name": "Scroll Library",
+                    "standard_name": "Materi",
+                    "icon": "📖"
+                },
+                {
+                    "id": "my_guild",
+                    "name": "My Guild / Party",
+                    "standard_name": "Kelas",
+                    "icon": "🏰"
+                },
+                {
+                    "id": "hero_log",
+                    "name": "Hero Log / EXP & Stats",
+                    "standard_name": "Nilai sesuai Mapel",
+                    "icon": "⭐"
+                }
+            ]
+        }
+    }
+}

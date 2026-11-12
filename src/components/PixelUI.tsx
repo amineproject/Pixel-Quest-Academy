@@ -1,0 +1,293 @@
+import React from 'react';
+import { X } from 'lucide-react';
+import { PixelChestEmpty, PixelShieldDenied } from './PixelArt';
+
+type ButtonVariant = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
+
+interface PixelButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
+}
+
+const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary:
+    'bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--text-on-accent)]',
+  success:
+    'bg-[var(--accent-success)] hover:brightness-110 text-[#11131E]',
+  warning:
+    'bg-[var(--accent-warning)] hover:brightness-110 text-[var(--text-on-warning)]',
+  danger:
+    'bg-[var(--accent-danger)] hover:brightness-110 text-[#11131E]',
+  neutral:
+    'bg-[var(--bg-surface-alt)] hover:brightness-110 text-[var(--text-primary)]',
+};
+
+const SIZE_CLASSES = {
+  sm: 'min-h-[40px] px-3 py-1.5 text-[11px]',
+  md: 'min-h-[44px] px-4 py-2 text-[12px]',
+  lg: 'min-h-[48px] px-5 py-2.5 text-[13px]',
+};
+
+export const PixelButton: React.FC<PixelButtonProps> = ({
+  variant = 'primary',
+  size = 'md',
+  fullWidth = false,
+  className = '',
+  children,
+  ...rest
+}) => {
+  return (
+    <button
+      className={`pixel-btn font-pixel-ui inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+};
+
+export const PixelSectionTitle: React.FC<{
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}> = ({ title, subtitle, action }) => (
+  <div className="flex items-start justify-between gap-3 mb-3">
+    <div className="min-w-0">
+      <h2 className="font-pixel-display text-[13px] tracking-wide text-[var(--text-primary)]">
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="font-pixel-body text-[17px] text-[var(--text-secondary)] mt-0.5 leading-snug">
+          {subtitle}
+        </p>
+      )}
+    </div>
+    {action && <div className="shrink-0">{action}</div>}
+  </div>
+);
+
+export const PixelFieldLabel: React.FC<{
+  htmlFor?: string;
+  children: React.ReactNode;
+}> = ({ htmlFor, children }) => (
+  <label
+    htmlFor={htmlFor}
+    className="block font-pixel-ui text-[11px] uppercase tracking-wider text-[var(--text-secondary)] mb-1.5"
+  >
+    {children}
+  </label>
+);
+
+export const PixelInput: React.FC<
+  React.InputHTMLAttributes<HTMLInputElement>
+> = ({ className = '', ...rest }) => (
+  <input
+    className={`pixel-box-inset pixel-focus w-full min-h-[44px] px-3 py-2 font-pixel-body text-[19px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] ${className}`}
+    {...rest}
+  />
+);
+
+export const PixelSelect: React.FC<
+  React.SelectHTMLAttributes<HTMLSelectElement>
+> = ({ className = '', children, ...rest }) => (
+  <select
+    className={`pixel-box-inset pixel-focus w-full min-h-[44px] px-3 py-2 font-pixel-body text-[19px] text-[var(--text-primary)] ${className}`}
+    {...rest}
+  >
+    {children}
+  </select>
+);
+
+export const PixelTextarea: React.FC<
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+> = ({ className = '', ...rest }) => (
+  <textarea
+    className={`pixel-box-inset pixel-focus w-full px-3 py-2 font-pixel-body text-[19px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-snug ${className}`}
+    {...rest}
+  />
+);
+
+export const PixelExpBar: React.FC<{
+  percent: number;
+  labelLeft?: string;
+  labelRight?: string;
+  color?: string;
+}> = ({
+  percent,
+  labelLeft,
+  labelRight,
+  color = 'var(--accent-warning)',
+}) => {
+  const safePercent = Math.max(0, Math.min(100, percent));
+  return (
+    <div>
+      {(labelLeft || labelRight) && (
+        <div className="flex items-center justify-between text-[15px] font-pixel-body text-[var(--text-secondary)] mb-1 tabular-nums">
+          <span>{labelLeft}</span>
+          <span>{labelRight}</span>
+        </div>
+      )}
+      <div className="pixel-box-inset h-4 w-full p-0.5">
+        <div
+          className="h-full transition-all duration-200"
+          style={{
+            width: `${safePercent}%`,
+            backgroundColor: color,
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+export const PixelEmptyChest: React.FC<{
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+}> = ({
+  title = 'No Scrolls Found in This Chest!',
+  description = 'Belum ada gulungan atau catatan di dalam peti ini.',
+  action,
+}) => (
+  <div className="pixel-box p-6 flex flex-col items-center text-center gap-3">
+    <PixelChestEmpty size={76} />
+    <h3 className="font-pixel-display text-[12px] text-[var(--accent-warning)] leading-relaxed">
+      {title}
+    </h3>
+    <p className="font-pixel-body text-[18px] text-[var(--text-secondary)] max-w-[30ch]">
+      {description}
+    </p>
+    {action && <div className="mt-1">{action}</div>}
+  </div>
+);
+
+export const PixelModal: React.FC<{
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}> = ({ open, title, onClose, children }) => {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div className="pixel-box w-full max-w-[468px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)]">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] bg-[var(--bg-surface)]">
+          <h3 className="font-pixel-display text-[11px] text-[var(--text-primary)] truncate">
+            {title}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close modal"
+            className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-4 overflow-y-auto pixel-scroll space-y-4">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const PixelConfirmDialog: React.FC<{
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({
+  open,
+  title,
+  message,
+  confirmLabel = 'Delete',
+  onConfirm,
+  onCancel,
+}) => (
+  <PixelModal open={open} title={title} onClose={onCancel}>
+    <p className="font-pixel-body text-[19px] text-[var(--text-primary)]">
+      {message}
+    </p>
+    <div className="grid grid-cols-2 gap-3 pt-2">
+      <PixelButton type="button" variant="neutral" onClick={onCancel}>
+        Cancel
+      </PixelButton>
+      <PixelButton type="button" variant="danger" onClick={onConfirm}>
+        {confirmLabel}
+      </PixelButton>
+    </div>
+  </PixelModal>
+);
+
+export const AccessDeniedModal: React.FC<{
+  open: boolean;
+  attemptedRoute: string | null;
+  onReturnToHub: () => void;
+}> = ({ open, attemptedRoute, onReturnToHub }) => {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+      role="alertdialog"
+      aria-modal="true"
+      aria-label="Access Denied"
+    >
+      <div className="pixel-box w-full max-w-[420px] p-5 bg-[var(--bg-canvas)] text-center space-y-4">
+        <div className="flex justify-center">
+          <PixelShieldDenied size={84} />
+        </div>
+        <h2 className="font-pixel-display text-[13px] text-[var(--accent-danger)] leading-relaxed">
+          ACCESS DENIED! YOUR LEVEL IS TOO LOW!
+        </h2>
+        <p className="font-pixel-body text-[19px] text-[var(--text-secondary)]">
+          Akun Hero beroperasi dalam mode Read-Only. Area{' '}
+          <span className="text-[var(--accent-warning)]">
+            {attemptedRoute || 'Game Master'}
+          </span>{' '}
+          hanya dapat diakses oleh Guild Master.
+        </p>
+        <PixelButton
+          type="button"
+          variant="warning"
+          fullWidth
+          onClick={onReturnToHub}
+        >
+          Return to Town Hub
+        </PixelButton>
+      </div>
+    </div>
+  );
+};
+
+export const PixelToast: React.FC<{
+  message: string | null;
+  tone?: 'success' | 'warning' | 'danger';
+}> = ({ message, tone = 'success' }) => {
+  if (!message) return null;
+  const bg =
+    tone === 'danger'
+      ? 'bg-[var(--accent-danger)] text-[#11131E]'
+      : tone === 'warning'
+        ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
+        : 'bg-[var(--accent-success)] text-[#11131E]';
+
+  return (
+    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] max-w-[432px] pointer-events-none">
+      <div
+        className={`pixel-box px-4 py-2.5 font-pixel-ui text-[11px] text-center ${bg}`}
+      >
+        {message}
+      </div>
+    </div>
+  );
+};
