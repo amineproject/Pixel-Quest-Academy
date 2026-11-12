@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, Save, XCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Save,
+  XCircle,
+} from 'lucide-react';
 import { AcademyState, ExpGrade, GradeStatus } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
@@ -7,6 +16,7 @@ import {
   PixelEmptyChest,
   PixelFieldLabel,
   PixelInput,
+  PixelModal,
   PixelSectionTitle,
   PixelSelect,
 } from '../../components/PixelUI';
@@ -17,6 +27,11 @@ import {
   getRankFromScore,
   sortDungeonsAlphabetically,
 } from '../../utils/exp';
+import {
+  buildClassRecapData,
+  downloadRecapCsv,
+  downloadRecapHtmlReport,
+} from '../../utils/exportRecap';
 
 interface GmExpLootProps {
   state: AcademyState;
@@ -67,6 +82,12 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
   );
   const [selectedDungeonId, setSelectedDungeonId] = useState('all');
 
+  // Class Recap Download Modal State
+  const [recapModalOpen, setRecapModalOpen] = useState(false);
+  const [recapDungeonId, setRecapDungeonId] = useState('all');
+  const [recapRealmId, setRecapRealmId] = useState('all');
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+
   useEffect(() => {
     const nextQuests = state.quests.filter(
       (q) => q.realmId === selectedRealmId
@@ -79,6 +100,21 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
   const activeQuest = state.quests.find((q) => q.id === selectedQuestId);
 
   const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+
+  const openRecapModal = () => {
+    const defaultDungeon =
+      selectedDungeonId !== 'all'
+        ? selectedDungeonId
+        : sortedDungeons[0]?.id || 'all';
+    setRecapDungeonId(defaultDungeon);
+    setRecapRealmId('all');
+    setDownloadNotice(null);
+    setRecapModalOpen(true);
+  };
+
+  const recapPreview = recapModalOpen
+    ? buildClassRecapData(state, recapDungeonId, recapRealmId)
+    : null;
 
   const eligibleHeroes = state.heroes
     .filter((h) => {
@@ -154,6 +190,17 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
       <PixelSectionTitle
         title="EXP & Loot / Penilaian"
         subtitle="Isi status & skor siswa per Realm & Quest (tampil simbol di akun siswa)"
+        action={
+          <PixelButton
+            type="button"
+            size="sm"
+            variant="warning"
+            onClick={openRecapModal}
+          >
+            <Download size={14} />
+            Rekap Kelas
+          </PixelButton>
+        }
       />
 
       <div className="pixel-box p-3.5 space-y-3">
@@ -368,6 +415,157 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
           })}
         </div>
       )}
+
+      {/* Download Class Recap Modal */}
+      <PixelModal
+        open={recapModalOpen}
+        title="Unduh Rekap Penilaian Kelas"
+        onClose={() => setRecapModalOpen(false)}
+      >
+        <div className="space-y-3.5">
+          <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+            Pilih kelas dan mata pelajaran untuk melihat ringkasan nilai lalu unduh dalam format Excel/CSV atau Laporan Cetak (HTML/PDF).
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <PixelFieldLabel htmlFor="recap-dng">Pilih Kelas</PixelFieldLabel>
+              <PixelSelect
+                id="recap-dng"
+                value={recapDungeonId}
+                onChange={(e) => {
+                  setRecapDungeonId(e.target.value);
+                  setDownloadNotice(null);
+                }}
+              >
+                <option value="all">Semua Kelas ({sortedDungeons.length})</option>
+                {sortedDungeons.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.guildCode}) — {d.tier}
+                  </option>
+                ))}
+              </PixelSelect>
+            </div>
+
+            <div>
+              <PixelFieldLabel htmlFor="recap-realm">Pilih Mata Pelajaran</PixelFieldLabel>
+              <PixelSelect
+                id="recap-realm"
+                value={recapRealmId}
+                onChange={(e) => {
+                  setRecapRealmId(e.target.value);
+                  setDownloadNotice(null);
+                }}
+              >
+                <option value="all">Semua Mata Pelajaran</option>
+                {state.realms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.code} — {r.name}
+                  </option>
+                ))}
+              </PixelSelect>
+            </div>
+          </div>
+
+          {recapPreview && (
+            <div className="pixel-box-inset p-3 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
+                <span className="font-semibold text-[var(--accent-warning)]">
+                  {recapPreview.classLabel}
+                </span>
+                <span className="text-[var(--text-muted)] tabular-nums">
+                  {recapPreview.rows.length} Siswa · {recapPreview.quests.length} Tugas
+                </span>
+              </div>
+
+              {recapPreview.rows.length === 0 ? (
+                <p className="text-[12.5px] text-[var(--text-muted)] py-2 text-center">
+                  Belum ada siswa terdaftar di kelas ini.
+                </p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto pixel-scroll space-y-1.5 pr-1">
+                  {recapPreview.rows.map((row) => (
+                    <div
+                      key={row.hero.id}
+                      className="p-2 bg-[var(--bg-surface)] border border-[var(--border-pixel)]/50 flex items-center justify-between gap-2 text-[12px]"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-bold text-[var(--text-primary)] truncate">
+                          {row.no}. {row.hero.name}
+                        </p>
+                        <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                          {row.dungeonName} · NIS {row.hero.studentCode} ·{' '}
+                          <span className="text-emerald-400">✓{row.tuntasCount}</span>{' '}
+                          <span className="text-lime-300">!{row.prosesCount}</span>{' '}
+                          <span className="text-amber-300">▲{row.remidialCount}</span>{' '}
+                          <span className="text-rose-400">✗{row.belumCount}</span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 tabular-nums">
+                        <p className="font-bold text-[var(--accent-warning)]">
+                          Rata: {row.avgScore} ({row.rank})
+                        </p>
+                        <p className="text-[11px] text-[var(--accent-success)]">
+                          {row.totalExp} EXP
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {downloadNotice && (
+            <p className="text-[12.5px] font-semibold text-[var(--accent-success)] bg-[var(--bg-inset)] p-2 border border-[var(--accent-success)]">
+              ✓ {downloadNotice}
+            </p>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            <PixelButton
+              type="button"
+              variant="success"
+              disabled={!recapPreview || recapPreview.rows.length === 0}
+              onClick={() => {
+                if (!recapPreview) return;
+                downloadRecapCsv(state, recapPreview);
+                setDownloadNotice(
+                  `File CSV rekap "${recapPreview.classLabel}" berhasil diunduh!`
+                );
+              }}
+            >
+              <FileSpreadsheet size={15} />
+              Unduh Excel / CSV (.csv)
+            </PixelButton>
+
+            <PixelButton
+              type="button"
+              variant="primary"
+              disabled={!recapPreview || recapPreview.rows.length === 0}
+              onClick={() => {
+                if (!recapPreview) return;
+                downloadRecapHtmlReport(state, recapPreview);
+                setDownloadNotice(
+                  `Laporan cetak "${recapPreview.classLabel}" berhasil diunduh!`
+                );
+              }}
+            >
+              <FileText size={15} />
+              Unduh Laporan Cetak (.html)
+            </PixelButton>
+          </div>
+
+          <PixelButton
+            type="button"
+            variant="neutral"
+            fullWidth
+            onClick={() => setRecapModalOpen(false)}
+          >
+            Tutup
+          </PixelButton>
+        </div>
+      </PixelModal>
     </div>
   );
 };
