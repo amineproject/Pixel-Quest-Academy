@@ -13,6 +13,7 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { sortDungeonsAlphabetically } from '../../utils/exp';
 
 interface GmDungeonsProps {
   state: AcademyState;
@@ -42,10 +43,11 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
 
   const uniqueTiers = Array.from(
     new Set(state.dungeons.map((d) => d.tier).filter(Boolean))
-  );
+  ).sort((a, b) => a.localeCompare(b, 'id', { numeric: true, sensitivity: 'base' }));
   const tierFilterOptions = ['all', ...uniqueTiers];
 
-  const filtered = state.dungeons.filter(
+  const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+  const filtered = sortedDungeons.filter(
     (d) => tierFilter === 'all' || d.tier === tierFilter
   );
 

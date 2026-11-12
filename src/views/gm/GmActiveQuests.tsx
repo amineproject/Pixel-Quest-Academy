@@ -16,7 +16,7 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
-import { formatRetroDate } from '../../utils/exp';
+import { formatRetroDate, sortDungeonsAlphabetically } from '../../utils/exp';
 
 interface GmActiveQuestsProps {
   state: AcademyState;
@@ -212,9 +212,9 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                 onChange={(e) => setDungeonId(e.target.value)}
               >
                 <option value="all">All Guilds</option>
-                {state.dungeons.map((d) => (
+                {sortDungeonsAlphabetically(state.dungeons).map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.guildCode}
+                    {d.name} ({d.guildCode})
                   </option>
                 ))}
               </PixelSelect>

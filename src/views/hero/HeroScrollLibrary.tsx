@@ -12,7 +12,7 @@ import {
   PixelModal,
   PixelSectionTitle,
 } from '../../components/PixelUI';
-import { formatRetroDate } from '../../utils/exp';
+import { formatRetroDate, getHeroEffectiveRealmIds } from '../../utils/exp';
 
 interface HeroScrollLibraryProps {
   state: AcademyState;
@@ -27,12 +27,19 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
   const [tab, setTab] = useState<'tomes' | 'quests'>('tomes');
   const [readingTome, setReadingTome] = useState<AncientTome | null>(null);
 
+  const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
+  const visibleRealms = allowedRealmIds
+    ? state.realms.filter((r) => allowedRealmIds.includes(r.id))
+    : state.realms;
+
   const filteredTomes = state.tomes
+    .filter((t) => !allowedRealmIds || allowedRealmIds.includes(t.realmId))
     .filter((t) => selectedRealmId === 'all' || t.realmId === selectedRealmId)
     .sort((a, b) => a.chapter - b.chapter);
 
   const filteredQuests = state.quests.filter(
     (q) =>
+      (!allowedRealmIds || allowedRealmIds.includes(q.realmId)) &&
       (selectedRealmId === 'all' || q.realmId === selectedRealmId) &&
       (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId)
   );
@@ -85,7 +92,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
         >
           All Realms
         </button>
-        {state.realms.map((realm) => (
+        {visibleRealms.map((realm) => (
           <button
             key={realm.id}
             type="button"

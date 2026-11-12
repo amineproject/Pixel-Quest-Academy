@@ -17,6 +17,7 @@ import {
 } from '../../components/PixelUI';
 import {
   formatRetroDate,
+  getHeroEffectiveRealmIds,
   getHeroLevelProgress,
   getHeroTotalExp,
 } from '../../utils/exp';
@@ -51,9 +52,12 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
     .filter((n) => filter === 'all' || n.priority === filter)
     .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
 
+  const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
   const upcomingQuests = state.quests
     .filter(
-      (q) => q.dungeonId === 'all' || q.dungeonId === hero.dungeonId
+      (q) =>
+        (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId) &&
+        (!allowedRealmIds || allowedRealmIds.includes(q.realmId))
     )
     .slice(0, 2);
 

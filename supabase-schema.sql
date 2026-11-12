@@ -184,19 +184,19 @@ CREATE POLICY "Allow all on settings" ON public.settings FOR ALL USING (true);
 -- ----------------------------------------------------------------------------
 
 -- Dungeons
-INSERT INTO public.dungeons (id, name, tier, guild_code, capacity, description) VALUES
-('dng-x-ipa-1', 'Crimson Citadel', 'Kelas X', 'X-IPA-1', 32, 'Rombel sains dasar berfokus pada eksplorasi alchemical chemistry dan biologi terapan.'),
-('dng-x-ipa-2', 'Emerald Bastion', 'Kelas X', 'X-IPA-2', 30, 'Skuadron petualang kelas X dengan penekanan logika matematika dan riset lapangan.'),
-('dng-xi-ipa-1', 'Arcane Spire', 'Kelas XI', 'XI-IPA-1', 28, 'Menara pembelajaran tingkat lanjut untuk eksperimen reaksi kimia dan genetika.')
+INSERT INTO public.dungeons (id, name, tier, guild_code, capacity, description, realm_ids) VALUES
+('dng-x-ipa-1', 'Crimson Citadel', 'Kelas X', 'X-IPA-1', 32, 'Rombel sains dasar berfokus pada eksplorasi alchemical chemistry dan biologi terapan.', '["rlm-chem","rlm-math","rlm-bio"]'),
+('dng-x-ipa-2', 'Emerald Bastion', 'Kelas X', 'X-IPA-2', 30, 'Skuadron petualang kelas X dengan penekanan logika matematika dan riset lapangan.', '["rlm-math","rlm-bio"]'),
+('dng-xi-ipa-1', 'Arcane Spire', 'Kelas XI', 'XI-IPA-1', 28, 'Menara pembelajaran tingkat lanjut untuk eksperimen reaksi kimia dan genetika.', '["rlm-chem","rlm-math"]')
 ON CONFLICT (id) DO NOTHING;
 
 -- Heroes
-INSERT INTO public.heroes (id, name, username, student_code, dungeon_id, avatar, hero_class, active, joined_date) VALUES
-('hr-rian', 'Rian Pratama', 'rian_x1', '261001', 'dng-x-ipa-1', 'knight', 'Arcane Knight', true, '2026-07-14'),
-('hr-sari', 'Sari Wulandari', 'sari_x1', '261002', 'dng-x-ipa-1', 'alchemist', 'Potion Alchemist', true, '2026-07-14'),
-('hr-dimas', 'Dimas Nugroho', 'dimas_x1', '261003', 'dng-x-ipa-1', 'mage', 'Rune Mage', true, '2026-07-15'),
-('hr-nadia', 'Nadia Kusuma', 'nadia_x1', '261004', 'dng-x-ipa-1', 'ranger', 'Forest Ranger', true, '2026-07-15'),
-('hr-bagas', 'Bagas Aditya', 'bagas_x2', '261015', 'dng-x-ipa-2', 'scholar', 'Scroll Scholar', true, '2026-07-16')
+INSERT INTO public.heroes (id, name, username, student_code, dungeon_id, avatar, hero_class, active, joined_date, enrolled_realm_ids) VALUES
+('hr-rian', 'Rian Pratama', 'rian_x1', '261001', 'dng-x-ipa-1', 'knight', 'Arcane Knight', true, '2026-07-14', '["rlm-chem","rlm-math","rlm-bio"]'),
+('hr-sari', 'Sari Wulandari', 'sari_x1', '261002', 'dng-x-ipa-1', 'alchemist', 'Potion Alchemist', true, '2026-07-14', '["rlm-chem","rlm-bio"]'),
+('hr-dimas', 'Dimas Nugroho', 'dimas_x1', '261003', 'dng-x-ipa-1', 'mage', 'Rune Mage', true, '2026-07-15', '["rlm-chem","rlm-math"]'),
+('hr-nadia', 'Nadia Kusuma', 'nadia_x1', '261004', 'dng-x-ipa-1', 'ranger', 'Forest Ranger', true, '2026-07-15', '["rlm-bio","rlm-math"]'),
+('hr-bagas', 'Bagas Aditya', 'bagas_x2', '261015', 'dng-x-ipa-2', 'scholar', 'Scroll Scholar', true, '2026-07-16', '["rlm-math","rlm-bio"]')
 ON CONFLICT (id) DO NOTHING;
 
 -- Realms

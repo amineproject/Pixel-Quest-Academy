@@ -40,6 +40,7 @@ export async function seedInitialDataIfEmpty() {
           guildCode: d.guildCode,
           capacity: d.capacity,
           description: d.description,
+          realmIds: JSON.stringify(d.realmIds || []),
         });
       }
 
@@ -55,6 +56,7 @@ export async function seedInitialDataIfEmpty() {
           heroClass: h.heroClass,
           active: h.active,
           joinedDate: h.joinedDate,
+          enrolledRealmIds: JSON.stringify(h.enrolledRealmIds || []),
         });
       }
 

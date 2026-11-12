@@ -10,7 +10,12 @@ import {
   PixelSectionTitle,
   PixelSelect,
 } from '../../components/PixelUI';
-import { calculateExpEarned, getRankFromScore } from '../../utils/exp';
+import {
+  calculateExpEarned,
+  getHeroEffectiveRealmIds,
+  getRankFromScore,
+  sortDungeonsAlphabetically,
+} from '../../utils/exp';
 
 interface GmExpLootProps {
   state: AcademyState;
@@ -40,20 +45,31 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
 
   const activeQuest = state.quests.find((q) => q.id === selectedQuestId);
 
-  const eligibleHeroes = state.heroes.filter((h) => {
-    if (!h.active) return false;
-    if (selectedDungeonId !== 'all' && h.dungeonId !== selectedDungeonId) {
-      return false;
-    }
-    if (
-      activeQuest &&
-      activeQuest.dungeonId !== 'all' &&
-      selectedDungeonId === 'all'
-    ) {
-      return h.dungeonId === activeQuest.dungeonId;
-    }
-    return true;
-  });
+  const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+
+  const eligibleHeroes = state.heroes
+    .filter((h) => {
+      if (!h.active) return false;
+      if (selectedDungeonId !== 'all' && h.dungeonId !== selectedDungeonId) {
+        return false;
+      }
+      if (
+        activeQuest &&
+        activeQuest.dungeonId !== 'all' &&
+        selectedDungeonId === 'all' &&
+        h.dungeonId !== activeQuest.dungeonId
+      ) {
+        return false;
+      }
+      if (activeQuest?.realmId) {
+        const allowedRealms = getHeroEffectiveRealmIds(h, state.dungeons);
+        if (allowedRealms && !allowedRealms.includes(activeQuest.realmId)) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
 
   // Local draft scores for smooth editing before clicking Save
   const [draftScores, setDraftScores] = useState<Record<string, number>>({});
@@ -144,9 +160,9 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
             <option value="all">
               Target Quest ({activeQuest?.dungeonId === 'all' ? 'All Guilds' : 'Guild Terkait'})
             </option>
-            {state.dungeons.map((d) => (
+            {sortedDungeons.map((d) => (
               <option key={d.id} value={d.id}>
-                {d.guildCode} — {d.name}
+                {d.name} ({d.guildCode})
               </option>
             ))}
           </PixelSelect>

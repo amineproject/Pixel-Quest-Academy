@@ -1,4 +1,4 @@
-import { ExpGrade } from '../types/lms';
+import { Dungeon, ExpGrade, HeroStudent } from '../types/lms';
 
 export type LetterRank = 'S' | 'A' | 'B' | 'C' | 'D';
 
@@ -72,4 +72,34 @@ export function formatRetroDate(isoDate: string): string {
     return isoDate;
   }
   return `${day} ${months[monthIndex]} ${year}`;
+}
+
+export function sortDungeonsAlphabetically<T extends { name: string; guildCode?: string }>(
+  list: T[]
+): T[] {
+  return [...list].sort((a, b) => {
+    const nameDiff = (a.name || '').localeCompare(b.name || '', 'id', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+    if (nameDiff !== 0) return nameDiff;
+    return (a.guildCode || '').localeCompare(b.guildCode || '', 'id', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+  });
+}
+
+export function getHeroEffectiveRealmIds(
+  hero: HeroStudent,
+  dungeons: Dungeon[]
+): string[] | null {
+  if (hero.enrolledRealmIds && hero.enrolledRealmIds.length > 0) {
+    return hero.enrolledRealmIds;
+  }
+  const dungeon = dungeons.find((d) => d.id === hero.dungeonId);
+  if (dungeon?.realmIds && dungeon.realmIds.length > 0) {
+    return dungeon.realmIds;
+  }
+  return null;
 }

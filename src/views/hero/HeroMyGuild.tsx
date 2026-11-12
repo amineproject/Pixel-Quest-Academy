@@ -5,7 +5,11 @@ import {
   PixelEmptyChest,
   PixelSectionTitle,
 } from '../../components/PixelUI';
-import { getHeroLevelProgress, getHeroTotalExp } from '../../utils/exp';
+import {
+  getHeroEffectiveRealmIds,
+  getHeroLevelProgress,
+  getHeroTotalExp,
+} from '../../utils/exp';
 
 interface HeroMyGuildProps {
   state: AcademyState;
@@ -14,6 +18,10 @@ interface HeroMyGuildProps {
 
 export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
   const dungeon = state.dungeons.find((d) => d.id === hero.dungeonId);
+  const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons) || [];
+  const enrolledRealms = state.realms.filter((r) =>
+    allowedRealmIds.includes(r.id)
+  );
   const partyMembers = state.heroes
     .filter((h) => h.dungeonId === hero.dungeonId && h.active)
     .sort(
@@ -45,6 +53,29 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
           <p className="font-pixel-body text-[18px] text-[var(--text-secondary)]">
             {dungeon.description}
           </p>
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="font-pixel-ui text-[9px] text-[var(--accent-warning)] uppercase">
+              Mapel Diikuti ({enrolledRealms.length}):
+            </span>
+            {enrolledRealms.length > 0 ? (
+              enrolledRealms.map((realm) => (
+                <span
+                  key={realm.id}
+                  className="text-[11px] font-medium px-2 py-0.5 border border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] flex items-center gap-1"
+                >
+                  <span
+                    className="w-2 h-2 inline-block shrink-0"
+                    style={{ backgroundColor: realm.accentColor }}
+                  />
+                  <span>{realm.name}</span>
+                </span>
+              ))
+            ) : (
+              <span className="text-[11px] text-[var(--text-muted)] italic">
+                Semua Mapel
+              </span>
+            )}
+          </div>
           <p className="font-pixel-body text-[16px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-pixel)]/40 tabular-nums">
             Kapasitas Guild: {partyMembers.length}/{dungeon.capacity} Heroes Aktif
           </p>
