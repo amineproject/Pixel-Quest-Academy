@@ -57,6 +57,9 @@ export interface GameMasterProfile {
   title: string;
   specialty: string;
   avatar: AvatarClass;
+  username?: string;
+  password?: string;
+  requirePassword?: boolean;
 }
 
 export interface Dungeon {

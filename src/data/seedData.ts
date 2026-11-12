@@ -8,6 +8,9 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
     title: 'Guild Master of Science',
     specialty: 'Guru IPA & Pembina Sains',
     avatar: 'guild_master',
+    username: 'admin',
+    password: 'admin',
+    requirePassword: false,
   },
   settings: {
     theme: 'sunny_quest',

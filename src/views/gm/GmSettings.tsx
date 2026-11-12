@@ -63,8 +63,16 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
 }) => {
   const [name, setName] = useState(state.gmProfile.name);
   const [title, setTitle] = useState(state.gmProfile.title);
+  const [specialty, setSpecialty] = useState(state.gmProfile.specialty || 'Guru IPA & Pembina Sains');
+  const [avatar, setAvatar] = useState(state.gmProfile.avatar || 'guild_master');
+  const [username, setUsername] = useState(state.gmProfile.username || 'admin');
+  const [password, setPassword] = useState(state.gmProfile.password || 'admin');
+  const [requirePassword, setRequirePassword] = useState(
+    Boolean(state.gmProfile.requirePassword)
+  );
   const [term, setTerm] = useState(state.settings.academicTerm);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,11 +80,18 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
       ...state.gmProfile,
       name: name.trim() || state.gmProfile.name,
       title: title.trim() || state.gmProfile.title,
+      specialty: specialty.trim() || state.gmProfile.specialty,
+      avatar,
+      username: username.trim() || 'admin',
+      password: password.trim() || 'admin',
+      requirePassword,
     });
     onUpdateSettings({
       ...state.settings,
       academicTerm: term.trim() || state.settings.academicTerm,
     });
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2400);
   };
 
   return (
@@ -161,40 +176,153 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         </div>
       </section>
 
-      {/* GM Profile Editor */}
-      <form onSubmit={handleSaveProfile} className="pixel-box p-4 space-y-3">
+      {/* GM Profile & Security Editor */}
+      <form onSubmit={handleSaveProfile} className="pixel-box p-4 space-y-3.5">
         <div className="flex items-center gap-3">
-          <PixelAvatar avatar={state.gmProfile.avatar} size={44} />
-          <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
-            GAME MASTER PROFILE
-          </h3>
+          <PixelAvatar avatar={avatar} size={48} />
+          <div>
+            <h3 className="font-pixel-ui text-[12px] text-[var(--accent-warning)]">
+              GAME MASTER PROFILE & SECURITY
+            </h3>
+            <p className="font-pixel-body text-[15px] text-[var(--text-secondary)]">
+              Kustomisasi identitas guru dan keamanan akun admin
+            </p>
+          </div>
         </div>
+
+        {/* GM Avatar Selection */}
         <div>
-          <PixelFieldLabel htmlFor="gm-name">Nama Game Master</PixelFieldLabel>
-          <PixelInput
-            id="gm-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <PixelFieldLabel>Pilih Avatar Guild Master</PixelFieldLabel>
+          <div className="grid grid-cols-6 gap-2">
+            {[
+              { id: 'guild_master' as const, label: 'Master' },
+              { id: 'knight' as const, label: 'Knight' },
+              { id: 'mage' as const, label: 'Mage' },
+              { id: 'alchemist' as const, label: 'Alchemist' },
+              { id: 'ranger' as const, label: 'Ranger' },
+              { id: 'scholar' as const, label: 'Scholar' },
+            ].map((av) => (
+              <button
+                key={av.id}
+                type="button"
+                onClick={() => setAvatar(av.id)}
+                className={`p-1.5 flex flex-col items-center gap-1 border-2 cursor-pointer ${
+                  avatar === av.id
+                    ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)]'
+                    : 'border-[var(--border-pixel)] bg-[var(--bg-inset)] opacity-70 hover:opacity-100'
+                }`}
+              >
+                <PixelAvatar avatar={av.id} size={32} />
+                <span className="font-pixel-ui text-[8px] text-[var(--text-primary)]">
+                  {av.label}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div>
-          <PixelFieldLabel htmlFor="gm-title">Gelar / Jabatan</PixelFieldLabel>
-          <PixelInput
-            id="gm-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <PixelFieldLabel htmlFor="gm-name">Nama Game Master (Guru)</PixelFieldLabel>
+            <PixelInput
+              id="gm-name"
+              required
+              placeholder="Contoh: Pak Budi Santoso, S.Pd"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <PixelFieldLabel htmlFor="gm-title">Gelar / Posisi di Guild</PixelFieldLabel>
+            <PixelInput
+              id="gm-title"
+              required
+              placeholder="Contoh: Guild Master of Science"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
         </div>
-        <div>
-          <PixelFieldLabel htmlFor="gm-term">Periode Akademik</PixelFieldLabel>
-          <PixelInput
-            id="gm-term"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-          />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <PixelFieldLabel htmlFor="gm-spec">Mata Pelajaran / Keahlian</PixelFieldLabel>
+            <PixelInput
+              id="gm-spec"
+              placeholder="Contoh: Guru IPA & Pembina Sains"
+              value={specialty}
+              onChange={(e) => setSpecialty(e.target.value)}
+            />
+          </div>
+          <div>
+            <PixelFieldLabel htmlFor="gm-term">Periode Akademik</PixelFieldLabel>
+            <PixelInput
+              id="gm-term"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+            />
+          </div>
         </div>
-        <PixelButton type="submit" variant="primary" fullWidth>
-          Save Profile
+
+        {/* Security & Credentials */}
+        <div className="pt-2 border-t border-[var(--border-pixel)]/40 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase">
+              🔐 Akun & Password Guru
+            </span>
+            <span className="font-pixel-body text-[14px] text-[var(--text-muted)]">
+              Proteksi Akses Siswa
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <PixelFieldLabel htmlFor="gm-user">Username Login GM</PixelFieldLabel>
+              <PixelInput
+                id="gm-user"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <PixelFieldLabel htmlFor="gm-pass">Password Akun GM</PixelFieldLabel>
+              <PixelInput
+                id="gm-pass"
+                type="text"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <label className="flex items-start gap-2.5 p-2.5 pixel-box-inset cursor-pointer bg-[var(--bg-inset)]">
+            <input
+              type="checkbox"
+              checked={requirePassword}
+              onChange={(e) => setRequirePassword(e.target.checked)}
+              className="w-5 h-5 accent-[var(--accent-warning)] mt-0.5 shrink-0"
+            />
+            <div className="space-y-0.5">
+              <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] block">
+                KUNCI MODE GAME MASTER (Wajibkan Password)
+              </span>
+              <p className="font-pixel-body text-[15px] text-[var(--text-secondary)] leading-tight">
+                Hilangkan tombol 1-klik "Fast Enter" di layar login agar siswa tidak bisa sembarangan masuk ke mode guru.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {saveSuccess && (
+          <p className="font-pixel-body text-[16px] text-[var(--accent-success)]">
+            ✓ Profil & pengaturan keamanan Game Master berhasil disimpan!
+          </p>
+        )}
+
+        <PixelButton type="submit" variant="primary" fullWidth size="md">
+          Simpan Profil & Pengaturan Keamanan
         </PixelButton>
       </form>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, Sparkles, UserCheck, Volume2, VolumeX, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Crown, Sparkles, UserCheck, Volume2, VolumeX, ShieldCheck, ArrowRight, Lock } from 'lucide-react';
 import {
   AcademyState,
   HeroStudent,
@@ -82,14 +82,36 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const handleGmSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setGmError(null);
-    if (!gmUsername.trim()) {
+    const expectedUsername = (state.gmProfile.username || 'admin').trim().toLowerCase();
+    const expectedPassword = state.gmProfile.password || 'admin';
+
+    const inputUser = gmUsername.trim().toLowerCase();
+    const inputPass = gmPassword.trim();
+
+    if (!inputUser) {
       setGmError('Masukkan username Game Master!');
       playRetroSound('error', state.settings.soundEnabled);
       return;
     }
-    // Accepting 'admin', 'gm_budi', or any demo input
-    playRetroSound('start', state.settings.soundEnabled);
-    onLoginAsGm();
+
+    if (!inputPass) {
+      setGmError('Masukkan password Game Master!');
+      playRetroSound('error', state.settings.soundEnabled);
+      return;
+    }
+
+    // Verify credentials: matches configured credentials OR master default 'admin'/'admin'
+    const isMatch =
+      (inputUser === expectedUsername && inputPass === expectedPassword) ||
+      (inputUser === 'admin' && (inputPass === 'admin' || inputPass === 'admin123'));
+
+    if (isMatch) {
+      playRetroSound('start', state.settings.soundEnabled);
+      onLoginAsGm();
+    } else {
+      setGmError('Username atau Password Game Master salah!');
+      playRetroSound('error', state.settings.soundEnabled);
+    }
   };
 
   return (
@@ -327,20 +349,34 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     Akses penuh untuk mengelola 9 Modul: Dungeons, Siswa, Quest Board, Realms, Tomes, Quests, & EXP Loot.
                   </div>
 
-                  {/* 1-Tap Fast GM Login */}
-                  <PixelButton
-                    type="button"
-                    variant="warning"
-                    fullWidth
-                    size="lg"
-                    onClick={() => {
-                      playRetroSound('start', state.settings.soundEnabled);
-                      onLoginAsGm();
-                    }}
-                  >
-                    <Crown size={18} />
-                    Fast Enter as Game Master
-                  </PixelButton>
+                  {/* Fast Enter or Lock Badge depending on requirePassword */}
+                  {state.gmProfile.requirePassword ? (
+                    <div className="pixel-box-inset p-2.5 text-center border-2 border-[var(--accent-warning)] bg-[var(--bg-inset)]">
+                      <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] flex items-center justify-center gap-1.5">
+                        <Lock size={13} />
+                        KUNCI KEAMANAN AKTIF: WAJIB MASUK DENGAN PASSWORD
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <PixelButton
+                        type="button"
+                        variant="warning"
+                        fullWidth
+                        size="lg"
+                        onClick={() => {
+                          playRetroSound('start', state.settings.soundEnabled);
+                          onLoginAsGm();
+                        }}
+                      >
+                        <Crown size={18} />
+                        Fast Enter as Game Master
+                      </PixelButton>
+                      <span className="font-pixel-body text-[13px] text-[var(--text-muted)] block text-center">
+                        (Akses 1-klik aktif untuk demo · Dapat dikunci di Settings)
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* GM Credentials Form */}
