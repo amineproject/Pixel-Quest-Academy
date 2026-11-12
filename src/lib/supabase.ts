@@ -158,25 +158,45 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
     }
 
     return {
-      dungeons: dList.map((d: any) => ({
-        id: d.id,
-        name: d.name,
-        tier: d.tier,
-        guildCode: d.guild_code,
-        capacity: Number(d.capacity) || 30,
-        description: d.description || '',
-      })),
-      heroes: hList.map((h: any) => ({
-        id: h.id,
-        name: h.name,
-        username: h.username,
-        studentCode: h.student_code,
-        dungeonId: h.dungeon_id || '',
-        avatar: h.avatar || 'knight',
-        heroClass: h.hero_class || 'Adventurer',
-        active: Boolean(h.active),
-        joinedDate: h.joined_date || '',
-      })),
+      dungeons: dList.map((d: any) => {
+        let rIds: string[] = [];
+        try {
+          if (d.realm_ids) {
+            rIds = Array.isArray(d.realm_ids) ? d.realm_ids : JSON.parse(d.realm_ids);
+          }
+        } catch {}
+        return {
+          id: d.id,
+          name: d.name,
+          tier: d.tier,
+          guildCode: d.guild_code,
+          capacity: Number(d.capacity) || 30,
+          description: d.description || '',
+          realmIds: rIds,
+        };
+      }),
+      heroes: hList.map((h: any) => {
+        let erIds: string[] = [];
+        try {
+          if (h.enrolled_realm_ids) {
+            erIds = Array.isArray(h.enrolled_realm_ids)
+              ? h.enrolled_realm_ids
+              : JSON.parse(h.enrolled_realm_ids);
+          }
+        } catch {}
+        return {
+          id: h.id,
+          name: h.name,
+          username: h.username,
+          studentCode: h.student_code,
+          dungeonId: h.dungeon_id || '',
+          avatar: h.avatar || 'knight',
+          heroClass: h.hero_class || 'Adventurer',
+          active: Boolean(h.active),
+          joinedDate: h.joined_date || '',
+          enrolledRealmIds: erIds,
+        };
+      }),
       notices: nList.map((n: any) => ({
         id: n.id,
         title: n.title,
@@ -258,6 +278,7 @@ export async function cloudSyncDungeon(dungeon: Dungeon): Promise<void> {
       guild_code: dungeon.guildCode,
       capacity: dungeon.capacity,
       description: dungeon.description,
+      realm_ids: JSON.stringify(dungeon.realmIds || []),
     });
   } catch (err) {
     console.warn('Cloud sync dungeon failed:', err);
@@ -288,6 +309,7 @@ export async function cloudSyncHero(hero: HeroStudent): Promise<void> {
       hero_class: hero.heroClass,
       active: hero.active,
       joined_date: hero.joinedDate,
+      enrolled_realm_ids: JSON.stringify(hero.enrolledRealmIds || []),
     });
   } catch (err) {
     console.warn('Cloud sync hero failed:', err);
@@ -353,6 +375,9 @@ export async function cloudDeleteRealm(id: string): Promise<void> {
   const client = getSupabase();
   if (!client) return;
   try {
+    await client.from('grades').delete().eq('realm_id', id);
+    await client.from('tomes').delete().eq('realm_id', id);
+    await client.from('quests').delete().eq('realm_id', id);
     await client.from('realms').delete().eq('id', id);
   } catch (err) {
     console.warn('Cloud delete realm failed:', err);
@@ -474,6 +499,7 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           guild_code: d.guildCode,
           capacity: d.capacity,
           description: d.description,
+          realm_ids: JSON.stringify(d.realmIds || []),
         }))
       );
     }
@@ -491,6 +517,7 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           hero_class: h.heroClass,
           active: h.active,
           joined_date: h.joinedDate,
+          enrolled_realm_ids: JSON.stringify(h.enrolledRealmIds || []),
         }))
       );
     }

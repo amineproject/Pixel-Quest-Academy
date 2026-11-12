@@ -26,6 +26,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       guildCode: 'X-IPA-1',
       capacity: 32,
       description: 'Rombel sains dasar berfokus pada eksplorasi alchemical chemistry dan biologi terapan.',
+      realmIds: ['rlm-chem', 'rlm-math', 'rlm-bio'],
     },
     {
       id: 'dng-x-ipa-2',
@@ -34,6 +35,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       guildCode: 'X-IPA-2',
       capacity: 30,
       description: 'Skuadron petualang kelas X dengan penekanan logika matematika dan riset lapangan.',
+      realmIds: ['rlm-math', 'rlm-bio'],
     },
     {
       id: 'dng-xi-ipa-1',
@@ -42,6 +44,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       guildCode: 'XI-IPA-1',
       capacity: 28,
       description: 'Menara pembelajaran tingkat lanjut untuk eksperimen reaksi kimia dan genetika.',
+      realmIds: ['rlm-chem', 'rlm-math'],
     },
   ],
   heroes: [
@@ -55,6 +58,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       heroClass: 'Arcane Knight',
       active: true,
       joinedDate: '2026-07-14',
+      enrolledRealmIds: ['rlm-chem', 'rlm-math', 'rlm-bio'],
     },
     {
       id: 'hr-sari',
@@ -66,6 +70,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       heroClass: 'Potion Alchemist',
       active: true,
       joinedDate: '2026-07-14',
+      enrolledRealmIds: ['rlm-chem', 'rlm-bio'],
     },
     {
       id: 'hr-dimas',
@@ -77,6 +82,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       heroClass: 'Rune Mage',
       active: true,
       joinedDate: '2026-07-15',
+      enrolledRealmIds: ['rlm-chem', 'rlm-math'],
     },
     {
       id: 'hr-nadia',
@@ -88,6 +94,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       heroClass: 'Forest Ranger',
       active: true,
       joinedDate: '2026-07-15',
+      enrolledRealmIds: ['rlm-bio', 'rlm-math'],
     },
     {
       id: 'hr-bagas',
@@ -99,6 +106,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       heroClass: 'Scroll Scholar',
       active: true,
       joinedDate: '2026-07-16',
+      enrolledRealmIds: ['rlm-math', 'rlm-bio'],
     },
     {
       id: 'hr-putri',
@@ -108,8 +116,9 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       dungeonId: 'dng-xi-ipa-1',
       avatar: 'mage',
       heroClass: 'Chrono Mage',
-      active: false,
-      joinedDate: '2025-07-12',
+      active: true,
+      joinedDate: '2026-07-17',
+      enrolledRealmIds: ['rlm-chem', 'rlm-math'],
     },
   ],
   notices: [

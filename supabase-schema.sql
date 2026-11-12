@@ -14,8 +14,12 @@ CREATE TABLE IF NOT EXISTS public.dungeons (
     guild_code TEXT NOT NULL,
     capacity INTEGER NOT NULL DEFAULT 30,
     description TEXT,
+    realm_ids TEXT, -- JSON array of realm IDs (mata pelajaran yang diajarkan)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure column exists if table was created previously
+ALTER TABLE public.dungeons ADD COLUMN IF NOT EXISTS realm_ids TEXT;
 
 -- ----------------------------------------------------------------------------
 -- 2. Heroes table (Siswa / Petualang Terdaftar)
@@ -30,8 +34,12 @@ CREATE TABLE IF NOT EXISTS public.heroes (
     hero_class TEXT NOT NULL DEFAULT 'Arcane Knight',
     active BOOLEAN NOT NULL DEFAULT true,
     joined_date TEXT NOT NULL,
+    enrolled_realm_ids TEXT, -- JSON array of enrolled realm IDs (mata pelajaran yang diikuti)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure column exists if table was created previously
+ALTER TABLE public.heroes ADD COLUMN IF NOT EXISTS enrolled_realm_ids TEXT;
 
 -- ----------------------------------------------------------------------------
 -- 3. Realms table (Mata Pelajaran / Bidang Keilmuan)

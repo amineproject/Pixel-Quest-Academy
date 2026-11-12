@@ -26,6 +26,7 @@ const EMPTY_FORM: Omit<Dungeon, 'id'> = {
   guildCode: '',
   capacity: 30,
   description: '',
+  realmIds: [],
 };
 
 export const GmDungeons: React.FC<GmDungeonsProps> = ({
@@ -50,7 +51,10 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
 
   const openCreate = () => {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({
+      ...EMPTY_FORM,
+      realmIds: state.realms.map((r) => r.id),
+    });
     setModalOpen(true);
   };
 
@@ -62,6 +66,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
       guildCode: d.guildCode,
       capacity: d.capacity,
       description: d.description,
+      realmIds: d.realmIds || [],
     });
     setModalOpen(true);
   };
@@ -76,6 +81,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
       guildCode: form.guildCode.trim().toUpperCase(),
       capacity: Math.max(1, Number(form.capacity) || 30),
       description: form.description.trim(),
+      realmIds: form.realmIds || [],
     });
     setModalOpen(false);
   };
@@ -172,6 +178,35 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                   labelRight={`${memberCount}/${dungeon.capacity} Heroes`}
                   color="var(--accent-success)"
                 />
+
+                {/* Linked Realms / Subjects */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--border-pixel)]/30">
+                  <span className="font-pixel-ui text-[9px] text-[var(--accent-warning)] uppercase shrink-0">
+                    Mapel ({dungeon.realmIds?.length || 0}):
+                  </span>
+                  {dungeon.realmIds && dungeon.realmIds.length > 0 ? (
+                    dungeon.realmIds.map((rid) => {
+                      const realm = state.realms.find((r) => r.id === rid);
+                      if (!realm) return null;
+                      return (
+                        <span
+                          key={rid}
+                          className="text-[11px] font-medium px-2 py-0.5 border border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] flex items-center gap-1"
+                        >
+                          <span
+                            className="w-2 h-2 inline-block shrink-0"
+                            style={{ backgroundColor: realm.accentColor }}
+                          />
+                          <span className="truncate max-w-[120px]">{realm.name}</span>
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="text-[11px] text-[var(--text-muted)] italic">
+                      Belum ada mapel terhubung
+                    </span>
+                  )}
+                </div>
               </article>
             );
           })}
@@ -289,11 +324,76 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
             <PixelFieldLabel htmlFor="dng-desc">Deskripsi Guild</PixelFieldLabel>
             <PixelTextarea
               id="dng-desc"
-              rows={3}
+              rows={2}
               placeholder="Fokus pembelajaran rombel..."
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
+          </div>
+
+          {/* Hubungkan dengan Mata Pelajaran (Realms) */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <PixelFieldLabel>Mata Pelajaran di Kelas Ini (Realms)</PixelFieldLabel>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, realmIds: state.realms.map((r) => r.id) })}
+                  className="text-[10px] text-[var(--accent-warning)] hover:underline font-pixel-ui cursor-pointer"
+                >
+                  Pilih Semua
+                </button>
+                <span className="text-[var(--text-muted)] text-[10px]">·</span>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, realmIds: [] })}
+                  className="text-[10px] text-[var(--text-muted)] hover:underline font-pixel-ui cursor-pointer"
+                >
+                  Kosongkan
+                </button>
+              </div>
+            </div>
+            <p className="text-[12px] text-[var(--text-secondary)] leading-tight">
+              Pilih mapel yang dibuka di kelas ini. Siswa yang dimasukkan ke kelas ini akan otomatis terdaftar ke mapel-mapel ini:
+            </p>
+            {state.realms.length === 0 ? (
+              <p className="text-[12px] text-[var(--accent-warning)] p-2 pixel-box-inset">
+                Belum ada mapel di menu Realms. Buat mapel terlebih dahulu agar bisa dihubungkan ke kelas.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-2 pixel-box-inset bg-[var(--bg-inset)] max-h-36 overflow-y-auto pixel-scroll">
+                {state.realms.map((realm) => {
+                  const isChecked = form.realmIds?.includes(realm.id);
+                  return (
+                    <button
+                      key={realm.id}
+                      type="button"
+                      onClick={() => {
+                        const current = form.realmIds || [];
+                        const next = current.includes(realm.id)
+                          ? current.filter((id) => id !== realm.id)
+                          : [...current, realm.id];
+                        setForm({ ...form, realmIds: next });
+                      }}
+                      className={`flex items-center gap-2 p-1.5 border text-left cursor-pointer transition-colors ${
+                        isChecked
+                          ? 'border-[var(--accent-warning)] bg-[var(--accent-warning)]/15 text-[var(--text-primary)] font-semibold'
+                          : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]'
+                      }`}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 shrink-0 inline-block"
+                        style={{ backgroundColor: realm.accentColor }}
+                      />
+                      <span className="text-[13px] truncate flex-1">{realm.name}</span>
+                      <span className="text-[10px] font-pixel-ui text-[var(--accent-warning)]">
+                        {isChecked ? '✓' : '+'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3 pt-2">
             <PixelButton

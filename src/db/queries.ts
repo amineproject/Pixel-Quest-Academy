@@ -191,25 +191,39 @@ export async function getAllAcademyData() {
         soundEnabled: s.soundEnabled,
         academicTerm: s.academicTerm,
       },
-      dungeons: dungeonsList.map((d) => ({
-        id: d.id,
-        name: d.name,
-        tier: d.tier,
-        guildCode: d.guildCode,
-        capacity: d.capacity,
-        description: d.description || '',
-      })),
-      heroes: heroesList.map((h) => ({
-        id: h.id,
-        name: h.name,
-        username: h.username,
-        studentCode: h.studentCode,
-        dungeonId: h.dungeonId || '',
-        avatar: h.avatar as any,
-        heroClass: h.heroClass,
-        active: h.active,
-        joinedDate: h.joinedDate,
-      })),
+      dungeons: dungeonsList.map((d) => {
+        let rIds: string[] = [];
+        try {
+          if (d.realmIds) rIds = JSON.parse(d.realmIds);
+        } catch {}
+        return {
+          id: d.id,
+          name: d.name,
+          tier: d.tier,
+          guildCode: d.guildCode,
+          capacity: d.capacity,
+          description: d.description || '',
+          realmIds: rIds,
+        };
+      }),
+      heroes: heroesList.map((h) => {
+        let erIds: string[] = [];
+        try {
+          if (h.enrolledRealmIds) erIds = JSON.parse(h.enrolledRealmIds);
+        } catch {}
+        return {
+          id: h.id,
+          name: h.name,
+          username: h.username,
+          studentCode: h.studentCode,
+          dungeonId: h.dungeonId || '',
+          avatar: h.avatar as any,
+          heroClass: h.heroClass,
+          active: h.active,
+          joinedDate: h.joinedDate,
+          enrolledRealmIds: erIds,
+        };
+      }),
       notices: noticesList.map((n) => ({
         id: n.id,
         title: n.title,
@@ -269,6 +283,7 @@ export async function getAllAcademyData() {
 // Dungeons CRUD
 export async function upsertDungeon(d: Dungeon) {
   try {
+    const realmIdsJson = d.realmIds ? JSON.stringify(d.realmIds) : '[]';
     return await db
       .insert(dungeons)
       .values({
@@ -278,6 +293,7 @@ export async function upsertDungeon(d: Dungeon) {
         guildCode: d.guildCode,
         capacity: d.capacity,
         description: d.description,
+        realmIds: realmIdsJson,
       })
       .onConflictDoUpdate({
         target: dungeons.id,
@@ -287,6 +303,7 @@ export async function upsertDungeon(d: Dungeon) {
           guildCode: d.guildCode,
           capacity: d.capacity,
           description: d.description,
+          realmIds: realmIdsJson,
         },
       });
   } catch (error) {
@@ -297,6 +314,8 @@ export async function upsertDungeon(d: Dungeon) {
 
 export async function deleteDungeon(id: string) {
   try {
+    await db.update(heroes).set({ dungeonId: null }).where(eq(heroes.dungeonId, id));
+    await db.delete(notices).where(eq(notices.targetDungeonId, id));
     return await db.delete(dungeons).where(eq(dungeons.id, id));
   } catch (error) {
     console.error('Failed to delete dungeon:', error);
@@ -307,6 +326,21 @@ export async function deleteDungeon(id: string) {
 // Heroes CRUD
 export async function upsertHero(h: HeroStudent) {
   try {
+    let validDungeonId: string | null = null;
+    const rawDungeonId = h.dungeonId?.trim();
+    if (rawDungeonId && rawDungeonId !== '' && rawDungeonId !== 'none') {
+      const dExists = await db
+        .select({ id: dungeons.id })
+        .from(dungeons)
+        .where(eq(dungeons.id, rawDungeonId))
+        .limit(1);
+      if (dExists.length > 0) {
+        validDungeonId = rawDungeonId;
+      }
+    }
+
+    const enrolledJson = h.enrolledRealmIds ? JSON.stringify(h.enrolledRealmIds) : '[]';
+
     return await db
       .insert(heroes)
       .values({
@@ -314,11 +348,12 @@ export async function upsertHero(h: HeroStudent) {
         name: h.name,
         username: h.username,
         studentCode: h.studentCode,
-        dungeonId: h.dungeonId,
-        avatar: h.avatar,
-        heroClass: h.heroClass,
-        active: h.active,
-        joinedDate: h.joinedDate,
+        dungeonId: validDungeonId,
+        avatar: h.avatar || 'knight',
+        heroClass: h.heroClass || 'Arcane Knight',
+        active: h.active ?? true,
+        joinedDate: h.joinedDate || new Date().toISOString().slice(0, 10),
+        enrolledRealmIds: enrolledJson,
       })
       .onConflictDoUpdate({
         target: heroes.id,
@@ -326,10 +361,11 @@ export async function upsertHero(h: HeroStudent) {
           name: h.name,
           username: h.username,
           studentCode: h.studentCode,
-          dungeonId: h.dungeonId,
-          avatar: h.avatar,
-          heroClass: h.heroClass,
-          active: h.active,
+          dungeonId: validDungeonId,
+          avatar: h.avatar || 'knight',
+          heroClass: h.heroClass || 'Arcane Knight',
+          active: h.active ?? true,
+          enrolledRealmIds: enrolledJson,
         },
       });
   } catch (error) {
@@ -418,6 +454,9 @@ export async function upsertRealm(r: Realm) {
 
 export async function deleteRealm(id: string) {
   try {
+    await db.delete(grades).where(eq(grades.realmId, id));
+    await db.delete(tomes).where(eq(tomes.realmId, id));
+    await db.delete(quests).where(eq(quests.realmId, id));
     return await db.delete(realms).where(eq(realms.id, id));
   } catch (error) {
     console.error('Failed to delete realm:', error);

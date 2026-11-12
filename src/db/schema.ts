@@ -18,6 +18,7 @@ export const dungeons = pgTable('dungeons', {
   guildCode: text('guild_code').notNull(),
   capacity: integer('capacity').notNull().default(30),
   description: text('description'),
+  realmIds: text('realm_ids'), // JSON array of realm IDs
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -27,11 +28,12 @@ export const heroes = pgTable('heroes', {
   name: text('name').notNull(),
   username: text('username').notNull(),
   studentCode: text('student_code').notNull(),
-  dungeonId: text('dungeon_id').references(() => dungeons.id),
+  dungeonId: text('dungeon_id').references(() => dungeons.id, { onDelete: 'set null' }),
   avatar: text('avatar').notNull().default('knight'),
   heroClass: text('hero_class').notNull().default('Arcane Knight'),
   active: boolean('active').notNull().default(true),
   joinedDate: text('joined_date').notNull(),
+  enrolledRealmIds: text('enrolled_realm_ids'), // JSON array of enrolled realm IDs
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -61,7 +63,7 @@ export const realms = pgTable('realms', {
 // Ancient Tomes (Materi Pembelajaran)
 export const tomes = pgTable('tomes', {
   id: text('id').primaryKey(),
-  realmId: text('realm_id').references(() => realms.id),
+  realmId: text('realm_id').references(() => realms.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   chapter: integer('chapter').notNull().default(1),
   readMinutes: integer('read_minutes').notNull().default(8),
@@ -74,7 +76,7 @@ export const tomes = pgTable('tomes', {
 // Active Quests (Tugas / Misi)
 export const quests = pgTable('quests', {
   id: text('id').primaryKey(),
-  realmId: text('realm_id').references(() => realms.id),
+  realmId: text('realm_id').references(() => realms.id, { onDelete: 'cascade' }),
   dungeonId: text('dungeon_id').notNull().default('all'),
   title: text('title').notNull(),
   instructions: text('instructions').notNull(),
@@ -87,9 +89,9 @@ export const quests = pgTable('quests', {
 // EXP & Loot Grades (Penilaian)
 export const grades = pgTable('grades', {
   id: text('id').primaryKey(),
-  heroId: text('hero_id').references(() => heroes.id),
-  questId: text('quest_id').references(() => quests.id),
-  realmId: text('realm_id').references(() => realms.id),
+  heroId: text('hero_id').references(() => heroes.id, { onDelete: 'cascade' }),
+  questId: text('quest_id').references(() => quests.id, { onDelete: 'cascade' }),
+  realmId: text('realm_id').references(() => realms.id, { onDelete: 'cascade' }),
   score: integer('score').notNull().default(80),
   expEarned: integer('exp_earned').notNull().default(160),
   feedback: text('feedback').default(''),

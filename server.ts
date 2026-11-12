@@ -111,25 +111,39 @@ app.get('/api/academy', async (req, res) => {
             soundEnabled: s.sound_enabled ?? true,
             academicTerm: s.academic_term || 'Semester Ganjil 2026/2027',
           },
-          dungeons: dData.map((d: any) => ({
-            id: d.id,
-            name: d.name,
-            tier: d.tier,
-            guildCode: d.guild_code || d.guildCode,
-            capacity: d.capacity,
-            description: d.description || '',
-          })),
-          heroes: (hData || []).map((h: any) => ({
-            id: h.id,
-            name: h.name,
-            username: h.username,
-            studentCode: h.student_code || h.studentCode,
-            dungeonId: h.dungeon_id || h.dungeonId,
-            avatar: h.avatar,
-            heroClass: h.hero_class || h.heroClass,
-            active: h.active,
-            joinedDate: h.joined_date || h.joinedDate,
-          })),
+          dungeons: dData.map((d: any) => {
+            let rIds: string[] = [];
+            try {
+              if (d.realm_ids) rIds = Array.isArray(d.realm_ids) ? d.realm_ids : JSON.parse(d.realm_ids);
+            } catch {}
+            return {
+              id: d.id,
+              name: d.name,
+              tier: d.tier,
+              guildCode: d.guild_code || d.guildCode,
+              capacity: d.capacity,
+              description: d.description || '',
+              realmIds: rIds,
+            };
+          }),
+          heroes: (hData || []).map((h: any) => {
+            let erIds: string[] = [];
+            try {
+              if (h.enrolled_realm_ids) erIds = Array.isArray(h.enrolled_realm_ids) ? h.enrolled_realm_ids : JSON.parse(h.enrolled_realm_ids);
+            } catch {}
+            return {
+              id: h.id,
+              name: h.name,
+              username: h.username,
+              studentCode: h.student_code || h.studentCode,
+              dungeonId: h.dungeon_id || h.dungeonId,
+              avatar: h.avatar,
+              heroClass: h.hero_class || h.heroClass,
+              active: h.active,
+              joinedDate: h.joined_date || h.joinedDate,
+              enrolledRealmIds: erIds,
+            };
+          }),
           realms: (rData || []).map((r: any) => ({
             id: r.id,
             name: r.name,
@@ -202,6 +216,7 @@ app.post('/api/dungeons', async (req, res) => {
         guild_code: req.body.guildCode,
         capacity: req.body.capacity,
         description: req.body.description,
+        realm_ids: JSON.stringify(req.body.realmIds || []),
       });
     }
     res.json({ success: true });
@@ -227,16 +242,18 @@ app.post('/api/heroes', async (req, res) => {
   try {
     await upsertHero(req.body);
     if (supabaseAdmin) {
+      const dungeonIdVal = req.body.dungeonId?.trim() ? req.body.dungeonId.trim() : null;
       await supabaseAdmin.from('heroes').upsert({
         id: req.body.id,
         name: req.body.name,
         username: req.body.username,
         student_code: req.body.studentCode,
-        dungeon_id: req.body.dungeonId,
-        avatar: req.body.avatar,
-        hero_class: req.body.heroClass,
-        active: req.body.active,
+        dungeon_id: dungeonIdVal,
+        avatar: req.body.avatar || 'knight',
+        hero_class: req.body.heroClass || 'Arcane Knight',
+        active: req.body.active ?? true,
         joined_date: req.body.joinedDate,
+        enrolled_realm_ids: JSON.stringify(req.body.enrolledRealmIds || []),
       });
     }
     res.json({ success: true });
@@ -314,6 +331,9 @@ app.delete('/api/realms/:id', async (req, res) => {
   try {
     await deleteRealm(req.params.id);
     if (supabaseAdmin) {
+      await supabaseAdmin.from('grades').delete().eq('realm_id', req.params.id);
+      await supabaseAdmin.from('tomes').delete().eq('realm_id', req.params.id);
+      await supabaseAdmin.from('quests').delete().eq('realm_id', req.params.id);
       await supabaseAdmin.from('realms').delete().eq('id', req.params.id);
     }
     res.json({ success: true });

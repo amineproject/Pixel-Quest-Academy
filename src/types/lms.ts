@@ -65,10 +65,11 @@ export interface GameMasterProfile {
 export interface Dungeon {
   id: string;
   name: string;
-  tier: string; // e.g., "Kelas X", "Kelas XI", "Kelas XII"
+  tier: string; // e.g., "Kelas X", "Kelas XI", "Kelas XII", "Kelas 5 SD"
   guildCode: string;
   capacity: number;
   description: string;
+  realmIds?: string[]; // Mata pelajaran yang dibuka di kelas ini
 }
 
 export interface HeroStudent {
@@ -81,6 +82,7 @@ export interface HeroStudent {
   heroClass: string;
   active: boolean;
   joinedDate: string;
+  enrolledRealmIds?: string[]; // Mata pelajaran yang diikuti oleh siswa ini
 }
 
 export interface QuestNotice {
