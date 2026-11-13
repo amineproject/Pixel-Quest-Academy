@@ -16,6 +16,75 @@ import {
 export const SUPABASE_URL_KEY = 'pixel_quest_supabase_url';
 export const SUPABASE_KEY_KEY = 'pixel_quest_supabase_anon_key';
 
+/**
+ * Reads ?cloud=<base64> or #cloud=<base64> share link on startup so any device
+ * opening the link immediately inherits the public Supabase URL + Anon Key.
+ */
+export function bootstrapSupabaseFromUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    let token = searchParams.get('cloud');
+
+    if (!token && window.location.hash.includes('cloud=')) {
+      const hashPart = window.location.hash.split('cloud=')[1];
+      if (hashPart) {
+        token = hashPart.split('&')[0];
+      }
+    }
+
+    if (!token) return false;
+
+    const normalized = token.replace(/-/g, '+').replace(/_/g, '/');
+    const decodedJson = decodeURIComponent(escape(atob(normalized)));
+    const parsed = JSON.parse(decodedJson) as { u?: string; k?: string };
+
+    if (
+      parsed &&
+      typeof parsed.u === 'string' &&
+      typeof parsed.k === 'string' &&
+      parsed.u.startsWith('https://') &&
+      parsed.k.length > 10
+    ) {
+      localStorage.setItem(SUPABASE_URL_KEY, parsed.u.trim());
+      localStorage.setItem(SUPABASE_KEY_KEY, parsed.k.trim());
+      cachedClient = null;
+
+      // Clean ?cloud= parameter from URL bar without losing route hash
+      searchParams.delete('cloud');
+      const nextSearch = searchParams.toString();
+      const cleanUrl =
+        window.location.pathname +
+        (nextSearch ? `?${nextSearch}` : '') +
+        (window.location.hash.startsWith('#cloud=') ? '' : window.location.hash);
+      window.history.replaceState({}, document.title, cleanUrl);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Invalid cloud share token in URL:', err);
+  }
+  return false;
+}
+
+export function generateCloudShareLink(): string | null {
+  if (typeof window === 'undefined') return null;
+  const url = getStoredSupabaseUrl();
+  const key = getStoredSupabaseAnonKey();
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const payload = JSON.stringify({ u: url, k: key });
+    const encoded = btoa(unescape(encodeURIComponent(payload)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    const originAndPath = `${window.location.origin}${window.location.pathname}`;
+    return `${originAndPath}?cloud=${encoded}`;
+  } catch {
+    return null;
+  }
+}
+
 export function getStoredSupabaseUrl(): string {
   if (typeof window === 'undefined') return '';
   const fromStorage = localStorage.getItem(SUPABASE_URL_KEY);
@@ -109,6 +178,56 @@ export function getSupabaseStatus(): SupabaseConfigStatus {
   };
 }
 
+export async function testSupabaseConnection(): Promise<{
+  ok: boolean;
+  hasCloudData: boolean;
+  message: string;
+}> {
+  const client = getSupabase();
+  if (!client) {
+    return {
+      ok: false,
+      hasCloudData: false,
+      message: 'URL atau Anon Key Supabase belum valid.',
+    };
+  }
+  try {
+    const [dRes, hRes] = await Promise.all([
+      client.from('dungeons').select('id', { count: 'exact', head: true }),
+      client.from('heroes').select('id', { count: 'exact', head: true }),
+    ]);
+
+    if (dRes.error || hRes.error) {
+      const errMsg = dRes.error?.message || hRes.error?.message || 'Error koneksi';
+      if (errMsg.includes('does not exist') || errMsg.includes('schema cache')) {
+        return {
+          ok: false,
+          hasCloudData: false,
+          message:
+            'Terhubung ke Supabase, tetapi tabel belum dibuat! Jalankan isi file supabase-schema.sql di Supabase SQL Editor.',
+        };
+      }
+      return { ok: false, hasCloudData: false, message: `Gagal akses Supabase: ${errMsg}` };
+    }
+
+    const totalRows = (dRes.count || 0) + (hRes.count || 0);
+    return {
+      ok: true,
+      hasCloudData: totalRows > 0,
+      message:
+        totalRows > 0
+          ? `Terhubung! Ditemukan data aktif di Supabase Cloud (${dRes.count || 0} kelas, ${hRes.count || 0} siswa).`
+          : 'Terhubung! Tabel Supabase siap digunakan (masih kosong, klik Sinkronkan Data ke Cloud).',
+    };
+  } catch (err: any) {
+    return {
+      ok: false,
+      hasCloudData: false,
+      message: err?.message || 'Gagal menghubungi server Supabase.',
+    };
+  }
+}
+
 // ----------------------------------------------------------------------------
 // Cloud CRUD Sync Functions
 // ----------------------------------------------------------------------------
@@ -153,7 +272,7 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
     const sRow = settingsRes.data?.[0];
 
     // If tables are completely empty, return null to let local seed populate them
-    if (dList.length === 0 && hList.length === 0) {
+    if (dList.length === 0 && hList.length === 0 && rList.length === 0 && !sRow) {
       return null;
     }
 
@@ -520,14 +639,18 @@ export async function cloudSyncSettings(
   }
 }
 
-export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boolean> {
+export async function uploadAllLocalToSupabase(
+  state: AcademyState
+): Promise<{ ok: boolean; errorMessage?: string }> {
   const client = getSupabase();
-  if (!client) return false;
+  if (!client) {
+    return { ok: false, errorMessage: 'Supabase belum dikonfigurasi.' };
+  }
 
   try {
     // 1. Dungeons
     if (state.dungeons.length > 0) {
-      await client.from('dungeons').upsert(
+      const { error } = await client.from('dungeons').upsert(
         state.dungeons.map((d) => ({
           id: d.id,
           name: d.name,
@@ -538,29 +661,12 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           realm_ids: JSON.stringify(d.realmIds || []),
         }))
       );
+      if (error) throw new Error(`Tabel dungeons: ${error.message}`);
     }
 
-    // 2. Heroes
-    if (state.heroes.length > 0) {
-      await client.from('heroes').upsert(
-        state.heroes.map((h) => ({
-          id: h.id,
-          name: h.name,
-          username: h.username,
-          student_code: h.studentCode,
-          dungeon_id: h.dungeonId || null,
-          avatar: h.avatar,
-          hero_class: h.heroClass,
-          active: h.active,
-          joined_date: h.joinedDate,
-          enrolled_realm_ids: JSON.stringify(h.enrolledRealmIds || []),
-        }))
-      );
-    }
-
-    // 3. Realms
+    // 2. Realms (before tomes/quests/grades FK)
     if (state.realms.length > 0) {
-      await client.from('realms').upsert(
+      const { error } = await client.from('realms').upsert(
         state.realms.map((r) => ({
           id: r.id,
           name: r.name,
@@ -570,11 +676,32 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           description: r.description,
         }))
       );
+      if (error) throw new Error(`Tabel realms: ${error.message}`);
+    }
+
+    // 3. Heroes (after dungeons FK)
+    const validDungeonIds = new Set(state.dungeons.map((d) => d.id));
+    if (state.heroes.length > 0) {
+      const { error } = await client.from('heroes').upsert(
+        state.heroes.map((h) => ({
+          id: h.id,
+          name: h.name,
+          username: h.username,
+          student_code: h.studentCode,
+          dungeon_id: h.dungeonId && validDungeonIds.has(h.dungeonId) ? h.dungeonId : null,
+          avatar: h.avatar,
+          hero_class: h.heroClass,
+          active: h.active,
+          joined_date: h.joinedDate,
+          enrolled_realm_ids: JSON.stringify(h.enrolledRealmIds || []),
+        }))
+      );
+      if (error) throw new Error(`Tabel heroes: ${error.message}`);
     }
 
     // 4. Tomes
     if (state.tomes.length > 0) {
-      await client.from('tomes').upsert(
+      const { error } = await client.from('tomes').upsert(
         state.tomes.map((t) => ({
           id: t.id,
           realm_id: t.realmId || null,
@@ -586,11 +713,12 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           published_date: t.publishedDate,
         }))
       );
+      if (error) throw new Error(`Tabel tomes: ${error.message}`);
     }
 
     // 5. Quests
     if (state.quests.length > 0) {
-      await client.from('quests').upsert(
+      const { error } = await client.from('quests').upsert(
         state.quests.map((q) => ({
           id: q.id,
           realm_id: q.realmId || null,
@@ -602,11 +730,12 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           difficulty: q.difficulty,
         }))
       );
+      if (error) throw new Error(`Tabel quests: ${error.message}`);
     }
 
     // 6. Notices
     if (state.notices.length > 0) {
-      await client.from('notices').upsert(
+      const { error } = await client.from('notices').upsert(
         state.notices.map((n) => ({
           id: n.id,
           title: n.title,
@@ -617,6 +746,7 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
           author: n.author,
         }))
       );
+      if (error) throw new Error(`Tabel notices: ${error.message}`);
     }
 
     // 7. Grades
@@ -635,7 +765,7 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
         }))
       );
       if (gradeErr) {
-        await client.from('grades').upsert(
+        const { error: fallbackGradeErr } = await client.from('grades').upsert(
           state.grades.map((g) => ({
             id: g.id,
             hero_id: g.heroId,
@@ -647,6 +777,7 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
             graded_date: g.gradedDate,
           }))
         );
+        if (fallbackGradeErr) throw new Error(`Tabel grades: ${fallbackGradeErr.message}`);
       }
     }
 
@@ -666,7 +797,7 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
       gm_require_password: state.gmProfile.requirePassword ?? true,
     });
     if (settingsErr) {
-      await client.from('settings').upsert({
+      const { error: fallbackSettingsErr } = await client.from('settings').upsert({
         id: 'global',
         theme: state.settings.theme,
         crt_scanlines: state.settings.crtScanlines,
@@ -677,11 +808,15 @@ export async function uploadAllLocalToSupabase(state: AcademyState): Promise<boo
         gm_specialty: state.gmProfile.specialty,
         gm_avatar: state.gmProfile.avatar,
       });
+      if (fallbackSettingsErr) throw new Error(`Tabel settings: ${fallbackSettingsErr.message}`);
     }
 
-    return true;
-  } catch (err) {
+    return { ok: true };
+  } catch (err: any) {
     console.error('Failed to upload all data to Supabase:', err);
-    return false;
+    return {
+      ok: false,
+      errorMessage: err?.message || 'Gagal mengunggah data. Pastikan tabel di Supabase sudah dibuat.',
+    };
   }
 }

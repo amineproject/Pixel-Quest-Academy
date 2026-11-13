@@ -18,19 +18,22 @@ import {
 
 import {
   clearSupabaseConfig,
+  generateCloudShareLink,
   getStoredSupabaseAnonKey,
   getStoredSupabaseUrl,
   isSupabaseConfigured,
   saveSupabaseConfig,
+  testSupabaseConnection,
   uploadAllLocalToSupabase,
 } from '../../lib/supabase';
-import { Check, Cloud, RefreshCw } from 'lucide-react';
+import { Check, Cloud, Copy, Download, Link2, RefreshCw } from 'lucide-react';
 
 interface GmSettingsProps {
   state: AcademyState;
   onUpdateGmProfile: (profile: GameMasterProfile) => void;
   onUpdateSettings: (settings: SystemSettings) => void;
   onResetDemoData: () => void;
+  onPullCloudData: () => Promise<AcademyState | null>;
   onTestAccessDenied: () => void;
 }
 
@@ -67,6 +70,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   onUpdateGmProfile,
   onUpdateSettings,
   onResetDemoData,
+  onPullCloudData,
   onTestAccessDenied,
 }) => {
   const [name, setName] = useState(state.gmProfile.name);
@@ -88,8 +92,11 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   const [isCloudConfigured, setIsCloudConfigured] = useState(isSupabaseConfigured);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
-  const handleSaveCloudConfig = (e: React.FormEvent) => {
+  const shareLink = isCloudConfigured ? generateCloudShareLink() : null;
+
+  const handleSaveCloudConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cloudUrl.trim() || !cloudKey.trim()) {
       setSyncStatusMsg('Harap isi URL Proyek dan Anon Key Supabase!');
@@ -98,12 +105,19 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     saveSupabaseConfig(cloudUrl, cloudKey);
     const configured = isSupabaseConfigured();
     setIsCloudConfigured(configured);
-    if (configured) {
-      setSyncStatusMsg('✓ Berhasil terhubung ke Supabase Cloud!');
-    } else {
-      setSyncStatusMsg('Format URL atau Anon Key tidak valid.');
+    if (!configured) {
+      setSyncStatusMsg('Format URL (harus https://...) atau Anon Key tidak valid.');
+      return;
     }
-    setTimeout(() => setSyncStatusMsg(null), 3000);
+
+    setIsSyncing(true);
+    setSyncStatusMsg('Menguji koneksi ke Supabase Cloud...');
+    const testRes = await testSupabaseConnection();
+    if (testRes.ok && testRes.hasCloudData) {
+      await onPullCloudData();
+    }
+    setIsSyncing(false);
+    setSyncStatusMsg(testRes.message);
   };
 
   const handleSyncAllToCloud = async () => {
@@ -113,14 +127,42 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     }
     setIsSyncing(true);
     setSyncStatusMsg('Sedang mengunggah seluruh data ke Supabase Cloud...');
-    const ok = await uploadAllLocalToSupabase(state);
+    const res = await uploadAllLocalToSupabase(state);
     setIsSyncing(false);
-    if (ok) {
+    if (res.ok) {
       setSyncStatusMsg('✓ Seluruh data sukses tersinkronisasi ke Supabase Cloud!');
     } else {
-      setSyncStatusMsg('Gagal mengunggah data. Pastikan tabel di Supabase sudah dibuat.');
+      setSyncStatusMsg(`Gagal mengunggah: ${res.errorMessage || 'Pastikan tabel Supabase sudah dibuat.'}`);
     }
-    setTimeout(() => setSyncStatusMsg(null), 4000);
+  };
+
+  const handlePullFromCloud = async () => {
+    if (!isCloudConfigured) {
+      setSyncStatusMsg('Hubungkan ke Supabase Cloud terlebih dahulu!');
+      return;
+    }
+    setIsSyncing(true);
+    setSyncStatusMsg('Mengambil data terbaru dari Supabase Cloud...');
+    const fetched = await onPullCloudData();
+    setIsSyncing(false);
+    if (fetched) {
+      setSyncStatusMsg(
+        `✓ Data Cloud dimuat (${fetched.dungeons.length} kelas, ${fetched.heroes.length} siswa)!`
+      );
+    } else {
+      setSyncStatusMsg('Belum ada data di Supabase Cloud atau tabel belum dibuat.');
+    }
+  };
+
+  const handleCopyShareLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      setSyncStatusMsg('Salin manual link di kolom di atas.');
+    }
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -424,40 +466,100 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 pt-1">
-            <PixelButton type="submit" variant="primary" size="sm" className="flex-1">
+            <PixelButton type="submit" variant="primary" size="sm" disabled={isSyncing} className="flex-1">
               <Check size={14} />
-              Simpan & Hubungkan Cloud
+              Simpan & Uji Koneksi
             </PixelButton>
 
             {isCloudConfigured && (
-              <PixelButton
-                type="button"
-                variant="success"
-                size="sm"
-                disabled={isSyncing}
-                onClick={handleSyncAllToCloud}
-                className="flex-1"
-              >
-                <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-                {isSyncing ? 'Mengunggah...' : 'Sinkronkan Data ke Cloud'}
-              </PixelButton>
+              <>
+                <PixelButton
+                  type="button"
+                  variant="success"
+                  size="sm"
+                  disabled={isSyncing}
+                  onClick={handleSyncAllToCloud}
+                  className="flex-1"
+                >
+                  <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                  {isSyncing ? 'Proses...' : 'Kirim ke Cloud'}
+                </PixelButton>
+                <PixelButton
+                  type="button"
+                  variant="warning"
+                  size="sm"
+                  disabled={isSyncing}
+                  onClick={handlePullFromCloud}
+                  className="flex-1"
+                >
+                  <Download size={14} />
+                  Ambil dari Cloud
+                </PixelButton>
+              </>
             )}
           </div>
         </form>
 
         {syncStatusMsg && (
-          <p className="text-[13.5px] font-semibold text-[var(--accent-warning)] bg-[var(--bg-inset)] p-2.5 border border-[var(--border-pixel)]">
+          <p className="text-[13px] font-semibold text-[var(--accent-warning)] bg-[var(--bg-inset)] p-2.5 border border-[var(--border-pixel)]">
             {syncStatusMsg}
           </p>
         )}
 
-        <div className="pixel-box-inset p-2.5 text-[12.5px] text-[var(--text-muted)] leading-normal space-y-1">
+        {/* Cross-Device Shareable Link */}
+        {isCloudConfigured && shareLink && (
+          <div className="pixel-box-inset p-3 space-y-2 border-2 border-[var(--accent-success)]/60 bg-[var(--bg-inset)]">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-pixel-ui text-[10px] text-[var(--accent-success)] flex items-center gap-1.5">
+                <Link2 size={13} />
+                LINK AKSES LINTAS PERANGKAT (HP / LAPTOP LAIN)
+              </span>
+            </div>
+            <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
+              Bagikan link ini ke HP siswa atau buka di laptop lain agar perangkat tersebut <strong>otomatis terhubung</strong> ke database Cloud yang sama tanpa perlu input ulang API Key:
+            </p>
+            <div className="flex items-center gap-2">
+              <PixelInput
+                readOnly
+                value={shareLink}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                className="text-[12px] flex-1"
+              />
+              <PixelButton
+                type="button"
+                size="sm"
+                variant="success"
+                onClick={handleCopyShareLink}
+              >
+                <Copy size={14} />
+                {linkCopied ? 'Tersalin!' : 'Salin Link'}
+              </PixelButton>
+            </div>
+          </div>
+        )}
+
+        <div className="pixel-box-inset p-2.5 text-[12.5px] text-[var(--text-muted)] leading-normal space-y-1.5">
           <p>
-            💡 <strong>Panduan:</strong> Masukkan URL & Anon Key dari Dashboard Supabase Anda (<strong>Project Settings &gt; API</strong>). Skrip tabel SQL tersimpan di berkas <span className="text-[var(--accent-warning)]">supabase-schema.sql</span>.
+            <strong>1. Setup Database (Sekali Saja):</strong> Jalankan skrip <span className="text-[var(--accent-warning)]">supabase-schema.sql</span> di Supabase <strong>SQL Editor</strong>, lalu masukkan URL & Anon Key di atas dan klik <strong>Kirim ke Cloud</strong>.
           </p>
           <p>
-            Setelah terhubung, setiap pembuatan kelas, hero siswa, tugas, dan nilai akan otomatis tersimpan di cloud dan langsung terbaca di HP/laptop siswa!
+            <strong>2. Buka di Perangkat Lain:</strong> Bagikan <strong>Link Akses Lintas Perangkat</strong> di atas ke siswa/perangkat lain, <em>atau</em> tambahkan Environment Variables <code className="text-[var(--accent-warning)]">VITE_SUPABASE_URL</code> dan <code className="text-[var(--accent-warning)]">VITE_SUPABASE_ANON_KEY</code> di Vercel lalu Redeploy agar seluruh perangkat otomatis terhubung.
           </p>
+          {isCloudConfigured && (
+            <button
+              type="button"
+              onClick={() => {
+                clearSupabaseConfig();
+                setCloudUrl('');
+                setCloudKey('');
+                setIsCloudConfigured(false);
+                setSyncStatusMsg('Konfigurasi Supabase lokal dihapus.');
+              }}
+              className="text-[11px] text-[var(--accent-danger)] hover:underline cursor-pointer pt-1"
+            >
+              Putuskan Koneksi Cloud dari Perangkat Ini
+            </button>
+          )}
         </div>
       </section>
 

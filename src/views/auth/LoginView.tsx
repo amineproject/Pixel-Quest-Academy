@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import {
   ArrowRight,
+  Cloud,
   Crown,
   Lock,
+  RefreshCw,
   ShieldCheck,
   UserCheck,
   Volume2,
@@ -24,8 +26,14 @@ import {
   PixelButton,
   PixelFieldLabel,
   PixelInput,
+  PixelModal,
 } from '../../components/PixelUI';
 import { playRetroSound } from '../../utils/sound';
+import {
+  isSupabaseConfigured,
+  saveSupabaseConfig,
+  testSupabaseConnection,
+} from '../../lib/supabase';
 
 interface LoginViewProps {
   state: AcademyState;
@@ -33,6 +41,7 @@ interface LoginViewProps {
   onLoginAsGm: () => void;
   onUpdateTheme: (theme: PixelTheme) => void;
   onToggleSound: () => void;
+  onSyncData: () => Promise<AcademyState | null>;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
@@ -41,21 +50,31 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onLoginAsGm,
   onUpdateTheme,
   onToggleSound,
+  onSyncData,
 }) => {
   const [selectedRoleTab, setSelectedRoleTab] = useState<UserRole>(UserRole.HERO);
 
   // Hero manual input
   const [heroIdentifier, setHeroIdentifier] = useState('');
   const [heroError, setHeroError] = useState<string | null>(null);
+  const [isCheckingHero, setIsCheckingHero] = useState(false);
 
   // GM manual input (start empty, never pre-fill dummy dots or bypass passwords)
   const [gmUsername, setGmUsername] = useState('');
   const [gmPassword, setGmPassword] = useState('');
   const [gmError, setGmError] = useState<string | null>(null);
+  const [isCheckingGm, setIsCheckingGm] = useState(false);
+
+  // Cross-Device Cloud Connect Modal (for opening on a fresh device)
+  const [cloudModalOpen, setCloudModalOpen] = useState(false);
+  const [cloudInput, setCloudInput] = useState('');
+  const [cloudKeyInput, setCloudKeyInput] = useState('');
+  const [cloudStatus, setCloudStatus] = useState<string | null>(null);
+  const [isCloudBusy, setIsCloudBusy] = useState(false);
 
   const requireGmPassword = state.gmProfile.requirePassword !== false;
 
-  const handleHeroManualSubmit = (e: React.FormEvent) => {
+  const handleHeroManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHeroError(null);
     const query = heroIdentifier.trim().toLowerCase();
@@ -65,33 +84,36 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
-    const matched = state.heroes.find(
+    setIsCheckingHero(true);
+    const synced = await onSyncData();
+    const latestState = synced || state;
+    setIsCheckingHero(false);
+
+    const matched = latestState.heroes.find(
       (h) =>
         h.username.toLowerCase() === query ||
         h.studentCode.toLowerCase() === query
     );
 
     if (!matched) {
-      setHeroError('Akun Hero tidak ditemukan! Periksa kembali NIS atau Username Anda.');
-      playRetroSound('error', state.settings.soundEnabled);
+      setHeroError('Akun Hero tidak ditemukan! Pastikan NIS/Username benar dan perangkat terhubung ke Cloud.');
+      playRetroSound('error', latestState.settings.soundEnabled);
       return;
     }
 
     if (!matched.active) {
       setHeroError('Akun Hero ini sedang dinonaktifkan oleh Guru (Game Master).');
-      playRetroSound('error', state.settings.soundEnabled);
+      playRetroSound('error', latestState.settings.soundEnabled);
       return;
     }
 
-    playRetroSound('start', state.settings.soundEnabled);
+    playRetroSound('start', latestState.settings.soundEnabled);
     onLoginAsHero(matched);
   };
 
-  const handleGmSubmit = (e: React.FormEvent) => {
+  const handleGmSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGmError(null);
-    const expectedUsername = (state.gmProfile.username || 'admin').trim().toLowerCase();
-    const expectedPassword = state.gmProfile.password || 'admin';
 
     const inputUser = gmUsername.trim().toLowerCase();
     const inputPass = gmPassword;
@@ -108,17 +130,88 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
+    setIsCheckingGm(true);
+    const synced = await onSyncData();
+    const latestState = synced || state;
+    setIsCheckingGm(false);
+
+    const expectedUsername = (latestState.gmProfile.username || 'admin').trim().toLowerCase();
+    const expectedPassword = latestState.gmProfile.password || 'admin';
+
     // Strict credential verification: exact match with configured username & password only
     const isMatch =
       inputUser === expectedUsername && inputPass === expectedPassword;
 
     if (isMatch) {
-      playRetroSound('start', state.settings.soundEnabled);
+      playRetroSound('start', latestState.settings.soundEnabled);
       onLoginAsGm();
     } else {
       setGmError('Username atau Password Game Master salah!');
-      playRetroSound('error', state.settings.soundEnabled);
+      playRetroSound('error', latestState.settings.soundEnabled);
     }
+  };
+
+  const handleManualSyncClick = async () => {
+    setIsCloudBusy(true);
+    setCloudStatus(null);
+    const synced = await onSyncData();
+    setIsCloudBusy(false);
+    if (synced) {
+      setCloudStatus(
+        `✓ Data diperbarui (${synced.dungeons.length} kelas, ${synced.heroes.length} siswa).`
+      );
+    } else {
+      setCloudStatus(
+        isSupabaseConfigured()
+          ? 'Tidak ada data baru di Cloud atau tabel belum diisi.'
+          : 'Perangkat ini belum terhubung ke Supabase Cloud. Klik "Hubungkan Cloud" atau buka Link Akses dari Guru.'
+      );
+    }
+  };
+
+  const handleConnectDeviceCloud = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCloudStatus(null);
+
+    const raw = cloudInput.trim();
+    // Support pasting full ?cloud=... share link directly into the first box!
+    if (raw.includes('cloud=')) {
+      try {
+        const token = raw.split('cloud=')[1].split('&')[0];
+        const normalized = token.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(normalized))));
+        if (decoded?.u && decoded?.k) {
+          saveSupabaseConfig(decoded.u, decoded.k);
+          setIsCloudBusy(true);
+          const test = await testSupabaseConnection();
+          if (test.ok && test.hasCloudData) {
+            await onSyncData();
+          }
+          setIsCloudBusy(false);
+          setCloudStatus(test.message);
+          if (test.ok) setCloudModalOpen(false);
+          return;
+        }
+      } catch {
+        setCloudStatus('Link akses cloud tidak valid.');
+        return;
+      }
+    }
+
+    if (!raw || !cloudKeyInput.trim()) {
+      setCloudStatus('Tempel Link Akses Cloud dari Guru atau isi URL & Anon Key Supabase.');
+      return;
+    }
+
+    saveSupabaseConfig(raw, cloudKeyInput.trim());
+    setIsCloudBusy(true);
+    const test = await testSupabaseConnection();
+    if (test.ok && test.hasCloudData) {
+      await onSyncData();
+    }
+    setIsCloudBusy(false);
+    setCloudStatus(test.message);
+    if (test.ok) setCloudModalOpen(false);
   };
 
   return (
@@ -279,9 +372,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     </p>
                   )}
 
-                  <PixelButton type="submit" variant="success" fullWidth size="lg">
+                  <PixelButton
+                    type="submit"
+                    variant="success"
+                    fullWidth
+                    size="lg"
+                    disabled={isCheckingHero}
+                  >
                     <ArrowRight size={16} />
-                    Masuk Sebagai Hero
+                    {isCheckingHero ? 'Menyinkronkan...' : 'Masuk Sebagai Hero'}
                   </PixelButton>
                 </form>
               </div>
@@ -383,12 +482,55 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       [!] {gmError}
                     </p>
                   )}
-                  <PixelButton type="submit" variant="primary" fullWidth>
-                    Login GM Account
+                  <PixelButton
+                    type="submit"
+                    variant="primary"
+                    fullWidth
+                    disabled={isCheckingGm}
+                  >
+                    {isCheckingGm ? 'Memeriksa...' : 'Login GM Account'}
                   </PixelButton>
                 </form>
               </div>
             )}
+
+            {/* Cross-Device Cloud Sync Helper Bar */}
+            <div className="pixel-box-inset p-2.5 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11.5px] text-[var(--text-secondary)] flex items-center gap-1.5">
+                  <Cloud size={14} className={isSupabaseConfigured() ? 'text-[var(--accent-success)]' : 'text-[var(--accent-warning)]'} />
+                  {isSupabaseConfigured()
+                    ? 'Cloud Terhubung (Siap Lintas Perangkat)'
+                    : 'Buka dari perangkat lain? Hubungkan Cloud'}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isCloudBusy}
+                    onClick={handleManualSyncClick}
+                    className="pixel-btn min-h-[30px] px-2 py-1 text-[10px] font-pixel-ui bg-[var(--bg-surface)] text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw size={11} className={isCloudBusy ? 'animate-spin' : ''} />
+                    Sync
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCloudStatus(null);
+                      setCloudModalOpen(true);
+                    }}
+                    className="pixel-btn min-h-[30px] px-2 py-1 text-[10px] font-pixel-ui bg-[var(--bg-surface-alt)] text-[var(--accent-warning)] cursor-pointer"
+                  >
+                    Hubungkan Cloud
+                  </button>
+                </div>
+              </div>
+              {cloudStatus && (
+                <p className="text-[11.5px] text-[var(--accent-warning)] leading-snug">
+                  {cloudStatus}
+                </p>
+              )}
+            </div>
 
             {/* Cheerful Theme Bar at Bottom of Title Screen */}
             <div className="pt-2 border-t border-[var(--border-pixel)]/40 space-y-2">
@@ -434,6 +576,63 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <span>SELECT / START</span>
         </div>
       </div>
+
+      {/* Modal Connect New Device to Cloud */}
+      <PixelModal
+        open={cloudModalOpen}
+        title="Hubungkan Perangkat ke Cloud"
+        onClose={() => setCloudModalOpen(false)}
+      >
+        <form onSubmit={handleConnectDeviceCloud} className="space-y-3">
+          <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+            Agar akun dan data sekolah yang diinput dari perangkat lain muncul di perangkat ini, tempelkan <strong>Link Akses Cloud</strong> dari Guru atau masukkan <strong>Supabase Project URL & Anon Key</strong>:
+          </p>
+          <div>
+            <PixelFieldLabel htmlFor="login-cloud-url">
+              Link Akses Cloud / Supabase URL
+            </PixelFieldLabel>
+            <PixelInput
+              id="login-cloud-url"
+              placeholder="https://...?cloud=... atau https://xxxx.supabase.co"
+              value={cloudInput}
+              onChange={(e) => setCloudInput(e.target.value)}
+            />
+          </div>
+          {!cloudInput.includes('cloud=') && (
+            <div>
+              <PixelFieldLabel htmlFor="login-cloud-key">
+                Supabase Anon Key (Kosongkan jika pakai Link Akses)
+              </PixelFieldLabel>
+              <PixelInput
+                id="login-cloud-key"
+                type="password"
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                value={cloudKeyInput}
+                onChange={(e) => setCloudKeyInput(e.target.value)}
+              />
+            </div>
+          )}
+
+          {cloudStatus && (
+            <p className="text-[12.5px] text-[var(--accent-warning)] bg-[var(--bg-inset)] p-2 border border-[var(--border-pixel)]">
+              {cloudStatus}
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <PixelButton
+              type="button"
+              variant="neutral"
+              onClick={() => setCloudModalOpen(false)}
+            >
+              Tutup
+            </PixelButton>
+            <PixelButton type="submit" variant="success" disabled={isCloudBusy}>
+              {isCloudBusy ? 'Menghubungkan...' : 'Hubungkan & Sync'}
+            </PixelButton>
+          </div>
+        </form>
+      </PixelModal>
     </div>
   );
 };

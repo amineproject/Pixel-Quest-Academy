@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AcademyState,
   ActiveQuest,
@@ -30,6 +30,7 @@ import {
 } from './components/PixelUI';
 import { playRetroSound } from './utils/sound';
 import {
+  bootstrapSupabaseFromUrl,
   cloudDeleteDungeon,
   cloudDeleteHero,
   cloudDeleteNotice,
@@ -46,6 +47,8 @@ import {
   cloudSyncTome,
   fetchAcademyFromSupabase,
 } from './lib/supabase';
+
+const BOOTSTRAPPED_CLOUD_FROM_URL = bootstrapSupabaseFromUrl();
 
 // Login Title View
 import { LoginView } from './views/auth/LoginView';
@@ -104,6 +107,8 @@ function loadInitialAuth(): AuthSession {
 
 export default function App() {
   const [state, setState] = useState<AcademyState>(loadInitialState);
+  const stateRef = useRef<AcademyState>(state);
+  stateRef.current = state;
   const [authSession, setAuthSession] = useState<AuthSession>(loadInitialAuth);
   const [role, setRole] = useState<UserRole>(() => authSession.role || UserRole.GAME_MASTER);
   const [gmMenu, setGmMenu] = useState<GmMenuId>('hq');
@@ -274,18 +279,25 @@ export default function App() {
   };
 
   // Sync from Cloud (Supabase) and Backend (Express / Cloud SQL if running)
-  const syncFromRemote = useCallback(async () => {
+  const syncFromRemote = useCallback(async (): Promise<AcademyState | null> => {
+    const mergeRemote = (remote: Partial<AcademyState>): AcademyState => {
+      const prev = stateRef.current;
+      const next: AcademyState = {
+        ...prev,
+        ...remote,
+        settings: { ...prev.settings, ...(remote.settings || {}) },
+        gmProfile: { ...prev.gmProfile, ...(remote.gmProfile || {}) },
+      };
+      stateRef.current = next;
+      setState(next);
+      return next;
+    };
+
     // 1. Try Supabase Cloud first (works across all devices anywhere)
     try {
       const cloudData = await fetchAcademyFromSupabase();
       if (cloudData && Array.isArray(cloudData.dungeons) && Array.isArray(cloudData.heroes)) {
-        setState((prev) => ({
-          ...prev,
-          ...cloudData,
-          settings: { ...prev.settings, ...(cloudData.settings || {}) },
-          gmProfile: { ...prev.gmProfile, ...(cloudData.gmProfile || {}) },
-        }));
-        return;
+        return mergeRemote(cloudData);
       }
     } catch (err) {
       console.warn('Supabase sync error:', err);
@@ -295,36 +307,46 @@ export default function App() {
     try {
       const res = await fetch('/api/academy');
       if (res.ok) {
-        const data = await res.json();
-        if (data && Array.isArray(data.dungeons) && Array.isArray(data.heroes)) {
-          setState((prev) => ({
-            ...prev,
-            ...data,
-            settings: { ...prev.settings, ...(data.settings || {}) },
-            gmProfile: { ...prev.gmProfile, ...(data.gmProfile || {}) },
-          }));
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data && Array.isArray(data.dungeons) && Array.isArray(data.heroes)) {
+            return mergeRemote(data);
+          }
         }
       }
     } catch {
       // Local mode or offline
     }
+    return null;
   }, []);
 
   useEffect(() => {
+    if (BOOTSTRAPPED_CLOUD_FROM_URL) {
+      showToast('Perangkat berhasil terhubung ke Cloud! Menyinkronkan data...', 'success');
+    }
     syncFromRemote();
 
-    // Cross-device auto-sync on tab focus or visibility change
+    // Cross-device auto-sync on tab focus, visibility change, and 25s interval
     const handleRecheck = () => {
-      syncFromRemote();
+      if (document.visibilityState === 'visible') {
+        syncFromRemote();
+      }
     };
     window.addEventListener('focus', handleRecheck);
-    window.addEventListener('visibilitychange', handleRecheck);
+    document.addEventListener('visibilitychange', handleRecheck);
+    const pollTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        syncFromRemote();
+      }
+    }, 25000);
 
     return () => {
       window.removeEventListener('focus', handleRecheck);
-      window.removeEventListener('visibilitychange', handleRecheck);
+      document.removeEventListener('visibilitychange', handleRecheck);
+      window.clearInterval(pollTimer);
     };
-  }, [syncFromRemote]);
+  }, [syncFromRemote, showToast]);
 
   // CRUD Upsert & Delete Handlers
   const upsertItem = <T extends { id: string }>(list: T[], item: T): T[] => {
@@ -560,6 +582,7 @@ export default function App() {
           onLoginAsGm={handleLoginAsGm}
           onUpdateTheme={handleUpdateTheme}
           onToggleSound={handleToggleSound}
+          onSyncData={syncFromRemote}
         />
       </>
     );
@@ -648,6 +671,7 @@ export default function App() {
               onUpdateGmProfile={handleUpdateGmProfile}
               onUpdateSettings={handleUpdateSettings}
               onResetDemoData={handleResetDemoData}
+              onPullCloudData={syncFromRemote}
               onTestAccessDenied={() =>
                 handleTriggerAccessDenied('#/gm/exp-loot/edit')
               }
