@@ -74,14 +74,14 @@ export function buildClassRecapData(
   const selectedRealm =
     realmId === 'all' ? undefined : state.realms.find((r) => r.id === realmId);
 
-  // Filter heroes by selected class (or all classes sorted alphabetically by class -> name)
+  // Filter heroes by selected class (sorted by class tier & guildCode -> student name)
+  const dungeonOrder = new Map(sortedDungeons.map((d, idx) => [d.id, idx]));
   const heroesInScope = state.heroes
     .filter((h) => (dungeonId === 'all' ? true : h.dungeonId === dungeonId))
     .sort((a, b) => {
-      const dA = sortedDungeons.find((d) => d.id === a.dungeonId)?.name || 'ZZZ';
-      const dB = sortedDungeons.find((d) => d.id === b.dungeonId)?.name || 'ZZZ';
-      const classCmp = dA.localeCompare(dB, 'id', { numeric: true, sensitivity: 'base' });
-      if (classCmp !== 0) return classCmp;
+      const idxA = dungeonOrder.get(a.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      const idxB = dungeonOrder.get(b.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      if (idxA !== idxB) return idxA - idxB;
       return a.name.localeCompare(b.name, 'id', { sensitivity: 'base' });
     });
 

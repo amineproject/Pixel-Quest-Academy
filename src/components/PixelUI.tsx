@@ -1,6 +1,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { PixelChestEmpty, PixelShieldDenied } from './PixelArt';
+import { Dungeon } from '../types/lms';
+import { groupDungeonsByTier } from '../utils/exp';
 
 type ButtonVariant = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
 
@@ -99,6 +101,25 @@ export const PixelSelect: React.FC<
     {children}
   </select>
 );
+
+export const DungeonOptGroupOptions: React.FC<{ dungeons: Dungeon[] }> = ({
+  dungeons,
+}) => {
+  const groups = groupDungeonsByTier(dungeons);
+  return (
+    <>
+      {groups.map((group) => (
+        <optgroup key={group.tier} label={group.tier}>
+          {group.items.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.guildCode} — {d.name}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </>
+  );
+};
 
 export const PixelTextarea: React.FC<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>

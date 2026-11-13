@@ -6,6 +6,7 @@ import {
   QuestDifficulty,
 } from '../../types/lms';
 import {
+  DungeonOptGroupOptions,
   PixelButton,
   PixelConfirmDialog,
   PixelEmptyChest,
@@ -16,7 +17,7 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
-import { formatRetroDate, sortDungeonsAlphabetically } from '../../utils/exp';
+import { formatRetroDate } from '../../utils/exp';
 
 interface GmActiveQuestsProps {
   state: AcademyState;
@@ -211,12 +212,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                 value={dungeonId}
                 onChange={(e) => setDungeonId(e.target.value)}
               >
-                <option value="all">All Guilds</option>
-                {sortDungeonsAlphabetically(state.dungeons).map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.guildCode})
-                  </option>
-                ))}
+                <option value="all">All Guilds (Semua Kelas)</option>
+                <DungeonOptGroupOptions dungeons={state.dungeons} />
               </PixelSelect>
             </div>
           </div>

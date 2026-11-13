@@ -3,6 +3,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { AcademyState, AvatarClass, HeroStudent } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
+  DungeonOptGroupOptions,
   PixelButton,
   PixelConfirmDialog,
   PixelEmptyChest,
@@ -60,6 +61,8 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
     return getHeroEffectiveRealmIds(hero, state.dungeons) || [];
   };
 
+  const dungeonOrder = new Map(sortedDungeons.map((d, idx) => [d.id, idx]));
+
   const filtered = state.heroes
     .filter((h) => {
       const matchDungeon =
@@ -79,9 +82,12 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
         h.studentCode.toLowerCase().includes(q);
       return matchDungeon && matchRealm && matchQuery;
     })
-    .sort((a, b) =>
-      a.name.localeCompare(b.name, 'id', { sensitivity: 'base' })
-    );
+    .sort((a, b) => {
+      const idxA = dungeonOrder.get(a.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      const idxB = dungeonOrder.get(b.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      if (idxA !== idxB) return idxA - idxB;
+      return a.name.localeCompare(b.name, 'id', { sensitivity: 'base' });
+    });
 
   const getDungeonDefaultRealms = (dId: string): string[] => {
     const dng = state.dungeons.find((d) => d.id === dId);
@@ -180,11 +186,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
             aria-label="Filter berdasarkan Kelas"
           >
             <option value="all">Semua Kelas ({state.heroes.length} Heroes)</option>
-            {sortedDungeons.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({d.guildCode})
-              </option>
-            ))}
+            <DungeonOptGroupOptions dungeons={sortedDungeons} />
           </PixelSelect>
 
           <PixelSelect
@@ -408,11 +410,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   {!sortedDungeons.some((d) => d.id === dungeonId) && (
                     <option value="">-- Pilih Kelas --</option>
                   )}
-                  {sortedDungeons.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.guildCode}) — {d.tier}
-                    </option>
-                  ))}
+                  <DungeonOptGroupOptions dungeons={sortedDungeons} />
                 </>
               )}
             </PixelSelect>

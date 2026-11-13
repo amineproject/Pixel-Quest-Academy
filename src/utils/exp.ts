@@ -87,20 +87,70 @@ export function formatRetroDate(isoDate: string): string {
   return `${day} ${months[monthIndex]} ${year}`;
 }
 
-export function sortDungeonsAlphabetically<T extends { name: string; guildCode?: string }>(
-  list: T[]
-): T[] {
+const ROMAN_MAP: Record<string, string> = {
+  XII: '012',
+  XI: '011',
+  X: '010',
+  IX: '009',
+  VIII: '008',
+  VII: '007',
+  VI: '006',
+  V: '005',
+  IV: '004',
+  III: '003',
+  II: '002',
+  I: '001',
+};
+
+export function normalizeClassSortKey(text: string): string {
+  return (text || '')
+    .trim()
+    .replace(/\b(XII|XI|IX|VIII|VII|VI|IV|V|III|II|X|I)(?=\s|$|-|_|\/)/gi, (match) => {
+      const upper = match.toUpperCase();
+      return ROMAN_MAP[upper] || match;
+    })
+    .toLowerCase();
+}
+
+export function compareClassText(a: string, b: string): number {
+  return normalizeClassSortKey(a).localeCompare(normalizeClassSortKey(b), 'id', {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
+
+export function sortDungeonsAlphabetically<
+  T extends { name: string; guildCode?: string; tier?: string }
+>(list: T[]): T[] {
   return [...list].sort((a, b) => {
-    const nameDiff = (a.name || '').localeCompare(b.name || '', 'id', {
-      numeric: true,
-      sensitivity: 'base',
-    });
-    if (nameDiff !== 0) return nameDiff;
-    return (a.guildCode || '').localeCompare(b.guildCode || '', 'id', {
+    const tierDiff = compareClassText(a.tier || '', b.tier || '');
+    if (tierDiff !== 0) return tierDiff;
+    const codeDiff = compareClassText(a.guildCode || '', b.guildCode || '');
+    if (codeDiff !== 0) return codeDiff;
+    return (a.name || '').localeCompare(b.name || '', 'id', {
       numeric: true,
       sensitivity: 'base',
     });
   });
+}
+
+export function groupDungeonsByTier<T extends { name: string; guildCode?: string; tier?: string }>(
+  list: T[]
+): { tier: string; items: T[] }[] {
+  const sorted = sortDungeonsAlphabetically(list);
+  const groups: { tier: string; items: T[] }[] = [];
+  sorted.forEach((d) => {
+    const tierLabel = (d.tier || 'Lainnya').trim() || 'Lainnya';
+    const existing = groups.find(
+      (g) => g.tier.toLowerCase() === tierLabel.toLowerCase()
+    );
+    if (existing) {
+      existing.items.push(d);
+    } else {
+      groups.push({ tier: tierLabel, items: [d] });
+    }
+  });
+  return groups;
 }
 
 export function getHeroEffectiveRealmIds(

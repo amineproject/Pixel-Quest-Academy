@@ -12,6 +12,7 @@ import {
 import { AcademyState, ExpGrade, GradeStatus } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
+  DungeonOptGroupOptions,
   PixelButton,
   PixelEmptyChest,
   PixelFieldLabel,
@@ -116,6 +117,8 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
     ? buildClassRecapData(state, recapDungeonId, recapRealmId)
     : null;
 
+  const dungeonOrder = new Map(sortedDungeons.map((d, idx) => [d.id, idx]));
+
   const eligibleHeroes = state.heroes
     .filter((h) => {
       if (!h.active) return false;
@@ -138,7 +141,12 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
       }
       return true;
     })
-    .sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
+    .sort((a, b) => {
+      const idxA = dungeonOrder.get(a.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      const idxB = dungeonOrder.get(b.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      if (idxA !== idxB) return idxA - idxB;
+      return a.name.localeCompare(b.name, 'id', { sensitivity: 'base' });
+    });
 
   // Local draft scores, statuses, and feedback notes for smooth editing before clicking Save
   const [draftScores, setDraftScores] = useState<Record<string, number>>({});
@@ -240,7 +248,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
         </div>
 
         <div>
-          <PixelFieldLabel htmlFor="grd-dng">3. Filter Dungeon</PixelFieldLabel>
+          <PixelFieldLabel htmlFor="grd-dng">3. Filter Kelas / Dungeon</PixelFieldLabel>
           <PixelSelect
             id="grd-dng"
             value={selectedDungeonId}
@@ -249,11 +257,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
             <option value="all">
               Target Quest ({activeQuest?.dungeonId === 'all' ? 'All Guilds' : 'Guild Terkait'})
             </option>
-            {sortedDungeons.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({d.guildCode})
-              </option>
-            ))}
+            <DungeonOptGroupOptions dungeons={sortedDungeons} />
           </PixelSelect>
         </div>
       </div>
@@ -439,11 +443,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
                 }}
               >
                 <option value="all">Semua Kelas ({sortedDungeons.length})</option>
-                {sortedDungeons.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.guildCode}) — {d.tier}
-                  </option>
-                ))}
+                <DungeonOptGroupOptions dungeons={sortedDungeons} />
               </PixelSelect>
             </div>
 
