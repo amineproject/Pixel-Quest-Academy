@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   BookOpen,
   CheckCircle2,
+  KeyRound,
+  Lock,
   Pencil,
   ShieldAlert,
   XCircle,
@@ -20,6 +22,8 @@ import { PixelAvatar, PixelStar } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyChest,
+  PixelFieldLabel,
+  PixelInput,
   PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
@@ -44,6 +48,10 @@ interface HeroNoticeProps {
   onNavigate: (menu: HeroMenuId) => void;
   onAttemptRestrictedRoute: (route: string) => void;
   onUpdateAvatar: (avatar: AvatarClass) => void;
+  onChangePin?: (
+    currentPin: string,
+    newPin: string
+  ) => Promise<{ ok: boolean; error?: string }>;
 }
 
 export const HeroNotice: React.FC<HeroNoticeProps> = ({
@@ -52,6 +60,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   onNavigate,
   onAttemptRestrictedRoute,
   onUpdateAvatar,
+  onChangePin,
 }) => {
   const [filter, setFilter] = useState<'all' | NoticePriority>('all');
   const [selectedNotice, setSelectedNotice] = useState<QuestNotice | null>(
@@ -59,6 +68,13 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   );
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarClass>(hero.avatar);
+
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [currentPinInput, setCurrentPinInput] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [confirmPinInput, setConfirmPinInput] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [isSavingPin, setIsSavingPin] = useState(false);
 
   const dungeon = state.dungeons.find((d) => d.id === hero.dungeonId);
 
@@ -119,22 +135,46 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
               <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
                 {dungeon ? `${dungeon.guildCode} · ${dungeon.name}` : 'Belum Ada Kelas'} · NIS {hero.studentCode}
               </p>
+              <p className="text-[11px] mt-0.5 flex items-center gap-1">
+                <Lock size={11} className={hero.hasPin ? 'text-emerald-400' : 'text-amber-400'} />
+                <span className={hero.hasPin ? 'text-emerald-400 font-semibold' : 'text-amber-300'}>
+                  {hero.hasPin ? 'Akun Dilindungi PIN' : 'Belum Pasang PIN Rahasia'}
+                </span>
+              </p>
             </div>
           </div>
 
-          <PixelButton
-            type="button"
-            size="sm"
-            variant="warning"
-            onClick={() => {
-              setSelectedAvatar(hero.avatar);
-              setAvatarModalOpen(true);
-            }}
-            className="shrink-0"
-          >
-            <Pencil size={13} />
-            Avatar
-          </PixelButton>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onChangePin && (
+              <PixelButton
+                type="button"
+                size="sm"
+                variant={hero.hasPin ? 'neutral' : 'success'}
+                onClick={() => {
+                  setCurrentPinInput('');
+                  setNewPinInput('');
+                  setConfirmPinInput('');
+                  setPinError(null);
+                  setPinModalOpen(true);
+                }}
+              >
+                <KeyRound size={13} />
+                {hero.hasPin ? 'PIN' : 'Buat PIN'}
+              </PixelButton>
+            )}
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="warning"
+              onClick={() => {
+                setSelectedAvatar(hero.avatar);
+                setAvatarModalOpen(true);
+              }}
+            >
+              <Pencil size={13} />
+              Avatar
+            </PixelButton>
+          </div>
         </div>
 
         {/* Quest Status Symbols Summary (No Points) */}
@@ -400,6 +440,109 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
           </div>
         </div>
       </PixelModal>
+      {/* Student Self-Service Secret PIN Modal */}
+      {onChangePin && (
+        <PixelModal
+          open={pinModalOpen}
+          title={hero.hasPin ? 'Ubah PIN Rahasia' : 'Buat PIN Rahasia Siswa'}
+          onClose={() => setPinModalOpen(false)}
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setPinError(null);
+              const trimmedNew = newPinInput.trim();
+              if (trimmedNew.length < 4) {
+                setPinError('PIN baru minimal 4 karakter/angka.');
+                return;
+              }
+              if (trimmedNew !== confirmPinInput.trim()) {
+                setPinError('Konfirmasi PIN baru tidak cocok!');
+                return;
+              }
+              setIsSavingPin(true);
+              const res = await onChangePin(currentPinInput.trim(), trimmedNew);
+              setIsSavingPin(false);
+              if (!res.ok) {
+                setPinError(res.error || 'Gagal menyimpan PIN.');
+                return;
+              }
+              setPinModalOpen(false);
+            }}
+            autoComplete="off"
+            className="space-y-3"
+          >
+            <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+              Dengan memasang <strong>PIN Rahasia</strong>, teman sekelas yang mengetahui NIS atau Username kamu tidak dapat membuka akunmu dari perangkat lain.
+            </p>
+
+            {hero.hasPin && (
+              <div>
+                <PixelFieldLabel htmlFor="hero-cur-pin">PIN Saat Ini</PixelFieldLabel>
+                <PixelInput
+                  id="hero-cur-pin"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="new-password"
+                  required
+                  placeholder="Masukkan PIN saat ini..."
+                  value={currentPinInput}
+                  onChange={(e) => setCurrentPinInput(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div>
+              <PixelFieldLabel htmlFor="hero-new-pin">PIN Baru (4–12 Angka/Karakter)</PixelFieldLabel>
+              <PixelInput
+                id="hero-new-pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                maxLength={12}
+                required
+                placeholder="Contoh: 123456"
+                value={newPinInput}
+                onChange={(e) => setNewPinInput(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <PixelFieldLabel htmlFor="hero-conf-pin">Ulangi PIN Baru</PixelFieldLabel>
+              <PixelInput
+                id="hero-conf-pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                maxLength={12}
+                required
+                placeholder="Ketik ulang PIN baru..."
+                value={confirmPinInput}
+                onChange={(e) => setConfirmPinInput(e.target.value)}
+              />
+            </div>
+
+            {pinError && (
+              <p className="text-[12.5px] font-semibold text-[var(--accent-danger)]">
+                [!] {pinError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <PixelButton
+                type="button"
+                variant="neutral"
+                onClick={() => setPinModalOpen(false)}
+              >
+                Batal
+              </PixelButton>
+              <PixelButton type="submit" variant="success" disabled={isSavingPin}>
+                {isSavingPin ? 'Menyimpan...' : 'Simpan PIN'}
+              </PixelButton>
+            </div>
+          </form>
+        </PixelModal>
+      )}
     </div>
   );
 };

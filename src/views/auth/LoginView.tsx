@@ -3,6 +3,9 @@ import {
   ArrowRight,
   Cloud,
   Crown,
+  Eye,
+  EyeOff,
+  KeyRound,
   Lock,
   RefreshCw,
   ShieldCheck,
@@ -33,12 +36,14 @@ import {
   isSupabaseConfigured,
   saveSupabaseConfig,
   testSupabaseConnection,
+  verifyGmLoginCloud,
+  verifyHeroLoginCloud,
 } from '../../lib/supabase';
 
 interface LoginViewProps {
   state: AcademyState;
-  onLoginAsHero: (hero: HeroStudent) => void;
-  onLoginAsGm: () => void;
+  onLoginAsHero: (hero: HeroStudent, pin?: string) => void;
+  onLoginAsGm: (username: string, password: string) => void;
   onUpdateTheme: (theme: PixelTheme) => void;
   onToggleSound: () => void;
   onSyncData: () => Promise<AcademyState | null>;
@@ -56,12 +61,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   // Hero manual input
   const [heroIdentifier, setHeroIdentifier] = useState('');
+  const [heroPin, setHeroPin] = useState('');
+  const [showHeroPin, setShowHeroPin] = useState(false);
   const [heroError, setHeroError] = useState<string | null>(null);
   const [isCheckingHero, setIsCheckingHero] = useState(false);
 
   // GM manual input (start empty, never pre-fill dummy dots or bypass passwords)
   const [gmUsername, setGmUsername] = useState('');
   const [gmPassword, setGmPassword] = useState('');
+  const [showGmPass, setShowGmPass] = useState(false);
   const [gmError, setGmError] = useState<string | null>(null);
   const [isCheckingGm, setIsCheckingGm] = useState(false);
 
@@ -72,12 +80,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [cloudStatus, setCloudStatus] = useState<string | null>(null);
   const [isCloudBusy, setIsCloudBusy] = useState(false);
 
-  const requireGmPassword = state.gmProfile.requirePassword !== false;
-
   const handleHeroManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHeroError(null);
     const query = heroIdentifier.trim().toLowerCase();
+    const cleanPin = heroPin.trim();
     if (!query) {
       setHeroError('Masukkan NIS atau Username Hero!');
       playRetroSound('error', state.settings.soundEnabled);
@@ -87,13 +94,85 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsCheckingHero(true);
     const synced = await onSyncData();
     const latestState = synced || state;
-    setIsCheckingHero(false);
 
     const matched = latestState.heroes.find(
       (h) =>
         h.username.toLowerCase() === query ||
         h.studentCode.toLowerCase() === query
     );
+
+    if (isSupabaseConfigured()) {
+      const cloudRes = await verifyHeroLoginCloud(query, cleanPin);
+      setIsCheckingHero(false);
+
+      if (cloudRes.hardened) {
+        if (!cloudRes.ok) {
+          const errMap: Record<string, string> = {
+            not_found:
+              'Akun Hero tidak ditemukan! Pastikan NIS/Username benar dan perangkat terhubung ke Cloud.',
+            inactive:
+              'Akun Hero ini sedang dinonaktifkan oleh Guru (Game Master).',
+            pin_required:
+              'Akun ini dilindungi PIN Rahasia! Masukkan PIN Rahasia akunmu.',
+            invalid_pin: 'PIN Rahasia salah! Periksa kembali PIN akunmu.',
+          };
+          setHeroError(
+            errMap[cloudRes.error || ''] ||
+              cloudRes.error ||
+              'Gagal masuk ke akun Hero.'
+          );
+          playRetroSound('error', latestState.settings.soundEnabled);
+          return;
+        }
+
+        const verifiedHero =
+          latestState.heroes.find((h) => h.id === cloudRes.heroId) || matched;
+        if (!verifiedHero) {
+          setHeroError('Data profil Hero belum tersinkron. Klik tombol Sync lalu coba lagi.');
+          playRetroSound('error', latestState.settings.soundEnabled);
+          return;
+        }
+        playRetroSound('start', latestState.settings.soundEnabled);
+        onLoginAsHero({ ...verifiedHero, hasPin: cloudRes.hasPin ?? verifiedHero.hasPin }, cleanPin);
+        return;
+      }
+    }
+
+    // Non-Supabase mode: verify via Express/Cloud SQL API if running, else local roster
+    try {
+      const apiRes = await fetch('/api/auth/hero', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: query, pin: cleanPin }),
+      });
+      const contentType = apiRes.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await apiRes.json();
+        setIsCheckingHero(false);
+        if (!apiRes.ok || !data.ok) {
+          const errMap: Record<string, string> = {
+            not_found: 'Akun Hero tidak ditemukan! Pastikan NIS/Username benar.',
+            inactive: 'Akun Hero ini sedang dinonaktifkan oleh Guru (Game Master).',
+            pin_required: 'Akun ini dilindungi PIN Rahasia! Masukkan PIN Rahasia akunmu.',
+            invalid_pin: 'PIN Rahasia salah! Periksa kembali PIN akunmu.',
+          };
+          setHeroError(errMap[data.error || ''] || 'Gagal masuk ke akun Hero.');
+          playRetroSound('error', latestState.settings.soundEnabled);
+          return;
+        }
+        const verifiedHero =
+          latestState.heroes.find((h) => h.id === data.heroId) || matched;
+        if (verifiedHero) {
+          playRetroSound('start', latestState.settings.soundEnabled);
+          onLoginAsHero({ ...verifiedHero, hasPin: Boolean(data.hasPin) }, cleanPin);
+          return;
+        }
+      }
+    } catch {
+      // Static local mode without Express server
+    }
+
+    setIsCheckingHero(false);
 
     if (!matched) {
       setHeroError('Akun Hero tidak ditemukan! Pastikan NIS/Username benar dan perangkat terhubung ke Cloud.');
@@ -107,8 +186,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
+    if (matched.pin && matched.pin !== cleanPin) {
+      setHeroError(
+        cleanPin
+          ? 'PIN Rahasia salah! Periksa kembali PIN akunmu.'
+          : 'Akun ini dilindungi PIN Rahasia! Masukkan PIN Rahasia akunmu.'
+      );
+      playRetroSound('error', latestState.settings.soundEnabled);
+      return;
+    }
+
     playRetroSound('start', latestState.settings.soundEnabled);
-    onLoginAsHero(matched);
+    onLoginAsHero(matched, cleanPin);
   };
 
   const handleGmSubmit = async (e: React.FormEvent) => {
@@ -131,6 +220,27 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
 
     setIsCheckingGm(true);
+
+    if (isSupabaseConfigured()) {
+      const gmRes = await verifyGmLoginCloud(inputUser, inputPass);
+      if (gmRes.hardened) {
+        setIsCheckingGm(false);
+        if (gmRes.ok) {
+          playRetroSound('start', state.settings.soundEnabled);
+          onLoginAsGm(gmUsername.trim(), inputPass);
+        } else if (gmRes.error === 'rpc_required') {
+          setGmError(
+            'Database memakai proteksi terenkripsi baru. Jalankan ulang supabase-schema.sql di Supabase SQL Editor.'
+          );
+          playRetroSound('error', state.settings.soundEnabled);
+        } else {
+          setGmError('Username atau Password Game Master salah!');
+          playRetroSound('error', state.settings.soundEnabled);
+        }
+        return;
+      }
+    }
+
     const synced = await onSyncData();
     const latestState = synced || state;
     setIsCheckingGm(false);
@@ -144,7 +254,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
     if (isMatch) {
       playRetroSound('start', latestState.settings.soundEnabled);
-      onLoginAsGm();
+      onLoginAsGm(gmUsername.trim(), inputPass);
     } else {
       setGmError('Username atau Password Game Master salah!');
       playRetroSound('error', latestState.settings.soundEnabled);
@@ -349,14 +459,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </p>
                 </div>
 
-                <form onSubmit={handleHeroManualSubmit} className="pixel-box p-4 space-y-3">
+                <form onSubmit={handleHeroManualSubmit} autoComplete="off" className="pixel-box p-4 space-y-3">
                   <div>
                     <PixelFieldLabel htmlFor="hero-id-input">
                       NIS Siswa / Username
                     </PixelFieldLabel>
                     <PixelInput
                       id="hero-id-input"
-                      autoComplete="username"
+                      name="hero-login-id"
+                      autoComplete="off"
                       placeholder="Masukkan NIS atau Username akunmu..."
                       value={heroIdentifier}
                       onChange={(e) => {
@@ -364,6 +475,39 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         if (heroError) setHeroError(null);
                       }}
                     />
+                  </div>
+
+                  <div>
+                    <PixelFieldLabel htmlFor="hero-pin-input">
+                      <span className="inline-flex items-center gap-1">
+                        <KeyRound size={11} className="text-[var(--accent-warning)]" />
+                        PIN Rahasia Siswa
+                      </span>
+                    </PixelFieldLabel>
+                    <div className="flex items-center gap-1.5">
+                      <PixelInput
+                        id="hero-pin-input"
+                        name="hero-login-pin"
+                        type={showHeroPin ? 'text' : 'password'}
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                        placeholder="Masukkan PIN (kosongkan jika belum ada PIN)"
+                        value={heroPin}
+                        onChange={(e) => {
+                          setHeroPin(e.target.value);
+                          if (heroError) setHeroError(null);
+                        }}
+                        className="flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowHeroPin((v) => !v)}
+                        aria-label={showHeroPin ? 'Sembunyikan PIN' : 'Lihat PIN'}
+                        className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer shrink-0"
+                      >
+                        {showHeroPin ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
 
                   {heroError && (
@@ -382,6 +526,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <ArrowRight size={16} />
                     {isCheckingHero ? 'Menyinkronkan...' : 'Masuk Sebagai Hero'}
                   </PixelButton>
+
+                  <p className="text-[11.5px] text-[var(--text-muted)] text-center leading-snug">
+                    Menggunakan perangkat bersama? Pastikan klik <strong>Logout</strong> atau tutup tab setelah selesai.
+                  </p>
                 </form>
               </div>
             ) : (
@@ -412,37 +560,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     Akses penuh untuk mengelola 9 Modul: Dungeons, Siswa, Quest Board, Realms, Tomes, Quests, & Penilaian.
                   </div>
 
-                  {requireGmPassword ? (
-                    <div className="pixel-box-inset p-2.5 text-center border-2 border-[var(--accent-warning)] bg-[var(--bg-inset)]">
-                      <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] flex items-center justify-center gap-1.5">
-                        <Lock size={13} />
-                        WAJIB MASUK DENGAN USERNAME & PASSWORD
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <PixelButton
-                        type="button"
-                        variant="warning"
-                        fullWidth
-                        size="lg"
-                        onClick={() => {
-                          playRetroSound('start', state.settings.soundEnabled);
-                          onLoginAsGm();
-                        }}
-                      >
-                        <Crown size={18} />
-                        Fast Enter as Game Master
-                      </PixelButton>
-                      <span className="font-pixel-body text-[13px] text-[var(--text-muted)] block text-center">
-                        (Kunci password dinonaktifkan di Settings)
-                      </span>
-                    </div>
-                  )}
+                  <div className="pixel-box-inset p-2.5 text-center border-2 border-[var(--accent-warning)] bg-[var(--bg-inset)]">
+                    <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] flex items-center justify-center gap-1.5">
+                      <Lock size={13} />
+                      WAJIB MASUK DENGAN USERNAME & PASSWORD
+                    </span>
+                  </div>
                 </div>
 
                 {/* GM Credentials Form */}
-                <form onSubmit={handleGmSubmit} className="pixel-box p-3.5 space-y-2.5">
+                <form onSubmit={handleGmSubmit} autoComplete="off" className="pixel-box p-3.5 space-y-2.5">
                   <span className="font-pixel-ui text-[10px] text-[var(--text-muted)] block uppercase">
                     Kredensial Login GM
                   </span>
@@ -452,7 +579,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     </PixelFieldLabel>
                     <PixelInput
                       id="gm-user-input"
-                      autoComplete="username"
+                      name="gm-login-user"
+                      autoComplete="off"
                       placeholder="Masukkan username guru..."
                       value={gmUsername}
                       onChange={(e) => {
@@ -465,17 +593,29 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <PixelFieldLabel htmlFor="gm-pass-input">
                       Password Guild
                     </PixelFieldLabel>
-                    <PixelInput
-                      id="gm-pass-input"
-                      type="password"
-                      autoComplete="current-password"
-                      placeholder="Masukkan password guru..."
-                      value={gmPassword}
-                      onChange={(e) => {
-                        setGmPassword(e.target.value);
-                        if (gmError) setGmError(null);
-                      }}
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <PixelInput
+                        id="gm-pass-input"
+                        name="gm-login-pass"
+                        type={showGmPass ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder="Masukkan password guru..."
+                        value={gmPassword}
+                        onChange={(e) => {
+                          setGmPassword(e.target.value);
+                          if (gmError) setGmError(null);
+                        }}
+                        className="flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowGmPass((v) => !v)}
+                        aria-label={showGmPass ? 'Sembunyikan password' : 'Lihat password'}
+                        className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer shrink-0"
+                      >
+                        {showGmPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                   {gmError && (
                     <p className="font-pixel-body text-[16px] text-[var(--accent-danger)] leading-tight">

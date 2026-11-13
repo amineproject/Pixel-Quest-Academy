@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Dices, KeyRound, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { AcademyState, AvatarClass, HeroStudent } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
@@ -56,6 +56,8 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   const [avatar, setAvatar] = useState<AvatarClass>('knight');
   const [heroClass, setHeroClass] = useState('Arcane Knight');
   const [active, setActive] = useState(true);
+  const [pin, setPin] = useState('');
+  const [clearPin, setClearPin] = useState(false);
 
   const getEffectiveRealmsForHero = (hero: HeroStudent): string[] => {
     return getHeroEffectiveRealmIds(hero, state.dungeons) || [];
@@ -108,6 +110,8 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
     setAvatar('knight');
     setHeroClass('Arcane Knight');
     setActive(true);
+    setPin('');
+    setClearPin(false);
     setModalOpen(true);
   };
 
@@ -125,6 +129,8 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
     setAvatar(h.avatar);
     setHeroClass(h.heroClass);
     setActive(h.active);
+    setPin('');
+    setClearPin(false);
     setModalOpen(true);
   };
 
@@ -140,6 +146,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
     e.preventDefault();
     if (!name.trim() || !username.trim()) return;
     const resolvedDungeonId = dungeonId || sortedDungeons[0]?.id || '';
+    const trimmedPin = pin.trim();
     onSaveHero({
       id: editingHero?.id || `hr-${Date.now()}`,
       name: name.trim(),
@@ -152,6 +159,11 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
       joinedDate:
         editingHero?.joinedDate || new Date().toISOString().slice(0, 10),
       enrolledRealmIds,
+      ...(trimmedPin
+        ? { pin: trimmedPin, hasPin: true }
+        : clearPin
+          ? { pin: '', hasPin: false }
+          : { hasPin: Boolean(editingHero?.hasPin) }),
     });
     setModalOpen(false);
   };
@@ -269,9 +281,20 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <PixelAvatar avatar={hero.avatar} size={44} className="shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] break-words [overflow-wrap:anywhere]">
-                        {hero.name}
-                      </h3>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <h3 className="text-[14px] font-bold text-[var(--text-primary)] break-words [overflow-wrap:anywhere]">
+                          {hero.name}
+                        </h3>
+                        {hero.hasPin && (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 border border-emerald-400/70 bg-emerald-950/40 text-emerald-300 shrink-0"
+                            title="Akun siswa dilindungi PIN Rahasia"
+                          >
+                            <Lock size={10} />
+                            PIN
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[12px] text-[var(--text-secondary)] truncate">
                         @{hero.username} · NIS {hero.studentCode}
                       </p>
@@ -536,6 +559,74 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
               onChange={(e) => setHeroClass(e.target.value)}
             />
           </div>
+
+          {/* PIN Rahasia Siswa */}
+          <div className="pixel-box-inset p-3 space-y-2 border border-[var(--border-pixel)]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <PixelFieldLabel htmlFor="hr-pin">
+                <span className="inline-flex items-center gap-1">
+                  <KeyRound size={11} className="text-[var(--accent-warning)]" />
+                  PIN Rahasia Siswa (Keamanan Login)
+                </span>
+              </PixelFieldLabel>
+              {editingHero?.hasPin && !clearPin && (
+                <span className="text-[10.5px] font-semibold text-emerald-400">
+                  ✓ PIN Aktif
+                </span>
+              )}
+              {clearPin && (
+                <span className="text-[10.5px] font-semibold text-rose-400">
+                  PIN akan dihapus saat disimpan
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <PixelInput
+                id="hr-pin"
+                maxLength={12}
+                placeholder={
+                  editingHero?.hasPin && !clearPin
+                    ? 'Isi PIN baru jika ingin reset PIN...'
+                    : 'Contoh: 482910 (kosongkan jika tanpa PIN)'
+                }
+                value={pin}
+                onChange={(e) => {
+                  setPin(e.target.value);
+                  if (clearPin) setClearPin(false);
+                }}
+                className="flex-1"
+              />
+              <PixelButton
+                type="button"
+                size="sm"
+                variant="warning"
+                onClick={() => {
+                  setPin(String(Math.floor(100000 + Math.random() * 900000)));
+                  setClearPin(false);
+                }}
+              >
+                <Dices size={13} />
+                Acak
+              </PixelButton>
+              {editingHero?.hasPin && (
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="danger"
+                  onClick={() => {
+                    setPin('');
+                    setClearPin((prev) => !prev);
+                  }}
+                >
+                  {clearPin ? 'Batal Hapus' : 'Hapus PIN'}
+                </PixelButton>
+              )}
+            </div>
+            <p className="text-[11.5px] text-[var(--text-secondary)] leading-snug">
+              Melindungi akun siswa agar teman sekelas yang tahu NIS-nya tidak bisa login tanpa PIN. Siswa juga bisa mengubah PIN sendiri setelah login.
+            </p>
+          </div>
+
           <label className="flex items-center gap-2.5 min-h-[44px] cursor-pointer">
             <input
               type="checkbox"

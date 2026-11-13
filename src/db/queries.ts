@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
 import { db } from './index.ts';
 import {
@@ -237,6 +238,7 @@ export async function getAllAcademyData() {
           active: h.active,
           joinedDate: h.joinedDate,
           enrolledRealmIds: erIds,
+          hasPin: Boolean(h.hasPin),
         };
       }),
       notices: noticesList.map((n) => ({
@@ -342,6 +344,20 @@ export async function deleteDungeon(id: string) {
   }
 }
 
+export function hashPinSecret(pin: string): string {
+  const salt = crypto.randomBytes(12).toString('hex');
+  const hash = crypto.createHash('sha256').update(`${salt}:${pin}`).digest('hex');
+  return `${salt}:${hash}`;
+}
+
+export function verifyPinSecret(pin: string, stored: string): boolean {
+  if (!stored || !stored.includes(':')) return false;
+  const [salt, expectedHash] = stored.split(':');
+  if (!salt || !expectedHash) return false;
+  const actualHash = crypto.createHash('sha256').update(`${salt}:${pin}`).digest('hex');
+  return actualHash === expectedHash;
+}
+
 // Heroes CRUD
 export async function upsertHero(h: HeroStudent) {
   try {
@@ -359,6 +375,33 @@ export async function upsertHero(h: HeroStudent) {
     }
 
     const enrolledJson = h.enrolledRealmIds ? JSON.stringify(h.enrolledRealmIds) : '[]';
+    const trimmedPin = typeof h.pin === 'string' ? h.pin.trim() : undefined;
+
+    const updateSet: Record<string, any> = {
+      name: h.name,
+      username: h.username,
+      studentCode: h.studentCode,
+      dungeonId: validDungeonId,
+      avatar: h.avatar || 'knight',
+      heroClass: h.heroClass || 'Arcane Knight',
+      active: h.active ?? true,
+      enrolledRealmIds: enrolledJson,
+    };
+
+    let insertHasPin = Boolean(h.hasPin);
+    let insertPinHash = '';
+
+    if (trimmedPin && trimmedPin.length > 0) {
+      insertHasPin = true;
+      insertPinHash = hashPinSecret(trimmedPin);
+      updateSet.hasPin = true;
+      updateSet.pinHash = insertPinHash;
+    } else if (trimmedPin === '' && h.hasPin === false) {
+      insertHasPin = false;
+      insertPinHash = '';
+      updateSet.hasPin = false;
+      updateSet.pinHash = '';
+    }
 
     return await db
       .insert(heroes)
@@ -373,24 +416,69 @@ export async function upsertHero(h: HeroStudent) {
         active: h.active ?? true,
         joinedDate: h.joinedDate || new Date().toISOString().slice(0, 10),
         enrolledRealmIds: enrolledJson,
+        hasPin: insertHasPin,
+        pinHash: insertPinHash,
       })
       .onConflictDoUpdate({
         target: heroes.id,
-        set: {
-          name: h.name,
-          username: h.username,
-          studentCode: h.studentCode,
-          dungeonId: validDungeonId,
-          avatar: h.avatar || 'knight',
-          heroClass: h.heroClass || 'Arcane Knight',
-          active: h.active ?? true,
-          enrolledRealmIds: enrolledJson,
-        },
+        set: updateSet,
       });
   } catch (error) {
     console.error('Failed to upsert hero:', error);
     throw new Error('Failed to save hero.', { cause: error });
   }
+}
+
+export async function verifyHeroLoginSql(identifier: string, pin: string) {
+  const q = identifier.trim().toLowerCase();
+  const rows = await db.select().from(heroes);
+  const matched = rows.find(
+    (h) =>
+      h.username.toLowerCase() === q || h.studentCode.toLowerCase() === q
+  );
+  if (!matched) {
+    return { ok: false, error: 'not_found' };
+  }
+  if (!matched.active) {
+    return { ok: false, error: 'inactive' };
+  }
+  if (matched.hasPin && matched.pinHash) {
+    if (!pin.trim()) {
+      return { ok: false, error: 'pin_required' };
+    }
+    if (!verifyPinSecret(pin.trim(), matched.pinHash)) {
+      return { ok: false, error: 'invalid_pin' };
+    }
+  }
+  return { ok: true, heroId: matched.id, hasPin: Boolean(matched.hasPin) };
+}
+
+export async function changeOwnHeroPinSql(
+  heroId: string,
+  currentPin: string,
+  newPin: string
+) {
+  const rows = await db
+    .select()
+    .from(heroes)
+    .where(eq(heroes.id, heroId))
+    .limit(1);
+  const hero = rows[0];
+  if (!hero) return { ok: false, error: 'Hero tidak ditemukan.' };
+  if (hero.hasPin && hero.pinHash) {
+    if (!verifyPinSecret(currentPin.trim(), hero.pinHash)) {
+      return { ok: false, error: 'PIN saat ini salah!' };
+    }
+  }
+  const cleanNew = newPin.trim();
+  if (cleanNew.length < 4) {
+    return { ok: false, error: 'PIN baru minimal 4 karakter.' };
+  }
+  await db
+    .update(heroes)
+    .set({ hasPin: true, pinHash: hashPinSecret(cleanNew) })
+    .where(eq(heroes.id, heroId));
+  return { ok: true };
 }
 
 export async function deleteHero(id: string) {

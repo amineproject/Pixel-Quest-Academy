@@ -34,6 +34,8 @@ export const heroes = pgTable('heroes', {
   active: boolean('active').notNull().default(true),
   joinedDate: text('joined_date').notNull(),
   enrolledRealmIds: text('enrolled_realm_ids'), // JSON array of enrolled realm IDs
+  hasPin: boolean('has_pin').notNull().default(false),
+  pinHash: text('pin_hash').default(''),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

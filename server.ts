@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import * as dotenv from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
+  changeOwnHeroPinSql,
   deleteDungeon,
   deleteHero,
   deleteNotice,
@@ -20,6 +21,7 @@ import {
   upsertQuest,
   upsertRealm,
   upsertTome,
+  verifyHeroLoginSql,
 } from './src/db/queries.ts';
 
 dotenv.config();
@@ -147,6 +149,7 @@ app.get('/api/academy', async (req, res) => {
               active: h.active,
               joinedDate: h.joined_date || h.joinedDate,
               enrolledRealmIds: erIds,
+              hasPin: Boolean(h.has_pin ?? h.hasPin),
             };
           }),
           realms: (rData || []).map((r: any) => ({
@@ -246,7 +249,31 @@ app.delete('/api/dungeons/:id', async (req, res) => {
   }
 });
 
-// Heroes
+// Heroes & Hero PIN Auth
+app.post('/api/auth/hero', async (req, res) => {
+  try {
+    const { identifier, pin } = req.body || {};
+    const result = await verifyHeroLoginSql(String(identifier || ''), String(pin || ''));
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message || 'Auth failed' });
+  }
+});
+
+app.post('/api/heroes/:id/pin', async (req, res) => {
+  try {
+    const { currentPin, newPin } = req.body || {};
+    const result = await changeOwnHeroPinSql(
+      req.params.id,
+      String(currentPin || ''),
+      String(newPin || '')
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message || 'PIN update failed' });
+  }
+});
+
 app.post('/api/heroes', async (req, res) => {
   try {
     await upsertHero(req.body);
@@ -263,6 +290,7 @@ app.post('/api/heroes', async (req, res) => {
         active: req.body.active ?? true,
         joined_date: req.body.joinedDate,
         enrolled_realm_ids: JSON.stringify(req.body.enrolledRealmIds || []),
+        has_pin: Boolean(req.body.pin ? true : req.body.hasPin),
       });
     }
     res.json({ success: true });

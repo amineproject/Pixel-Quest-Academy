@@ -17,19 +17,22 @@ import {
 } from '../../components/PixelUI';
 
 import {
+  checkHardenedSecurityStatus,
   clearSupabaseConfig,
   generateCloudShareLink,
   getStoredSupabaseAnonKey,
   getStoredSupabaseUrl,
+  GmAuthCredentials,
   isSupabaseConfigured,
   saveSupabaseConfig,
   testSupabaseConnection,
   uploadAllLocalToSupabase,
 } from '../../lib/supabase';
-import { Check, Cloud, Copy, Download, Link2, RefreshCw } from 'lucide-react';
+import { Check, Cloud, Copy, Download, Eye, EyeOff, Link2, Lock, RefreshCw } from 'lucide-react';
 
 interface GmSettingsProps {
   state: AcademyState;
+  gmAuth?: GmAuthCredentials;
   onUpdateGmProfile: (profile: GameMasterProfile) => void;
   onUpdateSettings: (settings: SystemSettings) => void;
   onResetDemoData: () => void;
@@ -67,24 +70,38 @@ const THEMES: { id: PixelTheme; label: string; previewColors: string[] }[] = [
 
 export const GmSettings: React.FC<GmSettingsProps> = ({
   state,
+  gmAuth,
   onUpdateGmProfile,
   onUpdateSettings,
   onResetDemoData,
   onPullCloudData,
   onTestAccessDenied,
 }) => {
+  const isProtectedPass =
+    isSupabaseConfigured() &&
+    (!state.gmProfile.password || state.gmProfile.password === '[PROTECTED]');
+
   const [name, setName] = useState(state.gmProfile.name);
   const [title, setTitle] = useState(state.gmProfile.title);
   const [specialty, setSpecialty] = useState(state.gmProfile.specialty || 'Guru IPA & Pembina Sains');
   const [avatar, setAvatar] = useState(state.gmProfile.avatar || 'guild_master');
-  const [username, setUsername] = useState(state.gmProfile.username || 'admin');
-  const [password, setPassword] = useState(state.gmProfile.password || 'admin');
-  const [requirePassword, setRequirePassword] = useState(
-    state.gmProfile.requirePassword !== false
+  const [username, setUsername] = useState(state.gmProfile.username || gmAuth?.username || 'admin');
+  const [password, setPassword] = useState(
+    isProtectedPass ? '' : state.gmProfile.password || gmAuth?.password || 'admin'
   );
+  const [showGmPassword, setShowGmPassword] = useState(false);
   const [term, setTerm] = useState(state.settings.academicTerm);
   const [confirmReset, setConfirmReset] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Supabase Cloud Sync State
+  const [cloudUrl, setCloudUrl] = useState(getStoredSupabaseUrl);
+  const [cloudKey, setCloudKey] = useState(getStoredSupabaseAnonKey);
+  const [isCloudConfigured, setIsCloudConfigured] = useState(isSupabaseConfigured);
+  const [isHardenedSecurity, setIsHardenedSecurity] = useState<boolean | null>(null);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Sync local form fields if remote Cloud data updates from another device (HP <-> Laptop)
   useEffect(() => {
@@ -92,19 +109,28 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     setTitle(state.gmProfile.title);
     setSpecialty(state.gmProfile.specialty || 'Guru IPA & Pembina Sains');
     setAvatar(state.gmProfile.avatar || 'guild_master');
-    setUsername(state.gmProfile.username || 'admin');
-    setPassword(state.gmProfile.password || 'admin');
-    setRequirePassword(state.gmProfile.requirePassword !== false);
+    setUsername(state.gmProfile.username || gmAuth?.username || 'admin');
+    if (isSupabaseConfigured() && (!state.gmProfile.password || state.gmProfile.password === '[PROTECTED]')) {
+      setPassword('');
+    } else if (state.gmProfile.password) {
+      setPassword(state.gmProfile.password);
+    }
     setTerm(state.settings.academicTerm);
-  }, [state.gmProfile, state.settings.academicTerm]);
+  }, [state.gmProfile, state.settings.academicTerm, gmAuth?.username]);
 
-  // Supabase Cloud Sync State
-  const [cloudUrl, setCloudUrl] = useState(getStoredSupabaseUrl);
-  const [cloudKey, setCloudKey] = useState(getStoredSupabaseAnonKey);
-  const [isCloudConfigured, setIsCloudConfigured] = useState(isSupabaseConfigured);
-  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!isCloudConfigured) {
+      setIsHardenedSecurity(null);
+      return;
+    }
+    checkHardenedSecurityStatus().then((hardened) => {
+      if (active) setIsHardenedSecurity(hardened);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isCloudConfigured]);
 
   const shareLink = isCloudConfigured ? generateCloudShareLink() : null;
 
@@ -125,6 +151,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     setIsSyncing(true);
     setSyncStatusMsg('Menguji koneksi ke Supabase Cloud...');
     const testRes = await testSupabaseConnection();
+    setIsHardenedSecurity(testRes.hardened);
     if (testRes.ok && testRes.hasCloudData) {
       await onPullCloudData();
     }
@@ -139,7 +166,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     }
     setIsSyncing(true);
     setSyncStatusMsg('Sedang mengunggah seluruh data ke Supabase Cloud...');
-    const res = await uploadAllLocalToSupabase(state);
+    const res = await uploadAllLocalToSupabase(state, gmAuth);
     setIsSyncing(false);
     if (res.ok) {
       setSyncStatusMsg('✓ Seluruh data sukses tersinkronisasi ke Supabase Cloud!');
@@ -156,6 +183,8 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     setIsSyncing(true);
     setSyncStatusMsg('Mengambil data terbaru dari Supabase Cloud...');
     const fetched = await onPullCloudData();
+    const hardened = await checkHardenedSecurityStatus();
+    setIsHardenedSecurity(hardened);
     setIsSyncing(false);
     if (fetched) {
       setSyncStatusMsg(
@@ -179,7 +208,8 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password) return;
+    const resolvedPassword = password.trim() || gmAuth?.password || state.gmProfile.password || '';
+    if (!username.trim() || !resolvedPassword) return;
     onUpdateGmProfile({
       ...state.gmProfile,
       name: name.trim() || state.gmProfile.name,
@@ -187,13 +217,14 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
       specialty: specialty.trim() || state.gmProfile.specialty,
       avatar,
       username: username.trim(),
-      password,
-      requirePassword,
+      password: resolvedPassword,
+      requirePassword: true,
     });
     onUpdateSettings({
       ...state.settings,
       academicTerm: term.trim() || state.settings.academicTerm,
     });
+    if (isProtectedPass) setPassword('');
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2400);
   };
@@ -392,33 +423,34 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
               />
             </div>
             <div>
-              <PixelFieldLabel htmlFor="gm-pass">Password Akun GM</PixelFieldLabel>
-              <PixelInput
-                id="gm-pass"
-                type="text"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <PixelFieldLabel htmlFor="gm-pass">
+                {isProtectedPass ? 'Ganti Password GM (Opsional)' : 'Password Akun GM'}
+              </PixelFieldLabel>
+              <div className="flex items-center gap-1.5">
+                <PixelInput
+                  id="gm-pass"
+                  type={showGmPassword ? 'text' : 'password'}
+                  required={!isProtectedPass && !gmAuth?.password}
+                  placeholder={isProtectedPass ? 'Kosongkan jika tetap pakai password saat ini' : 'Password guru'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowGmPassword((v) => !v)}
+                  aria-label={showGmPassword ? 'Sembunyikan password' : 'Lihat password'}
+                  className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer shrink-0"
+                >
+                  {showGmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
           </div>
 
-          <label className="flex items-start gap-2.5 p-2.5 pixel-box-inset cursor-pointer bg-[var(--bg-inset)]">
-            <input
-              type="checkbox"
-              checked={requirePassword}
-              onChange={(e) => setRequirePassword(e.target.checked)}
-              className="w-5 h-5 accent-[var(--accent-warning)] mt-0.5 shrink-0"
-            />
-            <div className="space-y-0.5">
-              <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] block">
-                KUNCI MODE GAME MASTER (Wajibkan Password)
-              </span>
-              <p className="font-pixel-body text-[15px] text-[var(--text-secondary)] leading-tight">
-                Hilangkan tombol 1-klik "Fast Enter" di layar login agar siswa tidak bisa sembarangan masuk ke mode guru.
-              </p>
-            </div>
-          </label>
+          <p className="text-[12px] text-[var(--text-secondary)] pixel-box-inset p-2.5 bg-[var(--bg-inset)] leading-snug">
+            Login Game Master selalu wajib menggunakan Username &amp; Password (Fast Enter dinonaktifkan &amp; password terenkripsi di database).
+          </p>
         </div>
 
         {saveSuccess && (
@@ -455,6 +487,23 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
           Agar data yang diinput oleh Guru (Game Master) langsung tersimpan dan dapat dibaca oleh siswa di perangkat lain (HP, laptop, tablet), hubungkan ke Supabase Cloud:
         </p>
+
+        {isCloudConfigured && isHardenedSecurity !== null && (
+          <div
+            className={`pixel-box-inset p-2.5 text-[12px] flex items-center gap-2 border ${
+              isHardenedSecurity
+                ? 'border-emerald-500/60 text-emerald-300 bg-emerald-950/25'
+                : 'border-amber-500/60 text-amber-300 bg-amber-950/25'
+            }`}
+          >
+            <Lock size={14} className="shrink-0" />
+            <span>
+              {isHardenedSecurity
+                ? 'Keamanan RLS Ketat & Hash Password Aktif (Nilai & Kredensial GM terlindungi di server Supabase).'
+                : 'Database masih memakai mode lama. Jalankan pembaruan supabase-schema.sql di Supabase SQL Editor untuk mengaktifkan enkripsi password, PIN siswa, dan RLS ketat.'}
+            </span>
+          </div>
+        )}
 
         <form onSubmit={handleSaveCloudConfig} className="space-y-3 pt-1">
           <div>

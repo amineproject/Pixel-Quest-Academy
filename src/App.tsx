@@ -30,7 +30,9 @@ import {
 } from './components/PixelUI';
 import { playRetroSound } from './utils/sound';
 import {
+  AcademyFetchContext,
   bootstrapSupabaseFromUrl,
+  changeOwnHeroPinCloud,
   cloudDeleteDungeon,
   cloudDeleteHero,
   cloudDeleteNotice,
@@ -47,8 +49,10 @@ import {
   cloudSyncTome,
   CloudSyncResult,
   fetchAcademyFromSupabase,
+  GmAuthCredentials,
   isSupabaseConfigured,
   subscribeAcademyRealtime,
+  updateOwnHeroAvatarCloud,
 } from './lib/supabase';
 
 const BOOTSTRAPPED_CLOUD_FROM_URL = bootstrapSupabaseFromUrl();
@@ -75,28 +79,16 @@ import { HeroLog } from './views/hero/HeroLog';
 
 const AUTH_KEY = 'pixel_quest_auth_session';
 
-function loadInitialState(): AcademyState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return INITIAL_ACADEMY_STATE;
-    const parsed = JSON.parse(raw) as Partial<AcademyState>;
-    if (!parsed || !Array.isArray(parsed.dungeons) || !Array.isArray(parsed.heroes)) {
-      return INITIAL_ACADEMY_STATE;
-    }
-    return {
-      ...INITIAL_ACADEMY_STATE,
-      ...parsed,
-      gmProfile: { ...INITIAL_ACADEMY_STATE.gmProfile, ...parsed.gmProfile },
-      settings: { ...INITIAL_ACADEMY_STATE.settings, ...parsed.settings },
-    };
-  } catch {
-    return INITIAL_ACADEMY_STATE;
-  }
-}
-
 function loadInitialAuth(): AuthSession {
   try {
-    const raw = localStorage.getItem(AUTH_KEY);
+    // Always remove legacy localStorage auth key so sessions never leak across browser restarts or shared devices
+    localStorage.removeItem(AUTH_KEY);
+    // If opened via an admin-shared ?cloud= link, force a fresh login screen for the new user
+    if (BOOTSTRAPPED_CLOUD_FROM_URL) {
+      sessionStorage.removeItem(AUTH_KEY);
+      return { isLoggedIn: false, role: UserRole.HERO };
+    }
+    const raw = sessionStorage.getItem(AUTH_KEY);
     if (!raw) return { isLoggedIn: false, role: UserRole.HERO };
     const parsed = JSON.parse(raw) as AuthSession;
     if (parsed && typeof parsed.isLoggedIn === 'boolean') {
@@ -108,16 +100,68 @@ function loadInitialAuth(): AuthSession {
   }
 }
 
+function loadInitialState(): AcademyState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return isSupabaseConfigured()
+        ? {
+            ...INITIAL_ACADEMY_STATE,
+            grades: [],
+            gmProfile: { ...INITIAL_ACADEMY_STATE.gmProfile, password: '' },
+          }
+        : INITIAL_ACADEMY_STATE;
+    }
+    const parsed = JSON.parse(raw) as Partial<AcademyState>;
+    if (!parsed || !Array.isArray(parsed.dungeons) || !Array.isArray(parsed.heroes)) {
+      return INITIAL_ACADEMY_STATE;
+    }
+    const baseState: AcademyState = {
+      ...INITIAL_ACADEMY_STATE,
+      ...parsed,
+      gmProfile: { ...INITIAL_ACADEMY_STATE.gmProfile, ...parsed.gmProfile },
+      settings: { ...INITIAL_ACADEMY_STATE.settings, ...parsed.settings },
+    };
+    if (isSupabaseConfigured()) {
+      return {
+        ...baseState,
+        gmProfile: { ...baseState.gmProfile, password: '' },
+      };
+    }
+    return baseState;
+  } catch {
+    return INITIAL_ACADEMY_STATE;
+  }
+}
+
+function sanitizeStateForLocalStorage(
+  st: AcademyState,
+  auth: AuthSession
+): AcademyState {
+  if (!isSupabaseConfigured()) return st;
+  const isAdminSession = auth.isLoggedIn && auth.role === UserRole.GAME_MASTER;
+  return {
+    ...st,
+    gmProfile: { ...st.gmProfile, password: '' },
+    grades: isAdminSession ? st.grades : auth.isLoggedIn ? st.grades : [],
+    heroes: st.heroes.map(({ pin: _pin, ...rest }) => rest),
+  };
+}
+
 export default function App() {
+  const [authSession, setAuthSession] = useState<AuthSession>(loadInitialAuth);
+  const authSessionRef = useRef<AuthSession>(authSession);
+  authSessionRef.current = authSession;
+
   const [state, setState] = useState<AcademyState>(loadInitialState);
   const stateRef = useRef<AcademyState>(state);
   stateRef.current = state;
-  const [authSession, setAuthSession] = useState<AuthSession>(loadInitialAuth);
-  const [role, setRole] = useState<UserRole>(() => authSession.role || UserRole.GAME_MASTER);
+
+  const [role, setRole] = useState<UserRole>(() => authSession.role || UserRole.HERO);
   const [gmMenu, setGmMenu] = useState<GmMenuId>('hq');
   const [heroMenu, setHeroMenu] = useState<HeroMenuId>('notice');
   const [activeHeroId, setActiveHeroId] = useState<string>(
-    () => authSession.heroId || 'hr-rian'
+    () => authSession.heroId || ''
   );
   const [gmDrawerOpen, setGmDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -144,29 +188,34 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // Persist State to localStorage
+  // Persist State to localStorage (scrubbed when Cloud security is enabled)
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const safeToStore = sanitizeStateForLocalStorage(state, authSession);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeToStore));
     } catch {
       // Ignore quota error
     }
-  }, [state]);
+  }, [state, authSession]);
 
-  // Persist Auth Session
+  // Persist Auth Session in sessionStorage only (auto-clears when tab/browser closes on shared devices)
   useEffect(() => {
     try {
-      localStorage.setItem(AUTH_KEY, JSON.stringify(authSession));
+      localStorage.removeItem(AUTH_KEY);
+      if (authSession.isLoggedIn) {
+        sessionStorage.setItem(AUTH_KEY, JSON.stringify(authSession));
+      } else {
+        sessionStorage.removeItem(AUTH_KEY);
+      }
     } catch {
       // Ignore quota error
     }
   }, [authSession]);
 
-  // Sync active Hero fallback if edited/deleted
-  const activeHero =
-    state.heroes.find((h) => h.id === activeHeroId) ||
-    state.heroes.find((h) => h.active) ||
-    state.heroes[0];
+  // Match only the authenticated Hero (never fall back to another student's account)
+  const activeHero = activeHeroId
+    ? state.heroes.find((h) => h.id === activeHeroId)
+    : undefined;
 
   // Hash-based route & EC-01 RBAC Guard listener
   useEffect(() => {
@@ -198,36 +247,147 @@ export default function App() {
     return () => window.removeEventListener('hashchange', syncFromHash);
   }, [role, heroMenu, state.settings.soundEnabled]);
 
-  const handleLoginAsHero = (hero: HeroStudent) => {
-    setAuthSession({
+  const getGmAuth = useCallback((): GmAuthCredentials | undefined => {
+    const ses = authSessionRef.current;
+    if (
+      ses.isLoggedIn &&
+      ses.role === UserRole.GAME_MASTER &&
+      ses.gmUsername &&
+      ses.gmPassword
+    ) {
+      return { username: ses.gmUsername, password: ses.gmPassword };
+    }
+    return undefined;
+  }, []);
+
+  const getFetchContext = useCallback(
+    (overrideAuth?: AuthSession): AcademyFetchContext => {
+      const ses = overrideAuth || authSessionRef.current;
+      if (!ses.isLoggedIn) return { role: 'guest' };
+      if (ses.role === UserRole.GAME_MASTER) {
+        return {
+          role: 'admin',
+          gmUsername: ses.gmUsername,
+          gmPassword: ses.gmPassword,
+        };
+      }
+      return {
+        role: 'student',
+        heroId: ses.heroId,
+        heroPin: ses.heroPin || '',
+      };
+    },
+    []
+  );
+
+  // Sync from Cloud (Supabase) and Backend (Express / Cloud SQL if running)
+  const syncFromRemote = useCallback(
+    async (overrideAuth?: AuthSession): Promise<AcademyState | null> => {
+      const mergeRemote = (remote: Partial<AcademyState>): AcademyState => {
+        const prev = stateRef.current;
+        const next: AcademyState = {
+          ...prev,
+          ...remote,
+          settings: { ...prev.settings, ...(remote.settings || {}) },
+          gmProfile: { ...prev.gmProfile, ...(remote.gmProfile || {}) },
+        };
+        stateRef.current = next;
+        setState(next);
+        return next;
+      };
+
+      // 1. Try Supabase Cloud first (works across all devices anywhere)
+      try {
+        const cloudData = await fetchAcademyFromSupabase(getFetchContext(overrideAuth));
+        if (cloudData && Array.isArray(cloudData.dungeons) && Array.isArray(cloudData.heroes)) {
+          return mergeRemote(cloudData);
+        }
+      } catch (err) {
+        console.warn('Supabase sync error:', err);
+      }
+
+      // 2. Fallback to Express backend if running
+      try {
+        const res = await fetch('/api/academy');
+        if (res.ok) {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data = await res.json();
+            if (data && Array.isArray(data.dungeons) && Array.isArray(data.heroes)) {
+              return mergeRemote(data);
+            }
+          }
+        }
+      } catch {
+        // Local mode or offline
+      }
+      return null;
+    },
+    [getFetchContext]
+  );
+
+  const handleLoginAsHero = (hero: HeroStudent, pin?: string) => {
+    const nextAuth: AuthSession = {
       isLoggedIn: true,
       role: UserRole.HERO,
       heroId: hero.id,
-    });
+      heroPin: pin || '',
+    };
+    authSessionRef.current = nextAuth;
+    setAuthSession(nextAuth);
     setRole(UserRole.HERO);
     setActiveHeroId(hero.id);
     setHeroMenu('notice');
     window.location.hash = '#/hero/notice';
     showToast(`Selamat datang, Hero ${hero.name}!`, 'success');
+    syncFromRemote(nextAuth);
   };
 
-  const handleLoginAsGm = () => {
-    setAuthSession({
+  const handleLoginAsGm = (username: string, password: string) => {
+    const nextAuth: AuthSession = {
       isLoggedIn: true,
       role: UserRole.GAME_MASTER,
-    });
+      gmUsername: username,
+      gmPassword: password,
+    };
+    authSessionRef.current = nextAuth;
+    setAuthSession(nextAuth);
     setRole(UserRole.GAME_MASTER);
     setGmMenu('hq');
     window.location.hash = '#/gm/hq';
     showToast(`Selamat datang kembali, Guild Master!`, 'success');
+    syncFromRemote(nextAuth);
   };
 
   const handleLogout = () => {
     playRetroSound('logout', state.settings.soundEnabled);
-    setAuthSession({
+    const emptyAuth: AuthSession = {
       isLoggedIn: false,
       role: UserRole.HERO,
-    });
+    };
+    authSessionRef.current = emptyAuth;
+    try {
+      sessionStorage.removeItem(AUTH_KEY);
+      localStorage.removeItem(AUTH_KEY);
+      if (isSupabaseConfigured()) {
+        const scrubbed: AcademyState = {
+          ...stateRef.current,
+          grades: [],
+          gmProfile: { ...stateRef.current.gmProfile, password: '' },
+        };
+        stateRef.current = scrubbed;
+        setState(scrubbed);
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(sanitizeStateForLocalStorage(scrubbed, emptyAuth))
+        );
+      }
+    } catch {
+      // Ignore storage error
+    }
+    setAuthSession(emptyAuth);
+    setRole(UserRole.HERO);
+    setActiveHeroId('');
     window.location.hash = '';
     showToast('Berhasil keluar ke Title Screen.', 'warning');
   };
@@ -283,49 +443,6 @@ export default function App() {
     setHeroMenu('notice');
     window.location.hash = '#/hero/notice';
   };
-
-  // Sync from Cloud (Supabase) and Backend (Express / Cloud SQL if running)
-  const syncFromRemote = useCallback(async (): Promise<AcademyState | null> => {
-    const mergeRemote = (remote: Partial<AcademyState>): AcademyState => {
-      const prev = stateRef.current;
-      const next: AcademyState = {
-        ...prev,
-        ...remote,
-        settings: { ...prev.settings, ...(remote.settings || {}) },
-        gmProfile: { ...prev.gmProfile, ...(remote.gmProfile || {}) },
-      };
-      stateRef.current = next;
-      setState(next);
-      return next;
-    };
-
-    // 1. Try Supabase Cloud first (works across all devices anywhere)
-    try {
-      const cloudData = await fetchAcademyFromSupabase();
-      if (cloudData && Array.isArray(cloudData.dungeons) && Array.isArray(cloudData.heroes)) {
-        return mergeRemote(cloudData);
-      }
-    } catch (err) {
-      console.warn('Supabase sync error:', err);
-    }
-
-    // 2. Fallback to Express backend if running
-    try {
-      const res = await fetch('/api/academy');
-      if (res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data && Array.isArray(data.dungeons) && Array.isArray(data.heroes)) {
-            return mergeRemote(data);
-          }
-        }
-      }
-    } catch {
-      // Local mode or offline
-    }
-    return null;
-  }, []);
 
   useEffect(() => {
     if (BOOTSTRAPPED_CLOUD_FROM_URL) {
@@ -395,7 +512,7 @@ export default function App() {
     const next = { ...stateRef.current, dungeons: upsertItem(stateRef.current.dungeons, dungeon) };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncDungeon(dungeon));
+    reportCloudSync(cloudSyncDungeon(dungeon, getGmAuth()));
     fetch('/api/dungeons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -412,17 +529,26 @@ export default function App() {
     };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudDeleteDungeon(id));
+    reportCloudSync(cloudDeleteDungeon(id, getGmAuth()));
     fetch(`/api/dungeons/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Dungeon deleted.', 'warning');
   };
 
   const handleSaveHero = (hero: HeroStudent) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
-    const next = { ...stateRef.current, heroes: upsertItem(stateRef.current.heroes, hero) };
+    // Do not keep raw PIN inside React/localStorage state when Cloud/Server handles hashing
+    const sanitizedHero: HeroStudent = {
+      ...hero,
+      hasPin:
+        typeof hero.pin === 'string'
+          ? hero.pin.trim().length > 0
+          : Boolean(hero.hasPin),
+      ...(isSupabaseConfigured() ? { pin: undefined } : {}),
+    };
+    const next = { ...stateRef.current, heroes: upsertItem(stateRef.current.heroes, sanitizedHero) };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncHero(hero));
+    reportCloudSync(cloudSyncHero(hero, getGmAuth()));
     fetch('/api/heroes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -433,7 +559,91 @@ export default function App() {
 
   const handleUpdateHeroAvatar = (avatar: AvatarClass) => {
     if (!activeHero) return;
-    handleSaveHero({ ...activeHero, avatar });
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const updatedHero: HeroStudent = { ...activeHero, avatar };
+    const next = {
+      ...stateRef.current,
+      heroes: upsertItem(stateRef.current.heroes, updatedHero),
+    };
+    stateRef.current = next;
+    setState(next);
+
+    if (isSupabaseConfigured()) {
+      reportCloudSync(
+        updateOwnHeroAvatarCloud(
+          activeHero.id,
+          authSessionRef.current.heroPin || '',
+          avatar
+        )
+      );
+    } else {
+      fetch('/api/heroes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedHero),
+      }).catch(() => {});
+    }
+    showToast('Avatar Hero diperbarui!');
+  };
+
+  const handleChangeOwnHeroPin = async (
+    currentPin: string,
+    newPin: string
+  ): Promise<{ ok: boolean; error?: string }> => {
+    if (!activeHero) return { ok: false, error: 'Sesi Hero tidak ditemukan.' };
+    const cleanNew = newPin.trim();
+    const cleanCurrent = currentPin.trim() || authSessionRef.current.heroPin || '';
+
+    if (isSupabaseConfigured()) {
+      const res = await changeOwnHeroPinCloud(activeHero.id, cleanCurrent, cleanNew);
+      if (!res.ok) {
+        playRetroSound('error', stateRef.current.settings.soundEnabled);
+        return { ok: false, error: res.error || 'Gagal menyimpan PIN di Cloud.' };
+      }
+    } else {
+      try {
+        const apiRes = await fetch(`/api/heroes/${activeHero.id}/pin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPin: cleanCurrent, newPin: cleanNew }),
+        });
+        if (apiRes.headers.get('content-type')?.includes('application/json')) {
+          const data = await apiRes.json();
+          if (!apiRes.ok || !data.ok) {
+            playRetroSound('error', stateRef.current.settings.soundEnabled);
+            return { ok: false, error: data.error || 'PIN saat ini salah.' };
+          }
+        }
+      } catch {
+        if (activeHero.pin && activeHero.pin !== cleanCurrent) {
+          playRetroSound('error', stateRef.current.settings.soundEnabled);
+          return { ok: false, error: 'PIN saat ini salah.' };
+        }
+      }
+    }
+
+    const updatedAuth: AuthSession = {
+      ...authSessionRef.current,
+      heroPin: cleanNew,
+    };
+    authSessionRef.current = updatedAuth;
+    setAuthSession(updatedAuth);
+
+    const updatedHero: HeroStudent = {
+      ...activeHero,
+      hasPin: Boolean(cleanNew),
+      ...(isSupabaseConfigured() ? {} : { pin: cleanNew }),
+    };
+    const next = {
+      ...stateRef.current,
+      heroes: upsertItem(stateRef.current.heroes, updatedHero),
+    };
+    stateRef.current = next;
+    setState(next);
+
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    showToast('PIN Rahasia berhasil diperbarui!', 'success');
+    return { ok: true };
   };
 
   const handleDeleteHero = (id: string) => {
@@ -445,7 +655,7 @@ export default function App() {
     };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudDeleteHero(id));
+    reportCloudSync(cloudDeleteHero(id, getGmAuth()));
     fetch(`/api/heroes/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Hero removed from roster.', 'warning');
   };
@@ -455,7 +665,7 @@ export default function App() {
     const next = { ...stateRef.current, notices: upsertItem(stateRef.current.notices, notice) };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncNotice(notice));
+    reportCloudSync(cloudSyncNotice(notice, getGmAuth()));
     fetch('/api/notices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -472,7 +682,7 @@ export default function App() {
     };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudDeleteNotice(id));
+    reportCloudSync(cloudDeleteNotice(id, getGmAuth()));
     fetch(`/api/notices/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Notice deleted.', 'warning');
   };
@@ -482,7 +692,7 @@ export default function App() {
     const next = { ...stateRef.current, realms: upsertItem(stateRef.current.realms, realm) };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncRealm(realm));
+    reportCloudSync(cloudSyncRealm(realm, getGmAuth()));
     fetch('/api/realms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -499,7 +709,7 @@ export default function App() {
     };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudDeleteRealm(id));
+    reportCloudSync(cloudDeleteRealm(id, getGmAuth()));
     fetch(`/api/realms/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Realm deleted.', 'warning');
   };
@@ -509,7 +719,7 @@ export default function App() {
     const next = { ...stateRef.current, tomes: upsertItem(stateRef.current.tomes, tome) };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncTome(tome));
+    reportCloudSync(cloudSyncTome(tome, getGmAuth()));
     fetch('/api/tomes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -526,7 +736,7 @@ export default function App() {
     };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudDeleteTome(id));
+    reportCloudSync(cloudDeleteTome(id, getGmAuth()));
     fetch(`/api/tomes/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Tome deleted.', 'warning');
   };
@@ -536,7 +746,7 @@ export default function App() {
     const next = { ...stateRef.current, quests: upsertItem(stateRef.current.quests, quest) };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncQuest(quest));
+    reportCloudSync(cloudSyncQuest(quest, getGmAuth()));
     fetch('/api/quests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -554,7 +764,7 @@ export default function App() {
     };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudDeleteQuest(id));
+    reportCloudSync(cloudDeleteQuest(id, getGmAuth()));
     fetch(`/api/quests/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Quest deleted.', 'warning');
   };
@@ -572,7 +782,7 @@ export default function App() {
     stateRef.current = next;
     setState(next);
 
-    reportCloudSync(cloudSyncGrade(canonicalGrade));
+    reportCloudSync(cloudSyncGrade(canonicalGrade, getGmAuth()));
     fetch('/api/grades', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -582,12 +792,29 @@ export default function App() {
     showToast(`Saved ${grade.score}/100 (+${grade.expEarned} EXP) for ${heroName}!`);
   };
 
-  const handleUpdateGmProfile = (gmProfile: GameMasterProfile) => {
+  const handleUpdateGmProfile = async (gmProfile: GameMasterProfile) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
-    const next = { ...stateRef.current, gmProfile };
+    const prevGmAuth = getGmAuth();
+    const nextProfileInState: GameMasterProfile = isSupabaseConfigured()
+      ? { ...gmProfile, password: '' }
+      : gmProfile;
+    const next = { ...stateRef.current, gmProfile: nextProfileInState };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncSettings(next.settings, gmProfile));
+
+    const cloudRes = await cloudSyncSettings(next.settings, gmProfile, prevGmAuth);
+    if (!cloudRes.ok && cloudRes.error) {
+      showToast(`Gagal sync profil ke Cloud: ${cloudRes.error}`, 'danger');
+    } else if (authSessionRef.current.role === UserRole.GAME_MASTER) {
+      const updatedAuth: AuthSession = {
+        ...authSessionRef.current,
+        gmUsername: gmProfile.username || authSessionRef.current.gmUsername,
+        gmPassword: gmProfile.password || authSessionRef.current.gmPassword,
+      };
+      authSessionRef.current = updatedAuth;
+      setAuthSession(updatedAuth);
+    }
+
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -601,7 +828,7 @@ export default function App() {
     const next = { ...stateRef.current, settings };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncSettings(settings, next.gmProfile));
+    reportCloudSync(cloudSyncSettings(settings, next.gmProfile, getGmAuth()));
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -613,14 +840,16 @@ export default function App() {
     playRetroSound('confirm', state.settings.soundEnabled);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem(AUTH_KEY);
     setState(INITIAL_ACADEMY_STATE);
     setAuthSession({ isLoggedIn: false, role: UserRole.HERO });
-    setActiveHeroId('hr-rian');
+    setRole(UserRole.HERO);
+    setActiveHeroId('');
     showToast('Demo data restored to defaults!', 'warning');
   };
 
-  // If user is not logged in, render the cheerful Retro Title & Login Screen!
-  if (!authSession.isLoggedIn) {
+  // If user is not logged in (or Hero session lost/deleted), render the Retro Title & Login Screen!
+  if (!authSession.isLoggedIn || (role === UserRole.HERO && !activeHero)) {
     return (
       <>
         <PixelToast message={toast?.message || null} tone={toast?.tone} />
@@ -718,6 +947,7 @@ export default function App() {
           {gmMenu === 'settings' && (
             <GmSettings
               state={state}
+              gmAuth={getGmAuth()}
               onUpdateGmProfile={handleUpdateGmProfile}
               onUpdateSettings={handleUpdateSettings}
               onResetDemoData={handleResetDemoData}
@@ -738,6 +968,7 @@ export default function App() {
                 onNavigate={handleSelectHeroMenu}
                 onAttemptRestrictedRoute={handleTriggerAccessDenied}
                 onUpdateAvatar={handleUpdateHeroAvatar}
+                onChangePin={handleChangeOwnHeroPin}
               />
             )}
             {heroMenu === 'scroll_library' && (

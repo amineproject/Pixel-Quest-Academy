@@ -31,6 +31,9 @@ export interface AuthSession {
   isLoggedIn: boolean;
   role: UserRole;
   heroId?: string;
+  heroPin?: string;
+  gmUsername?: string;
+  gmPassword?: string;
 }
 
 export type AvatarClass =
@@ -83,6 +86,8 @@ export interface HeroStudent {
   active: boolean;
   joinedDate: string;
   enrolledRealmIds?: string[]; // Mata pelajaran yang diikuti oleh siswa ini
+  pin?: string; // Input opsional PIN rahasia siswa (tidak diekspos dari Cloud)
+  hasPin?: boolean; // Penanda apakah siswa sudah memiliki PIN rahasia
 }
 
 export interface QuestNotice {
