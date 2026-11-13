@@ -45,7 +45,10 @@ import {
   cloudSyncRealm,
   cloudSyncSettings,
   cloudSyncTome,
+  CloudSyncResult,
   fetchAcademyFromSupabase,
+  isSupabaseConfigured,
+  subscribeAcademyRealtime,
 } from './lib/supabase';
 
 const BOOTSTRAPPED_CLOUD_FROM_URL = bootstrapSupabaseFromUrl();
@@ -117,6 +120,7 @@ export default function App() {
     () => authSession.heroId || 'hr-rian'
   );
   const [gmDrawerOpen, setGmDrawerOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // EC-01 Access Denied Guard State
   const [deniedRoute, setDeniedRoute] = useState<string | null>(null);
@@ -238,12 +242,14 @@ export default function App() {
     setGmMenu(id);
     setGmDrawerOpen(false);
     window.location.hash = `#/gm/${id}`;
+    syncFromRemote();
   };
 
   const handleSelectHeroMenu = (id: HeroMenuId) => {
     playRetroSound('blip', state.settings.soundEnabled);
     setHeroMenu(id);
     window.location.hash = `#/hero/${id}`;
+    syncFromRemote();
   };
 
   const handleToggleSound = () => {
@@ -327,7 +333,11 @@ export default function App() {
     }
     syncFromRemote();
 
-    // Cross-device auto-sync on tab focus, visibility change, and 25s interval
+    // Cross-device auto-sync: Supabase Realtime + tab focus + visibility + 12s poll
+    const unsubscribeRealtime = subscribeAcademyRealtime(() => {
+      syncFromRemote();
+    });
+
     const handleRecheck = () => {
       if (document.visibilityState === 'visible') {
         syncFromRemote();
@@ -339,14 +349,40 @@ export default function App() {
       if (document.visibilityState === 'visible') {
         syncFromRemote();
       }
-    }, 25000);
+    }, 12000);
 
     return () => {
+      unsubscribeRealtime();
       window.removeEventListener('focus', handleRecheck);
       document.removeEventListener('visibilitychange', handleRecheck);
       window.clearInterval(pollTimer);
     };
   }, [syncFromRemote, showToast]);
+
+  const handleManualSync = useCallback(async () => {
+    setIsSyncing(true);
+    const updated = await syncFromRemote();
+    setIsSyncing(false);
+    if (updated) {
+      playRetroSound('save', stateRef.current.settings.soundEnabled);
+      showToast('✓ Data terbaru disinkronkan dari Cloud!', 'success');
+    } else if (!isSupabaseConfigured()) {
+      showToast('Hubungkan Supabase Cloud di System Settings agar lintas perangkat aktif.', 'warning');
+    } else {
+      showToast('Cloud terhubung (belum ada perubahan baru).', 'warning');
+    }
+  }, [syncFromRemote, showToast]);
+
+  const reportCloudSync = useCallback(
+    (promise: Promise<CloudSyncResult>) => {
+      promise.then((res) => {
+        if (!res.ok && res.error) {
+          showToast(`Gagal sync ke Cloud: ${res.error}`, 'danger');
+        }
+      });
+    },
+    [showToast]
+  );
 
   // CRUD Upsert & Delete Handlers
   const upsertItem = <T extends { id: string }>(list: T[], item: T): T[] => {
@@ -355,12 +391,11 @@ export default function App() {
   };
 
   const handleSaveDungeon = (dungeon: Dungeon) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      dungeons: upsertItem(prev.dungeons, dungeon),
-    }));
-    cloudSyncDungeon(dungeon).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const next = { ...stateRef.current, dungeons: upsertItem(stateRef.current.dungeons, dungeon) };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncDungeon(dungeon));
     fetch('/api/dungeons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -370,23 +405,24 @@ export default function App() {
   };
 
   const handleDeleteDungeon = (id: string) => {
-    playRetroSound('confirm', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      dungeons: prev.dungeons.filter((d) => d.id !== id),
-    }));
-    cloudDeleteDungeon(id).catch(() => {});
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const next = {
+      ...stateRef.current,
+      dungeons: stateRef.current.dungeons.filter((d) => d.id !== id),
+    };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudDeleteDungeon(id));
     fetch(`/api/dungeons/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Dungeon deleted.', 'warning');
   };
 
   const handleSaveHero = (hero: HeroStudent) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      heroes: upsertItem(prev.heroes, hero),
-    }));
-    cloudSyncHero(hero).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const next = { ...stateRef.current, heroes: upsertItem(stateRef.current.heroes, hero) };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncHero(hero));
     fetch('/api/heroes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -401,24 +437,25 @@ export default function App() {
   };
 
   const handleDeleteHero = (id: string) => {
-    playRetroSound('confirm', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      heroes: prev.heroes.filter((h) => h.id !== id),
-      grades: prev.grades.filter((g) => g.heroId !== id),
-    }));
-    cloudDeleteHero(id).catch(() => {});
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const next = {
+      ...stateRef.current,
+      heroes: stateRef.current.heroes.filter((h) => h.id !== id),
+      grades: stateRef.current.grades.filter((g) => g.heroId !== id),
+    };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudDeleteHero(id));
     fetch(`/api/heroes/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Hero removed from roster.', 'warning');
   };
 
   const handleSaveNotice = (notice: QuestNotice) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      notices: upsertItem(prev.notices, notice),
-    }));
-    cloudSyncNotice(notice).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const next = { ...stateRef.current, notices: upsertItem(stateRef.current.notices, notice) };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncNotice(notice));
     fetch('/api/notices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -428,23 +465,24 @@ export default function App() {
   };
 
   const handleDeleteNotice = (id: string) => {
-    playRetroSound('confirm', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      notices: prev.notices.filter((n) => n.id !== id),
-    }));
-    cloudDeleteNotice(id).catch(() => {});
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const next = {
+      ...stateRef.current,
+      notices: stateRef.current.notices.filter((n) => n.id !== id),
+    };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudDeleteNotice(id));
     fetch(`/api/notices/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Notice deleted.', 'warning');
   };
 
   const handleSaveRealm = (realm: Realm) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      realms: upsertItem(prev.realms, realm),
-    }));
-    cloudSyncRealm(realm).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const next = { ...stateRef.current, realms: upsertItem(stateRef.current.realms, realm) };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncRealm(realm));
     fetch('/api/realms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -454,23 +492,24 @@ export default function App() {
   };
 
   const handleDeleteRealm = (id: string) => {
-    playRetroSound('confirm', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      realms: prev.realms.filter((r) => r.id !== id),
-    }));
-    cloudDeleteRealm(id).catch(() => {});
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const next = {
+      ...stateRef.current,
+      realms: stateRef.current.realms.filter((r) => r.id !== id),
+    };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudDeleteRealm(id));
     fetch(`/api/realms/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Realm deleted.', 'warning');
   };
 
   const handleSaveTome = (tome: AncientTome) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      tomes: upsertItem(prev.tomes, tome),
-    }));
-    cloudSyncTome(tome).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const next = { ...stateRef.current, tomes: upsertItem(stateRef.current.tomes, tome) };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncTome(tome));
     fetch('/api/tomes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -480,23 +519,24 @@ export default function App() {
   };
 
   const handleDeleteTome = (id: string) => {
-    playRetroSound('confirm', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      tomes: prev.tomes.filter((t) => t.id !== id),
-    }));
-    cloudDeleteTome(id).catch(() => {});
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const next = {
+      ...stateRef.current,
+      tomes: stateRef.current.tomes.filter((t) => t.id !== id),
+    };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudDeleteTome(id));
     fetch(`/api/tomes/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Tome deleted.', 'warning');
   };
 
   const handleSaveQuest = (quest: ActiveQuest) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      quests: upsertItem(prev.quests, quest),
-    }));
-    cloudSyncQuest(quest).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const next = { ...stateRef.current, quests: upsertItem(stateRef.current.quests, quest) };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncQuest(quest));
     fetch('/api/quests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -506,58 +546,66 @@ export default function App() {
   };
 
   const handleDeleteQuest = (id: string) => {
-    playRetroSound('confirm', state.settings.soundEnabled);
-    setState((prev) => ({
-      ...prev,
-      quests: prev.quests.filter((q) => q.id !== id),
-      grades: prev.grades.filter((g) => g.questId !== id),
-    }));
-    cloudDeleteQuest(id).catch(() => {});
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const next = {
+      ...stateRef.current,
+      quests: stateRef.current.quests.filter((q) => q.id !== id),
+      grades: stateRef.current.grades.filter((g) => g.questId !== id),
+    };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudDeleteQuest(id));
     fetch(`/api/quests/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Quest deleted.', 'warning');
   };
 
   const handleSaveGrade = (grade: ExpGrade) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => {
-      const existing = prev.grades.find(
-        (g) => g.heroId === grade.heroId && g.questId === grade.questId
-      );
-      const nextGrades = existing
-        ? prev.grades.map((g) => (g.id === existing.id ? { ...grade, id: existing.id } : g))
-        : [grade, ...prev.grades];
-      return { ...prev, grades: nextGrades };
-    });
-    cloudSyncGrade(grade).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const existing = stateRef.current.grades.find(
+      (g) => g.heroId === grade.heroId && g.questId === grade.questId
+    );
+    const canonicalGrade: ExpGrade = existing ? { ...grade, id: existing.id } : grade;
+    const nextGrades = existing
+      ? stateRef.current.grades.map((g) => (g.id === existing.id ? canonicalGrade : g))
+      : [canonicalGrade, ...stateRef.current.grades];
+    const next = { ...stateRef.current, grades: nextGrades };
+    stateRef.current = next;
+    setState(next);
+
+    reportCloudSync(cloudSyncGrade(canonicalGrade));
     fetch('/api/grades', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(grade),
+      body: JSON.stringify(canonicalGrade),
     }).catch(() => {});
-    const heroName = state.heroes.find((h) => h.id === grade.heroId)?.name || 'Hero';
+    const heroName = stateRef.current.heroes.find((h) => h.id === grade.heroId)?.name || 'Hero';
     showToast(`Saved ${grade.score}/100 (+${grade.expEarned} EXP) for ${heroName}!`);
   };
 
   const handleUpdateGmProfile = (gmProfile: GameMasterProfile) => {
-    playRetroSound('save', state.settings.soundEnabled);
-    setState((prev) => ({ ...prev, gmProfile }));
-    cloudSyncSettings(state.settings, gmProfile).catch(() => {});
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const next = { ...stateRef.current, gmProfile };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncSettings(next.settings, gmProfile));
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings: state.settings, gmProfile }),
+      body: JSON.stringify({ settings: next.settings, gmProfile }),
     }).catch(() => {});
     showToast('Game Master profile updated!');
   };
 
   const handleUpdateSettings = (settings: SystemSettings) => {
     playRetroSound('blip', settings.soundEnabled);
-    setState((prev) => ({ ...prev, settings }));
-    cloudSyncSettings(settings, state.gmProfile).catch(() => {});
+    const next = { ...stateRef.current, settings };
+    stateRef.current = next;
+    setState(next);
+    reportCloudSync(cloudSyncSettings(settings, next.gmProfile));
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings, gmProfile: state.gmProfile }),
+      body: JSON.stringify({ settings, gmProfile: next.gmProfile }),
     }).catch(() => {});
   };
 
@@ -604,6 +652,8 @@ export default function App() {
       onSelectGmMenu={handleSelectGmMenu}
       onSelectHeroMenu={handleSelectHeroMenu}
       onToggleSound={handleToggleSound}
+      onManualSync={handleManualSync}
+      isSyncing={isSyncing}
       onLogout={handleLogout}
       onOpenGmDrawer={() => {
         playRetroSound('blip', state.settings.soundEnabled);

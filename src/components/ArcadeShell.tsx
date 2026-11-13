@@ -7,6 +7,7 @@ import {
   Grid,
   LogOut,
   Map,
+  RefreshCw,
   ScrollText,
   Settings,
   Shield,
@@ -107,6 +108,8 @@ interface ArcadeShellProps {
   onSelectGmMenu: (id: GmMenuId) => void;
   onSelectHeroMenu: (id: HeroMenuId) => void;
   onToggleSound: () => void;
+  onManualSync?: () => void;
+  isSyncing?: boolean;
   onOpenGmDrawer: () => void;
   onLogout: () => void;
   children: React.ReactNode;
@@ -126,6 +129,8 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   onSelectGmMenu,
   onSelectHeroMenu,
   onToggleSound,
+  onManualSync,
+  isSyncing = false,
   onOpenGmDrawer,
   onLogout,
   children,
@@ -219,6 +224,21 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              {/* Cloud Sync button */}
+              {onManualSync && (
+                <button
+                  type="button"
+                  onClick={onManualSync}
+                  disabled={isSyncing}
+                  className="pixel-btn min-w-[34px] min-h-[34px] px-2 flex items-center justify-center gap-1 bg-[var(--bg-surface-alt)] text-[var(--accent-warning)] cursor-pointer font-pixel-ui text-[9px]"
+                  title="Sinkronkan Data Cloud"
+                  aria-label="Sinkronkan Data Cloud"
+                >
+                  <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                  <span className="hidden sm:inline">Sync</span>
+                </button>
+              )}
+
               {/* Audio toggle button */}
               <button
                 type="button"

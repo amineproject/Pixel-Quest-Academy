@@ -257,3 +257,21 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.settings (id, theme, crt_scanlines, sound_enabled, academic_term, gm_name, gm_title, gm_specialty, gm_avatar) VALUES
 ('global', 'sunny_quest', false, true, 'Semester Ganjil 2026/2027', 'Pak Budi Santoso', 'Guild Master of Science', 'Guru IPA & Pembina Sains', 'guild_master')
 ON CONFLICT (id) DO NOTHING;
+
+-- ----------------------------------------------------------------------------
+-- 11. Enable Supabase Realtime (Instant Live Sync HP <-> Laptop)
+-- ----------------------------------------------------------------------------
+DO $$
+DECLARE
+  t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['dungeons','heroes','realms','tomes','quests','notices','grades','settings'] LOOP
+    BEGIN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    WHEN undefined_object THEN
+      NULL;
+    END;
+  END LOOP;
+END $$;

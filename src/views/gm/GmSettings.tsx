@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RotateCcw, ShieldAlert } from 'lucide-react';
 import {
   AcademyState,
@@ -85,6 +85,18 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   const [term, setTerm] = useState(state.settings.academicTerm);
   const [confirmReset, setConfirmReset] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Sync local form fields if remote Cloud data updates from another device (HP <-> Laptop)
+  useEffect(() => {
+    setName(state.gmProfile.name);
+    setTitle(state.gmProfile.title);
+    setSpecialty(state.gmProfile.specialty || 'Guru IPA & Pembina Sains');
+    setAvatar(state.gmProfile.avatar || 'guild_master');
+    setUsername(state.gmProfile.username || 'admin');
+    setPassword(state.gmProfile.password || 'admin');
+    setRequirePassword(state.gmProfile.requirePassword !== false);
+    setTerm(state.settings.academicTerm);
+  }, [state.gmProfile, state.settings.academicTerm]);
 
   // Supabase Cloud Sync State
   const [cloudUrl, setCloudUrl] = useState(getStoredSupabaseUrl);
@@ -543,7 +555,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
             <strong>1. Setup Database (Sekali Saja):</strong> Jalankan skrip <span className="text-[var(--accent-warning)]">supabase-schema.sql</span> di Supabase <strong>SQL Editor</strong>, lalu masukkan URL & Anon Key di atas dan klik <strong>Kirim ke Cloud</strong>.
           </p>
           <p>
-            <strong>2. Buka di Perangkat Lain:</strong> Bagikan <strong>Link Akses Lintas Perangkat</strong> di atas ke siswa/perangkat lain, <em>atau</em> tambahkan Environment Variables <code className="text-[var(--accent-warning)]">VITE_SUPABASE_URL</code> dan <code className="text-[var(--accent-warning)]">VITE_SUPABASE_ANON_KEY</code> di Vercel lalu Redeploy agar seluruh perangkat otomatis terhubung.
+            <strong>2. Buka Akun Admin di HP & Laptop Secara Bersamaan:</strong> Buka <strong>Link Akses Lintas Perangkat</strong> di HP maupun Laptop lalu login dengan akun GM yang sama (<em>atau</em> pasang <code className="text-[var(--accent-warning)]">VITE_SUPABASE_URL</code> & <code className="text-[var(--accent-warning)]">VITE_SUPABASE_ANON_KEY</code> di Vercel lalu Redeploy). Setiap edit di HP otomatis tersinkron ke Laptop dalam beberapa detik atau klik tombol <strong>Sync</strong> di pojok kanan atas.
           </p>
           {isCloudConfigured && (
             <button

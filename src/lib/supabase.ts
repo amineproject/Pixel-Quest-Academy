@@ -392,11 +392,46 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
   }
 }
 
-export async function cloudSyncDungeon(dungeon: Dungeon): Promise<void> {
+export type CloudSyncResult = { ok: boolean; error?: string };
+
+export function subscribeAcademyRealtime(onRemoteChange: () => void): () => void {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return () => {};
+
+  let debounceTimer: number | null = null;
+  const trigger = () => {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      onRemoteChange();
+    }, 350);
+  };
+
   try {
-    await client.from('dungeons').upsert({
+    const channel = client
+      .channel('pixel-quest-academy-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        () => {
+          trigger();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      client.removeChannel(channel).catch(() => {});
+    };
+  } catch {
+    return () => {};
+  }
+}
+
+export async function cloudSyncDungeon(dungeon: Dungeon): Promise<CloudSyncResult> {
+  const client = getSupabase();
+  if (!client) return { ok: true };
+  try {
+    const { error } = await client.from('dungeons').upsert({
       id: dungeon.id,
       name: dungeon.name,
       tier: dungeon.tier,
@@ -405,26 +440,42 @@ export async function cloudSyncDungeon(dungeon: Dungeon): Promise<void> {
       description: dungeon.description,
       realm_ids: JSON.stringify(dungeon.realmIds || []),
     });
-  } catch (err) {
+    if (error) {
+      const { error: fallbackErr } = await client.from('dungeons').upsert({
+        id: dungeon.id,
+        name: dungeon.name,
+        tier: dungeon.tier,
+        guild_code: dungeon.guildCode,
+        capacity: dungeon.capacity,
+        description: dungeon.description,
+      });
+      if (fallbackErr) return { ok: false, error: fallbackErr.message };
+    }
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync dungeon failed:', err);
+    return { ok: false, error: err?.message || 'Gagal sinkronisasi kelas.' };
   }
 }
 
-export async function cloudDeleteDungeon(id: string): Promise<void> {
+export async function cloudDeleteDungeon(id: string): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('dungeons').delete().eq('id', id);
-  } catch (err) {
+    const { error } = await client.from('dungeons').delete().eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud delete dungeon failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudSyncHero(hero: HeroStudent): Promise<void> {
+export async function cloudSyncHero(hero: HeroStudent): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('heroes').upsert({
+    const { error } = await client.from('heroes').upsert({
       id: hero.id,
       name: hero.name,
       username: hero.username,
@@ -436,26 +487,45 @@ export async function cloudSyncHero(hero: HeroStudent): Promise<void> {
       joined_date: hero.joinedDate,
       enrolled_realm_ids: JSON.stringify(hero.enrolledRealmIds || []),
     });
-  } catch (err) {
+    if (error) {
+      const { error: fallbackErr } = await client.from('heroes').upsert({
+        id: hero.id,
+        name: hero.name,
+        username: hero.username,
+        student_code: hero.studentCode,
+        dungeon_id: hero.dungeonId || null,
+        avatar: hero.avatar,
+        hero_class: hero.heroClass,
+        active: hero.active,
+        joined_date: hero.joinedDate,
+      });
+      if (fallbackErr) return { ok: false, error: fallbackErr.message };
+    }
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync hero failed:', err);
+    return { ok: false, error: err?.message || 'Gagal sinkronisasi siswa.' };
   }
 }
 
-export async function cloudDeleteHero(id: string): Promise<void> {
+export async function cloudDeleteHero(id: string): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('heroes').delete().eq('id', id);
-  } catch (err) {
+    const { error } = await client.from('heroes').delete().eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud delete hero failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudSyncNotice(notice: QuestNotice): Promise<void> {
+export async function cloudSyncNotice(notice: QuestNotice): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('notices').upsert({
+    const { error } = await client.from('notices').upsert({
       id: notice.id,
       title: notice.title,
       description: notice.description,
@@ -464,26 +534,32 @@ export async function cloudSyncNotice(notice: QuestNotice): Promise<void> {
       release_date: notice.releaseDate,
       author: notice.author,
     });
-  } catch (err) {
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync notice failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudDeleteNotice(id: string): Promise<void> {
+export async function cloudDeleteNotice(id: string): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('notices').delete().eq('id', id);
-  } catch (err) {
+    const { error } = await client.from('notices').delete().eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud delete notice failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudSyncRealm(realm: Realm): Promise<void> {
+export async function cloudSyncRealm(realm: Realm): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('realms').upsert({
+    const { error } = await client.from('realms').upsert({
       id: realm.id,
       name: realm.name,
       code: realm.code,
@@ -491,29 +567,35 @@ export async function cloudSyncRealm(realm: Realm): Promise<void> {
       accent_color: realm.accentColor,
       description: realm.description,
     });
-  } catch (err) {
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync realm failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudDeleteRealm(id: string): Promise<void> {
+export async function cloudDeleteRealm(id: string): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
     await client.from('grades').delete().eq('realm_id', id);
     await client.from('tomes').delete().eq('realm_id', id);
     await client.from('quests').delete().eq('realm_id', id);
-    await client.from('realms').delete().eq('id', id);
-  } catch (err) {
+    const { error } = await client.from('realms').delete().eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud delete realm failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudSyncTome(tome: AncientTome): Promise<void> {
+export async function cloudSyncTome(tome: AncientTome): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('tomes').upsert({
+    const { error } = await client.from('tomes').upsert({
       id: tome.id,
       realm_id: tome.realmId || null,
       title: tome.title,
@@ -523,26 +605,32 @@ export async function cloudSyncTome(tome: AncientTome): Promise<void> {
       content: tome.content,
       published_date: tome.publishedDate,
     });
-  } catch (err) {
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync tome failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudDeleteTome(id: string): Promise<void> {
+export async function cloudDeleteTome(id: string): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('tomes').delete().eq('id', id);
-  } catch (err) {
+    const { error } = await client.from('tomes').delete().eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud delete tome failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudSyncQuest(quest: ActiveQuest): Promise<void> {
+export async function cloudSyncQuest(quest: ActiveQuest): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('quests').upsert({
+    const { error } = await client.from('quests').upsert({
       id: quest.id,
       realm_id: quest.realmId || null,
       dungeon_id: quest.dungeonId,
@@ -552,24 +640,30 @@ export async function cloudSyncQuest(quest: ActiveQuest): Promise<void> {
       max_exp: quest.maxExp,
       difficulty: quest.difficulty,
     });
-  } catch (err) {
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync quest failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudDeleteQuest(id: string): Promise<void> {
+export async function cloudDeleteQuest(id: string): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
-    await client.from('quests').delete().eq('id', id);
-  } catch (err) {
+    const { error } = await client.from('quests').delete().eq('id', id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud delete quest failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
-export async function cloudSyncGrade(grade: ExpGrade): Promise<void> {
+export async function cloudSyncGrade(grade: ExpGrade): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   const resolvedStatus = grade.status || (grade.score >= 70 ? 'tuntas' : 'remidial');
   try {
     const { error } = await client.from('grades').upsert({
@@ -584,7 +678,7 @@ export async function cloudSyncGrade(grade: ExpGrade): Promise<void> {
       graded_date: grade.gradedDate,
     });
     if (error) {
-      await client.from('grades').upsert({
+      const { error: fallbackErr } = await client.from('grades').upsert({
         id: grade.id,
         hero_id: grade.heroId,
         quest_id: grade.questId,
@@ -594,18 +688,21 @@ export async function cloudSyncGrade(grade: ExpGrade): Promise<void> {
         feedback: grade.feedback || '',
         graded_date: grade.gradedDate,
       });
+      if (fallbackErr) return { ok: false, error: fallbackErr.message };
     }
-  } catch (err) {
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync grade failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
 export async function cloudSyncSettings(
   settings: SystemSettings,
   gmProfile: GameMasterProfile
-): Promise<void> {
+): Promise<CloudSyncResult> {
   const client = getSupabase();
-  if (!client) return;
+  if (!client) return { ok: true };
   try {
     const { error } = await client.from('settings').upsert({
       id: 'global',
@@ -622,7 +719,7 @@ export async function cloudSyncSettings(
       gm_require_password: gmProfile.requirePassword ?? true,
     });
     if (error) {
-      await client.from('settings').upsert({
+      const { error: fallbackErr } = await client.from('settings').upsert({
         id: 'global',
         theme: settings.theme,
         crt_scanlines: settings.crtScanlines,
@@ -633,9 +730,12 @@ export async function cloudSyncSettings(
         gm_specialty: gmProfile.specialty,
         gm_avatar: gmProfile.avatar,
       });
+      if (fallbackErr) return { ok: false, error: fallbackErr.message };
     }
-  } catch (err) {
+    return { ok: true };
+  } catch (err: any) {
     console.warn('Cloud sync settings failed:', err);
+    return { ok: false, error: err?.message };
   }
 }
 
