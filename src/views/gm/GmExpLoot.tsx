@@ -288,15 +288,15 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
             const savedStatus = getEffectiveGradeStatus(existingGrade);
 
             return (
-              <article key={hero.id} className="pixel-box p-3.5 space-y-3">
+              <article key={hero.id} className="pixel-box p-3.5 space-y-3 overflow-hidden">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <PixelAvatar avatar={hero.avatar} size={40} />
-                    <div className="min-w-0">
-                      <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)] truncate">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <PixelAvatar avatar={hero.avatar} size={40} className="shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
                         {hero.name}
                       </h3>
-                      <p className="font-pixel-body text-[15px] text-[var(--text-secondary)]">
+                      <p className="text-[12px] text-[var(--text-secondary)] break-words">
                         {existingGrade
                           ? `Tersimpan: ${existingGrade.score}/100 · Status: ${savedStatus.toUpperCase()}`
                           : 'Belum dinilai (Belum Dikerjakan)'}
@@ -304,10 +304,10 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
                     </div>
                   </div>
                   <div className="text-right shrink-0 tabular-nums">
-                    <p className="font-pixel-display text-[13px] text-[var(--accent-warning)]">
+                    <p className="font-pixel-display text-[12px] text-[var(--accent-warning)]">
                       RANK {rank}
                     </p>
-                    <p className="font-pixel-body text-[16px] text-[var(--accent-success)]">
+                    <p className="text-[12.5px] font-bold text-[var(--accent-success)]">
                       +{expEarned} EXP
                     </p>
                   </div>

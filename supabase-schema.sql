@@ -65,9 +65,11 @@ CREATE TABLE IF NOT EXISTS public.tomes (
     read_minutes INTEGER NOT NULL DEFAULT 8,
     summary TEXT NOT NULL,
     content TEXT NOT NULL,
+    link_url TEXT DEFAULT '',
     published_date TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 
 -- ----------------------------------------------------------------------------
 -- 5. Active Quests table (Tugas & Misi Petualangan)
@@ -78,11 +80,13 @@ CREATE TABLE IF NOT EXISTS public.quests (
     dungeon_id TEXT NOT NULL DEFAULT 'all',
     title TEXT NOT NULL,
     instructions TEXT NOT NULL,
+    link_url TEXT DEFAULT '',
     deadline TEXT NOT NULL,
     max_exp INTEGER NOT NULL DEFAULT 200,
     difficulty TEXT NOT NULL DEFAULT 'Normal',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 
 -- ----------------------------------------------------------------------------
 -- 6. Quest Notices table (Papan Pengumuman / Guild Bulletin)
@@ -91,12 +95,14 @@ CREATE TABLE IF NOT EXISTS public.notices (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
+    link_url TEXT DEFAULT '',
     priority TEXT NOT NULL DEFAULT 'Medium',
     target_dungeon_id TEXT NOT NULL DEFAULT 'all',
     release_date TEXT NOT NULL,
     author TEXT NOT NULL DEFAULT 'Guild Master',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 
 -- ----------------------------------------------------------------------------
 -- 7. EXP & Loot Grades table (Buku Nilai & Reward Petualang)
@@ -179,15 +185,15 @@ CREATE POLICY "Allow public read notices" ON public.notices FOR SELECT USING (tr
 CREATE POLICY "Allow public read grades" ON public.grades FOR SELECT USING (true);
 CREATE POLICY "Allow public read settings" ON public.settings FOR SELECT USING (true);
 
--- Full Access Policy for App Server and Development Key
-CREATE POLICY "Allow all on dungeons" ON public.dungeons FOR ALL USING (true);
-CREATE POLICY "Allow all on heroes" ON public.heroes FOR ALL USING (true);
-CREATE POLICY "Allow all on realms" ON public.realms FOR ALL USING (true);
-CREATE POLICY "Allow all on tomes" ON public.tomes FOR ALL USING (true);
-CREATE POLICY "Allow all on quests" ON public.quests FOR ALL USING (true);
-CREATE POLICY "Allow all on notices" ON public.notices FOR ALL USING (true);
-CREATE POLICY "Allow all on grades" ON public.grades FOR ALL USING (true);
-CREATE POLICY "Allow all on settings" ON public.settings FOR ALL USING (true);
+-- Full Access Policy for App Server and Publishable/Anon Key
+CREATE POLICY "Allow all on dungeons" ON public.dungeons FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on heroes" ON public.heroes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on realms" ON public.realms FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on tomes" ON public.tomes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on quests" ON public.quests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on notices" ON public.notices FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on grades" ON public.grades FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on settings" ON public.settings FOR ALL USING (true) WITH CHECK (true);
 
 -- ----------------------------------------------------------------------------
 -- 10. Initial Seed Data (Pre-populates sample data for testing)

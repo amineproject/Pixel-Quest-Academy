@@ -12,6 +12,7 @@ import {
   PixelEmptyChest,
   PixelFieldLabel,
   PixelInput,
+  PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
   PixelSelect,
@@ -42,6 +43,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   const [maxExp, setMaxExp] = useState(200);
   const [difficulty, setDifficulty] = useState<QuestDifficulty>('Normal');
   const [instructions, setInstructions] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   const filtered = state.quests.filter(
     (q) => realmFilter === 'all' || q.realmId === realmFilter
@@ -56,6 +58,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     setMaxExp(200);
     setDifficulty('Normal');
     setInstructions('');
+    setLinkUrl('');
     setModalOpen(true);
   };
 
@@ -68,6 +71,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     setMaxExp(q.maxExp);
     setDifficulty(q.difficulty);
     setInstructions(q.instructions);
+    setLinkUrl(q.linkUrl || '');
     setModalOpen(true);
   };
 
@@ -83,6 +87,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
       maxExp: Math.max(50, Number(maxExp) || 200),
       difficulty,
       instructions: instructions.trim(),
+      linkUrl: linkUrl.trim(),
     });
     setModalOpen(false);
   };
@@ -126,14 +131,14 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               (d) => d.id === quest.dungeonId
             );
             return (
-              <article key={quest.id} className="pixel-box p-4 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="font-pixel-body text-[15px] text-[var(--accent-warning)] tabular-nums">
+              <article key={quest.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
                       [{quest.difficulty.toUpperCase()}] · +{quest.maxExp} EXP ·{' '}
                       {realm?.code || 'REALM'}
                     </p>
-                    <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)]">
+                    <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
                       {quest.title}
                     </h3>
                   </div>
@@ -143,7 +148,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                       type="button"
                       onClick={() => openEdit(quest)}
                       aria-label={`Edit ${quest.title}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
                     >
                       <Pencil size={15} />
                     </button>
@@ -151,18 +156,24 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                       type="button"
                       onClick={() => setDeleteTarget(quest)}
                       aria-label={`Delete ${quest.title}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
+                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
 
-                <p className="font-pixel-body text-[17px] text-[var(--text-secondary)]">
+                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                   {quest.instructions}
                 </p>
 
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--border-pixel)]/40 font-pixel-body text-[15px] text-[var(--text-muted)] tabular-nums">
+                {quest.linkUrl && (
+                  <div>
+                    <PixelLinkButton url={quest.linkUrl} label="Buka Tautan Tugas" />
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40 text-[12px] text-[var(--text-muted)] tabular-nums">
                   <span>
                     Target: {dungeon ? dungeon.guildCode : 'All Guilds'}
                   </span>
@@ -263,6 +274,16 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               placeholder="Tuliskan rincian langkah pengerjaan untuk siswa..."
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
+            />
+          </div>
+          <div>
+            <PixelFieldLabel htmlFor="qst-link">Tautan Tugas / Form / Pengumpulan (Opsional)</PixelFieldLabel>
+            <PixelInput
+              id="qst-link"
+              inputMode="url"
+              placeholder="https://forms.gle/... atau link soal/kumpul tugas"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-3 pt-2">

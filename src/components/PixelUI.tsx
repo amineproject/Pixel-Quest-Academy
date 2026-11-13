@@ -1,8 +1,12 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
 import { PixelChestEmpty, PixelShieldDenied } from './PixelArt';
 import { Dungeon } from '../types/lms';
-import { groupDungeonsByTier } from '../utils/exp';
+import {
+  formatLinkDisplay,
+  groupDungeonsByTier,
+  normalizeExternalUrl,
+} from '../utils/exp';
 
 type ButtonVariant = 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
 
@@ -55,13 +59,13 @@ export const PixelSectionTitle: React.FC<{
   subtitle?: string;
   action?: React.ReactNode;
 }> = ({ title, subtitle, action }) => (
-  <div className="flex items-start justify-between gap-3 mb-2.5">
-    <div className="min-w-0">
-      <h2 className="font-pixel-display text-[12px] sm:text-[13px] tracking-wide text-[var(--text-primary)]">
+  <div className="flex flex-wrap items-start justify-between gap-2.5 mb-2.5 min-w-0">
+    <div className="min-w-0 flex-1">
+      <h2 className="font-pixel-display text-[11.5px] sm:text-[13px] tracking-wide text-[var(--text-primary)] break-words [overflow-wrap:anywhere]">
         {title}
       </h2>
       {subtitle && (
-        <p className="text-[13px] text-[var(--text-secondary)] mt-0.5 leading-snug">
+        <p className="text-[12.5px] text-[var(--text-secondary)] mt-0.5 leading-snug break-words">
           {subtitle}
         </p>
       )}
@@ -69,6 +73,40 @@ export const PixelSectionTitle: React.FC<{
     {action && <div className="shrink-0">{action}</div>}
   </div>
 );
+
+export const PixelLinkButton: React.FC<{
+  url?: string;
+  label?: string;
+  compact?: boolean;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}> = ({ url, label = 'Buka Tautan', compact = false, onClick }) => {
+  const safeHref = normalizeExternalUrl(url);
+  if (!safeHref) return null;
+  const hostPreview = formatLinkDisplay(safeHref);
+
+  return (
+    <a
+      href={safeHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onClick}
+      className={`pixel-btn max-w-full bg-[var(--bg-inset)] hover:bg-[var(--bg-surface-alt)] text-[var(--accent-warning)] border border-[var(--accent-warning)]/70 inline-flex items-center gap-2 font-semibold cursor-pointer overflow-hidden ${
+        compact
+          ? 'min-h-[32px] px-2.5 py-1 text-[11.5px]'
+          : 'min-h-[36px] px-3 py-1.5 text-[12px]'
+      }`}
+      title={safeHref}
+    >
+      <ExternalLink size={14} className="shrink-0 text-[var(--accent-success)]" />
+      <span className="truncate">{label}</span>
+      {hostPreview && (
+        <span className="text-[11px] font-normal text-[var(--text-secondary)] truncate hidden xs:inline sm:inline">
+          ({hostPreview})
+        </span>
+      )}
+    </a>
+  );
+};
 
 export const PixelFieldLabel: React.FC<{
   htmlFor?: string;
@@ -198,21 +236,21 @@ export const PixelModal: React.FC<{
       aria-modal="true"
       aria-label={title}
     >
-      <div className="pixel-box w-full max-w-[468px] sm:max-w-[540px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)]">
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] bg-[var(--bg-surface)]">
-          <h3 className="font-pixel-display text-[11px] text-[var(--text-primary)] truncate">
+      <div className="pixel-box w-full max-w-[468px] sm:max-w-[540px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)] overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] min-w-0">
+          <h3 className="font-pixel-display text-[11px] text-[var(--text-primary)] truncate min-w-0">
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+            className="pixel-btn min-w-[40px] min-h-[40px] shrink-0 flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
-        <div className="p-4 overflow-y-auto pixel-scroll space-y-4">
+        <div className="p-4 overflow-y-auto overflow-x-hidden pixel-scroll space-y-4 min-w-0">
           {children}
         </div>
       </div>

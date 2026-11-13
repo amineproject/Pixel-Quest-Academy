@@ -82,6 +82,7 @@ export async function seedInitialDataIfEmpty() {
           readMinutes: t.readMinutes,
           summary: t.summary,
           content: t.content,
+          linkUrl: t.linkUrl || '',
           publishedDate: t.publishedDate,
         });
       }
@@ -94,6 +95,7 @@ export async function seedInitialDataIfEmpty() {
           dungeonId: q.dungeonId,
           title: q.title,
           instructions: q.instructions,
+          linkUrl: q.linkUrl || '',
           deadline: q.deadline,
           maxExp: q.maxExp,
           difficulty: q.difficulty,
@@ -106,6 +108,7 @@ export async function seedInitialDataIfEmpty() {
           id: n.id,
           title: n.title,
           description: n.description,
+          linkUrl: n.linkUrl || '',
           priority: n.priority,
           targetDungeonId: n.targetDungeonId,
           releaseDate: n.releaseDate,
@@ -240,6 +243,7 @@ export async function getAllAcademyData() {
         id: n.id,
         title: n.title,
         description: n.description,
+        linkUrl: n.linkUrl || '',
         priority: n.priority as any,
         targetDungeonId: n.targetDungeonId,
         releaseDate: n.releaseDate,
@@ -261,6 +265,7 @@ export async function getAllAcademyData() {
         readMinutes: t.readMinutes,
         summary: t.summary,
         content: t.content,
+        linkUrl: t.linkUrl || '',
         publishedDate: t.publishedDate,
       })),
       quests: questsList.map((q) => ({
@@ -269,6 +274,7 @@ export async function getAllAcademyData() {
         dungeonId: q.dungeonId,
         title: q.title,
         instructions: q.instructions,
+        linkUrl: q.linkUrl || '',
         deadline: q.deadline,
         maxExp: q.maxExp,
         difficulty: q.difficulty as any,
@@ -400,12 +406,14 @@ export async function deleteHero(id: string) {
 // Notices CRUD
 export async function upsertNotice(n: QuestNotice) {
   try {
+    const cleanLink = (n.linkUrl || '').trim();
     return await db
       .insert(notices)
       .values({
         id: n.id,
         title: n.title,
         description: n.description,
+        linkUrl: cleanLink,
         priority: n.priority,
         targetDungeonId: n.targetDungeonId,
         releaseDate: n.releaseDate,
@@ -416,6 +424,7 @@ export async function upsertNotice(n: QuestNotice) {
         set: {
           title: n.title,
           description: n.description,
+          linkUrl: cleanLink,
           priority: n.priority,
           targetDungeonId: n.targetDungeonId,
           releaseDate: n.releaseDate,
@@ -480,6 +489,7 @@ export async function deleteRealm(id: string) {
 // Tomes CRUD
 export async function upsertTome(t: AncientTome) {
   try {
+    const cleanLink = (t.linkUrl || '').trim();
     return await db
       .insert(tomes)
       .values({
@@ -490,6 +500,7 @@ export async function upsertTome(t: AncientTome) {
         readMinutes: t.readMinutes,
         summary: t.summary,
         content: t.content,
+        linkUrl: cleanLink,
         publishedDate: t.publishedDate,
       })
       .onConflictDoUpdate({
@@ -501,6 +512,7 @@ export async function upsertTome(t: AncientTome) {
           readMinutes: t.readMinutes,
           summary: t.summary,
           content: t.content,
+          linkUrl: cleanLink,
         },
       });
   } catch (error) {
@@ -521,6 +533,7 @@ export async function deleteTome(id: string) {
 // Quests CRUD
 export async function upsertQuest(q: ActiveQuest) {
   try {
+    const cleanLink = (q.linkUrl || '').trim();
     return await db
       .insert(quests)
       .values({
@@ -529,6 +542,7 @@ export async function upsertQuest(q: ActiveQuest) {
         dungeonId: q.dungeonId,
         title: q.title,
         instructions: q.instructions,
+        linkUrl: cleanLink,
         deadline: q.deadline,
         maxExp: q.maxExp,
         difficulty: q.difficulty,
@@ -540,6 +554,7 @@ export async function upsertQuest(q: ActiveQuest) {
           dungeonId: q.dungeonId,
           title: q.title,
           instructions: q.instructions,
+          linkUrl: cleanLink,
           deadline: q.deadline,
           maxExp: q.maxExp,
           difficulty: q.difficulty,

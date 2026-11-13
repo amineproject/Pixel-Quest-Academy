@@ -138,13 +138,13 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
             ).length;
             const ratio = Math.round((memberCount / dungeon.capacity) * 100);
             return (
-              <article key={dungeon.id} className="pixel-box p-4 space-y-3">
+              <article key={dungeon.id} className="pixel-box p-4 space-y-3 overflow-hidden">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-pixel-body text-[16px] text-[var(--accent-warning)]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words [overflow-wrap:anywhere]">
                       {dungeon.guildCode} · {dungeon.tier}
                     </p>
-                    <h3 className="font-pixel-display text-[12px] text-[var(--text-primary)] mt-0.5">
+                    <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
                       {dungeon.name}
                     </h3>
                   </div>
@@ -169,7 +169,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                 </div>
 
                 {dungeon.description && (
-                  <p className="font-pixel-body text-[17px] text-[var(--text-secondary)]">
+                  <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                     {dungeon.description}
                   </p>
                 )}

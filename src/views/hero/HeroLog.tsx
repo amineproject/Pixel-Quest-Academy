@@ -221,19 +221,19 @@ export const HeroLog: React.FC<HeroLogProps> = ({
             );
 
             return (
-              <article key={realm.id} className="pixel-box p-4 space-y-3">
+              <article key={realm.id} className="pixel-box p-4 space-y-3 overflow-hidden">
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <PixelRealmGlyph
                       icon={realm.icon}
                       color={realm.accentColor}
                       size={24}
                     />
-                    <div className="min-w-0">
-                      <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)] truncate">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
                         {realm.name}
                       </h3>
-                      <p className="font-pixel-body text-[15px] text-[var(--text-muted)]">
+                      <p className="text-[11.5px] font-semibold text-[var(--text-muted)]">
                         {realm.code} · {realmQuests.length} Tugas
                       </p>
                     </div>
@@ -249,10 +249,10 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     return (
                       <div
                         key={quest.id}
-                        className="pixel-box-inset p-3 flex items-start justify-between gap-3"
+                        className="pixel-box-inset p-3 flex items-start justify-between gap-3 overflow-hidden"
                       >
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="font-pixel-ui text-[11px] text-[var(--text-primary)] leading-snug">
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p className="text-[13.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
                             {quest.title}
                           </p>
                           <div className="flex flex-wrap items-center gap-2">
@@ -268,7 +268,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                             </span>
                           </div>
                           {grade?.feedback && (
-                            <p className="font-pixel-body text-[15px] text-[var(--text-secondary)] leading-snug pt-0.5">
+                            <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed pt-0.5 break-words [overflow-wrap:anywhere]">
                               Catatan Guru: {grade.feedback}
                             </p>
                           )}

@@ -42,6 +42,7 @@ export const notices = pgTable('notices', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   description: text('description').notNull(),
+  linkUrl: text('link_url'),
   priority: text('priority').notNull().default('Medium'),
   targetDungeonId: text('target_dungeon_id').notNull().default('all'),
   releaseDate: text('release_date').notNull(),
@@ -69,6 +70,7 @@ export const tomes = pgTable('tomes', {
   readMinutes: integer('read_minutes').notNull().default(8),
   summary: text('summary').notNull(),
   content: text('content').notNull(),
+  linkUrl: text('link_url'),
   publishedDate: text('published_date').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -80,6 +82,7 @@ export const quests = pgTable('quests', {
   dungeonId: text('dungeon_id').notNull().default('all'),
   title: text('title').notNull(),
   instructions: text('instructions').notNull(),
+  linkUrl: text('link_url'),
   deadline: text('deadline').notNull(),
   maxExp: integer('max_exp').notNull().default(200),
   difficulty: text('difficulty').notNull().default('Normal'),

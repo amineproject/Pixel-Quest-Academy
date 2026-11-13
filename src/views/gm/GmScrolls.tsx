@@ -7,6 +7,7 @@ import {
   PixelEmptyChest,
   PixelFieldLabel,
   PixelInput,
+  PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
   PixelSelect,
@@ -37,6 +38,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
   const [readMinutes, setReadMinutes] = useState(8);
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   const filtered = state.tomes
     .filter((t) => realmFilter === 'all' || t.realmId === realmFilter)
@@ -52,6 +54,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     setReadMinutes(8);
     setSummary('');
     setContent('');
+    setLinkUrl('');
     setModalOpen(true);
   };
 
@@ -63,6 +66,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     setReadMinutes(t.readMinutes);
     setSummary(t.summary);
     setContent(t.content);
+    setLinkUrl(t.linkUrl || '');
     setModalOpen(true);
   };
 
@@ -77,6 +81,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
       readMinutes: Math.max(1, Number(readMinutes) || 5),
       summary: summary.trim() || content.trim().slice(0, 90),
       content: content.trim(),
+      linkUrl: linkUrl.trim(),
       publishedDate:
         editing?.publishedDate || new Date().toISOString().slice(0, 10),
     });
@@ -124,14 +129,14 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
           {filtered.map((tome) => {
             const realm = state.realms.find((r) => r.id === tome.realmId);
             return (
-              <article key={tome.id} className="pixel-box p-4 space-y-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-pixel-body text-[15px] text-[var(--accent-warning)]">
+              <article key={tome.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
                       Bab {tome.chapter} · {realm?.name || 'General'} ·{' '}
                       {tome.readMinutes} min read
                     </p>
-                    <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)] mt-0.5">
+                    <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
                       {tome.title}
                     </h3>
                   </div>
@@ -141,7 +146,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                       type="button"
                       onClick={() => openEdit(tome)}
                       aria-label={`Edit ${tome.title}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
                     >
                       <Pencil size={15} />
                     </button>
@@ -149,19 +154,25 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                       type="button"
                       onClick={() => setDeleteTarget(tome)}
                       aria-label={`Delete ${tome.title}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
+                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
 
-                <p className="font-pixel-body text-[17px] text-[var(--text-secondary)]">
+                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed break-words [overflow-wrap:anywhere]">
                   {tome.summary}
                 </p>
 
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--border-pixel)]/40">
-                  <span className="font-pixel-body text-[15px] text-[var(--text-muted)] tabular-nums">
+                {tome.linkUrl && (
+                  <div>
+                    <PixelLinkButton url={tome.linkUrl} label="Buka Tautan Materi" />
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40">
+                  <span className="text-[12px] text-[var(--text-muted)] tabular-nums">
                     Published {formatRetroDate(tome.publishedDate)}
                   </span>
                   <PixelButton
@@ -187,12 +198,20 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
         onClose={() => setPreviewTome(null)}
       >
         {previewTome && (
-          <div className="space-y-3">
-            <p className="font-pixel-body text-[16px] text-[var(--accent-warning)]">
+          <div className="space-y-3 min-w-0">
+            <p className="text-[12.5px] font-semibold text-[var(--accent-warning)] break-words">
               {state.realms.find((r) => r.id === previewTome.realmId)?.name} ·{' '}
               {previewTome.readMinutes} min read
             </p>
-            <div className="pixel-box-inset p-4 font-pixel-body text-[19px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed">
+            {previewTome.linkUrl && (
+              <div>
+                <PixelLinkButton
+                  url={previewTome.linkUrl}
+                  label="Buka Tautan Materi"
+                />
+              </div>
+            )}
+            <div className="pixel-box-inset p-4 text-[14px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
               {previewTome.content}
             </div>
             <PixelButton
@@ -278,6 +297,16 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
               placeholder="Tulis materi pembelajaran terstruktur untuk Hero..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
+            />
+          </div>
+          <div>
+            <PixelFieldLabel htmlFor="tm-link">Tautan Materi / PDF / Video (Opsional)</PixelFieldLabel>
+            <PixelInput
+              id="tm-link"
+              inputMode="url"
+              placeholder="https://drive.google.com/... atau link YouTube/modul"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-3 pt-2">

@@ -12,6 +12,7 @@ import {
   PixelEmptyChest,
   PixelFieldLabel,
   PixelInput,
+  PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
   PixelSelect,
@@ -37,6 +38,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
   const [priority, setPriority] = useState<NoticePriority>('Medium');
   const [targetDungeonId, setTargetDungeonId] = useState('all');
   const [releaseDate, setReleaseDate] = useState(
@@ -51,6 +53,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
     setEditing(null);
     setTitle('');
     setDescription('');
+    setLinkUrl('');
     setPriority('Medium');
     setTargetDungeonId('all');
     setReleaseDate(new Date().toISOString().slice(0, 10));
@@ -61,6 +64,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
     setEditing(n);
     setTitle(n.title);
     setDescription(n.description);
+    setLinkUrl(n.linkUrl || '');
     setPriority(n.priority);
     setTargetDungeonId(n.targetDungeonId);
     setReleaseDate(n.releaseDate);
@@ -74,6 +78,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
       id: editing?.id || `ntc-${Date.now()}`,
       title: title.trim(),
       description: description.trim(),
+      linkUrl: linkUrl.trim(),
       priority,
       targetDungeonId,
       releaseDate,
@@ -136,10 +141,10 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
               (d) => d.id === notice.targetDungeonId
             );
             return (
-              <article key={notice.id} className="pixel-box p-4 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5 font-pixel-ui text-[10px]">
+              <article key={notice.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
                       <span className={priorityTextColor(notice.priority)}>
                         {priorityPrefix(notice.priority)}
                       </span>
@@ -152,7 +157,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                         {formatRetroDate(notice.releaseDate)}
                       </span>
                     </div>
-                    <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)]">
+                    <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
                       {notice.title}
                     </h3>
                   </div>
@@ -162,7 +167,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                       type="button"
                       onClick={() => openEdit(notice)}
                       aria-label={`Edit ${notice.title}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
                     >
                       <Pencil size={15} />
                     </button>
@@ -170,15 +175,23 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                       type="button"
                       onClick={() => setDeleteTarget(notice)}
                       aria-label={`Delete ${notice.title}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
+                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
-                <p className="font-pixel-body text-[18px] text-[var(--text-secondary)] leading-snug">
+                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                   {notice.description}
                 </p>
+                {notice.linkUrl && (
+                  <div className="pt-1">
+                    <PixelLinkButton
+                      url={notice.linkUrl}
+                      label="Buka Tautan Pengumuman"
+                    />
+                  </div>
+                )}
               </article>
             );
           })}
@@ -245,6 +258,16 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
               placeholder="Tulis instruksi atau kabar terbaru untuk siswa..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <div>
+            <PixelFieldLabel htmlFor="ntc-link">Tautan Lampiran / Info (Opsional)</PixelFieldLabel>
+            <PixelInput
+              id="ntc-link"
+              inputMode="url"
+              placeholder="https://drive.google.com/... atau link info lainnya"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-3 pt-2">

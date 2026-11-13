@@ -166,3 +166,24 @@ export function getHeroEffectiveRealmIds(
   }
   return null;
 }
+
+export function normalizeExternalUrl(raw?: string): string {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '';
+  if (/^javascript:/i.test(trimmed) || /^data:/i.test(trimmed)) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+export function formatLinkDisplay(raw?: string): string {
+  const safe = normalizeExternalUrl(raw);
+  if (!safe) return '';
+  try {
+    const parsed = new URL(safe);
+    const shortPath = parsed.pathname === '/' ? '' : parsed.pathname;
+    const combined = `${parsed.hostname}${shortPath}`;
+    return combined.length > 44 ? `${combined.slice(0, 41)}...` : combined;
+  } catch {
+    return safe.length > 44 ? `${safe.slice(0, 41)}...` : safe;
+  }
+}

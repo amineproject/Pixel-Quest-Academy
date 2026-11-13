@@ -20,6 +20,7 @@ import { PixelAvatar, PixelStar } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyChest,
+  PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
 } from '../../components/PixelUI';
@@ -103,14 +104,14 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   return (
     <div className="space-y-5">
       {/* Hero Status Header Card (with Avatar Editor) */}
-      <section className="pixel-box p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+      <section className="pixel-box p-4 space-y-3 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <PixelAvatar avatar={hero.avatar} size={52} className="animate-pixel-bounce shrink-0" />
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-success)]">
-                <PixelStar size={12} />
-                {hero.heroClass.toUpperCase()}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-success)] truncate">
+                <PixelStar size={12} className="shrink-0" />
+                <span className="truncate">{hero.heroClass.toUpperCase()}</span>
               </div>
               <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] truncate mt-0.5">
                 {hero.name}
@@ -194,31 +195,44 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
         ) : (
           <div className="space-y-2.5">
             {visibleNotices.map((notice) => (
-              <button
+              <article
                 key={notice.id}
-                type="button"
-                onClick={() => setSelectedNotice(notice)}
-                className="pixel-box w-full text-left p-4 space-y-1.5 hover:bg-[var(--bg-surface-alt)] transition-colors cursor-pointer"
+                className="pixel-box p-4 space-y-2 overflow-hidden"
               >
-                <div className="flex items-center justify-between gap-2 font-pixel-ui text-[10px]">
-                  <span className={priorityColor(notice.priority)}>
-                    {notice.priority === 'Critical'
-                      ? '[!] CRITICAL'
-                      : notice.priority === 'Medium'
-                        ? '[•] MEDIUM'
-                        : '[-] LOW'}
-                  </span>
-                  <span className="text-[var(--text-muted)] tabular-nums">
-                    {formatRetroDate(notice.releaseDate)}
-                  </span>
-                </div>
-                <h3 className="text-[14px] font-bold text-[var(--text-primary)]">
-                  {notice.title}
-                </h3>
-                <p className="text-[13px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
-                  {notice.description}
-                </p>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedNotice(notice)}
+                  className="w-full text-left space-y-1.5 hover:opacity-90 transition-opacity cursor-pointer block"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[10px]">
+                    <span className={priorityColor(notice.priority)}>
+                      {notice.priority === 'Critical'
+                        ? '[!] CRITICAL'
+                        : notice.priority === 'Medium'
+                          ? '[•] MEDIUM'
+                          : '[-] LOW'}
+                    </span>
+                    <span className="text-[var(--text-muted)] tabular-nums">
+                      {formatRetroDate(notice.releaseDate)}
+                    </span>
+                  </div>
+                  <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+                    {notice.title}
+                  </h3>
+                  <p className="text-[13px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed break-words [overflow-wrap:anywhere]">
+                    {notice.description}
+                  </p>
+                </button>
+                {notice.linkUrl && (
+                  <div className="pt-1 border-t border-[var(--border-pixel)]/30">
+                    <PixelLinkButton
+                      url={notice.linkUrl}
+                      label="Buka Tautan"
+                      compact
+                    />
+                  </div>
+                )}
+              </article>
             ))}
           </div>
         )}
@@ -250,29 +264,38 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
           upcomingQuests.map((q) => {
             const realm = state.realms.find((r) => r.id === q.realmId);
             return (
-              <div key={q.id} className="pixel-box p-3.5 space-y-1">
-                <p className="font-pixel-body text-[15px] text-[var(--accent-warning)] tabular-nums">
+              <article key={q.id} className="pixel-box p-4 space-y-2 overflow-hidden">
+                <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
                   {realm?.name} · Due {formatRetroDate(q.deadline)}
                 </p>
-                <h3 className="font-pixel-ui text-[11px] text-[var(--text-primary)]">
+                <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
                   {q.title}
                 </h3>
-                <p className="font-pixel-body text-[17px] text-[var(--text-secondary)]">
+                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                   {q.instructions}
                 </p>
-              </div>
+                {q.linkUrl && (
+                  <div className="pt-1.5 border-t border-[var(--border-pixel)]/30">
+                    <PixelLinkButton
+                      url={q.linkUrl}
+                      label="Buka Tautan Tugas"
+                      compact
+                    />
+                  </div>
+                )}
+              </article>
             );
           })
         )}
       </section>
 
       {/* Demo RBAC Verification Trigger */}
-      <section className="pixel-box-inset p-3.5 flex items-center justify-between gap-3">
-        <div className="min-w-0">
+      <section className="pixel-box-inset p-3.5 flex flex-wrap items-center justify-between gap-3 overflow-hidden">
+        <div className="min-w-0 flex-1">
           <p className="font-pixel-ui text-[10px] text-[var(--text-muted)]">
             RBAC READ-ONLY GUARD
           </p>
-          <p className="font-pixel-body text-[16px] text-[var(--text-secondary)]">
+          <p className="text-[12.5px] text-[var(--text-secondary)] leading-snug break-words">
             Uji akses halaman edit GM sebagai Hero
           </p>
         </div>
@@ -281,6 +304,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
           size="sm"
           variant="danger"
           onClick={() => onAttemptRestrictedRoute('#/gm/exp-loot/edit')}
+          className="shrink-0"
         >
           <ShieldAlert size={14} />
           Test Guard
@@ -294,17 +318,23 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
         onClose={() => setSelectedNotice(null)}
       >
         {selectedNotice && (
-          <div className="space-y-3">
-            <p className="font-pixel-body text-[16px] text-[var(--accent-warning)] tabular-nums">
+          <div className="space-y-3 min-w-0">
+            <p className="text-[12px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
               {selectedNotice.priority} · {formatRetroDate(selectedNotice.releaseDate)} ·{' '}
               {selectedNotice.author}
             </p>
-            <h3 className="font-pixel-display text-[12px] text-[var(--text-primary)]">
+            <h3 className="text-[15px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
               {selectedNotice.title}
             </h3>
-            <div className="pixel-box-inset p-3.5 font-pixel-body text-[19px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed">
+            <div className="pixel-box-inset p-3.5 text-[13.5px] sm:text-[14px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
               {selectedNotice.description}
             </div>
+            {selectedNotice.linkUrl && (
+              <PixelLinkButton
+                url={selectedNotice.linkUrl}
+                label="Buka Tautan Pengumuman"
+              />
+            )}
             <PixelButton
               type="button"
               variant="neutral"

@@ -107,9 +107,9 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
             ).length;
 
             return (
-              <article key={realm.id} className="pixel-box p-4 space-y-2.5">
+              <article key={realm.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
                 <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-11 h-11 shrink-0 pixel-box-inset flex items-center justify-center">
                       <PixelRealmGlyph
                         icon={realm.icon}
@@ -117,11 +117,11 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                         size={28}
                       />
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-pixel-body text-[15px] text-[var(--text-muted)]">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11.5px] font-semibold text-[var(--text-muted)] break-words [overflow-wrap:anywhere]">
                         {realm.code} · {tomeCount} Tomes · {questCount} Quests
                       </p>
-                      <h3 className="font-pixel-display text-[12px] text-[var(--text-primary)] truncate mt-0.5">
+                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
                         {realm.name}
                       </h3>
                     </div>
@@ -148,7 +148,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                 </div>
 
                 {realm.description && (
-                  <p className="font-pixel-body text-[17px] text-[var(--text-secondary)]">
+                  <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                     {realm.description}
                   </p>
                 )}

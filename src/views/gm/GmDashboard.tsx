@@ -11,6 +11,7 @@ import {
 import { PixelAvatar, PixelCoin, PixelStar } from '../../components/PixelArt';
 import {
   PixelButton,
+  PixelLinkButton,
   PixelSectionTitle,
 } from '../../components/PixelUI';
 import { formatRetroDate, getHeroTotalExp } from '../../utils/exp';
@@ -125,17 +126,17 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
         <PixelSectionTitle title="Tavern Highlights" />
 
         {topHero && (
-          <div className="pixel-box p-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="pixel-box p-3.5 flex items-center justify-between gap-3 overflow-hidden">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <PixelAvatar avatar={topHero.avatar} size={40} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)]">
                   TOP EXP HERO
                 </p>
-                <p className="text-[15px] font-bold text-[var(--text-primary)] truncate">
+                <p className="text-[14.5px] font-bold text-[var(--text-primary)] truncate">
                   {topHero.name}
                 </p>
-                <p className="text-[13px] text-[var(--text-secondary)]">
+                <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
                   {topHero.heroClass} ·{' '}
                   <span className="font-semibold text-[var(--accent-warning)] tabular-nums">
                     {getHeroTotalExp(topHero.id, state.grades)} EXP
@@ -148,6 +149,7 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
               size="sm"
               variant="neutral"
               onClick={() => onNavigate('exp_loot')}
+              className="shrink-0"
             >
               Grade
             </PixelButton>
@@ -155,19 +157,26 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
         )}
 
         {state.notices[0] && (
-          <div className="pixel-box p-3.5 space-y-1.5">
-            <div className="flex items-center justify-between text-[15px] font-pixel-body text-[var(--text-secondary)]">
+          <div className="pixel-box p-3.5 space-y-2 overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] font-semibold text-[var(--text-secondary)]">
               <span>Latest Notice · {state.notices[0].priority}</span>
-              <span className="tabular-nums">
+              <span className="tabular-nums text-[var(--text-muted)]">
                 {formatRetroDate(state.notices[0].releaseDate)}
               </span>
             </div>
-            <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)]">
+            <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
               {state.notices[0].title}
             </h3>
-            <p className="font-pixel-body text-[17px] text-[var(--text-secondary)] line-clamp-2">
+            <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
               {state.notices[0].description}
             </p>
+            {state.notices[0].linkUrl && (
+              <PixelLinkButton
+                url={state.notices[0].linkUrl}
+                label="Buka Tautan"
+                compact
+              />
+            )}
           </div>
         )}
       </section>

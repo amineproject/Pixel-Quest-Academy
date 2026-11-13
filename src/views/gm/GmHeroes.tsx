@@ -264,15 +264,15 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
             const heroRealmIds = getEffectiveRealmsForHero(hero);
 
             return (
-              <article key={hero.id} className="pixel-box p-3.5 space-y-2.5">
+              <article key={hero.id} className="pixel-box p-3.5 space-y-2.5 overflow-hidden">
                 <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <PixelAvatar avatar={hero.avatar} size={44} />
-                    <div className="min-w-0">
-                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <PixelAvatar avatar={hero.avatar} size={44} className="shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] break-words [overflow-wrap:anywhere]">
                         {hero.name}
                       </h3>
-                      <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
+                      <p className="text-[12px] text-[var(--text-secondary)] truncate">
                         @{hero.username} · NIS {hero.studentCode}
                       </p>
                       <p className="text-[12px] font-semibold text-[var(--accent-warning)] tabular-nums truncate">
@@ -312,13 +312,13 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                       return (
                         <span
                           key={rid}
-                          className="text-[11px] font-medium px-2 py-0.5 border border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] flex items-center gap-1"
+                          className="text-[11px] font-medium px-2 py-0.5 border border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] flex items-center gap-1 max-w-full"
                         >
                           <span
                             className="w-2 h-2 inline-block shrink-0"
                             style={{ backgroundColor: realm.accentColor }}
                           />
-                          <span className="truncate max-w-[120px]">{realm.name}</span>
+                          <span className="truncate max-w-[140px]">{realm.name}</span>
                         </span>
                       );
                     })
@@ -329,8 +329,8 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--border-pixel)]/40">
-                  <span className="text-[12.5px] text-[var(--text-secondary)]">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40">
+                  <span className="text-[12px] text-[var(--text-secondary)] min-w-0 break-words">
                     Karakter: <span className="font-medium text-[var(--text-primary)]">{hero.heroClass}</span> · Status:{' '}
                     <strong
                       className={
@@ -347,7 +347,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                     onClick={() =>
                       onSaveHero({ ...hero, active: !hero.active })
                     }
-                    className="pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[10px] bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                    className="pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[10px] bg-[var(--bg-surface-alt)] text-[var(--text-primary)] shrink-0 cursor-pointer"
                   >
                     {hero.active ? 'Set Inactive' : 'Activate'}
                   </button>

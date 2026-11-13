@@ -9,6 +9,7 @@ import { PixelRealmGlyph } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyChest,
+  PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
 } from '../../components/PixelUI';
@@ -137,7 +138,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
             {filteredTomes.map((tome) => {
               const realm = state.realms.find((r) => r.id === tome.realmId);
               return (
-                <article key={tome.id} className="pixel-box p-4 space-y-2.5">
+                <article key={tome.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
                   <div className="flex items-start gap-3">
                     {realm && (
                       <div className="w-10 h-10 shrink-0 pixel-box-inset flex items-center justify-center">
@@ -149,19 +150,26 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-[var(--accent-warning)]">
+                      <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
                         Bab {tome.chapter} · {realm?.name} · {tome.readMinutes} min read
                       </p>
-                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] mt-0.5">
+                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
                         {tome.title}
                       </h3>
                     </div>
                   </div>
-                  <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+                  <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                     {tome.summary}
                   </p>
-                  <div className="flex items-center justify-between pt-2 border-t border-[var(--border-pixel)]/40">
-                    <span className="font-pixel-body text-[15px] text-[var(--text-muted)] tabular-nums">
+                  {tome.linkUrl && (
+                    <PixelLinkButton
+                      url={tome.linkUrl}
+                      label="Buka Tautan Materi"
+                      compact
+                    />
+                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40">
+                    <span className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
                       {formatRetroDate(tome.publishedDate)}
                     </span>
                     <PixelButton
@@ -188,17 +196,24 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
           {filteredQuests.map((quest) => {
             const realm = state.realms.find((r) => r.id === quest.realmId);
             return (
-              <article key={quest.id} className="pixel-box p-4 space-y-2">
-                <p className="font-pixel-body text-[15px] text-[var(--accent-warning)] tabular-nums">
+              <article key={quest.id} className="pixel-box p-4 space-y-2 overflow-hidden">
+                <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
                   {realm?.name} · [{quest.difficulty.toUpperCase()}]
                 </p>
-                <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)]">
+                <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
                   {quest.title}
                 </h3>
-                <p className="font-pixel-body text-[18px] text-[var(--text-secondary)] leading-snug">
+                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                   {quest.instructions}
                 </p>
-                <p className="font-pixel-body text-[15px] text-[var(--text-muted)] pt-1 border-t border-[var(--border-pixel)]/40 tabular-nums">
+                {quest.linkUrl && (
+                  <PixelLinkButton
+                    url={quest.linkUrl}
+                    label="Buka Tautan Tugas"
+                    compact
+                  />
+                )}
+                <p className="text-[12px] text-[var(--text-muted)] pt-1.5 border-t border-[var(--border-pixel)]/40 tabular-nums">
                   Batas Waktu: {formatRetroDate(quest.deadline)} · Read-Only Briefing
                 </p>
               </article>
@@ -214,14 +229,20 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
         onClose={() => setReadingTome(null)}
       >
         {readingTome && (
-          <div className="space-y-3">
-            <p className="text-[12.5px] font-semibold text-[var(--accent-warning)]">
+          <div className="space-y-3 min-w-0">
+            <p className="text-[12px] font-semibold text-[var(--accent-warning)] break-words">
               {state.realms.find((r) => r.id === readingTome.realmId)?.name} ·{' '}
               {readingTome.readMinutes} min read
             </p>
-            <div className="pixel-box-inset p-4 text-[14.5px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed font-normal">
+            <div className="pixel-box-inset p-4 text-[13.5px] sm:text-[14px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed font-normal break-words [overflow-wrap:anywhere]">
               {readingTome.content}
             </div>
+            {readingTome.linkUrl && (
+              <PixelLinkButton
+                url={readingTome.linkUrl}
+                label="Buka Tautan Materi"
+              />
+            )}
             <PixelButton
               type="button"
               variant="primary"

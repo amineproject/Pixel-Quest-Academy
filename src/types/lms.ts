@@ -89,6 +89,7 @@ export interface QuestNotice {
   id: string;
   title: string;
   description: string;
+  linkUrl?: string;
   priority: NoticePriority;
   targetDungeonId: string; // 'all' or specific dungeonId
   releaseDate: string; // YYYY-MM-DD
@@ -112,6 +113,7 @@ export interface AncientTome {
   readMinutes: number;
   summary: string;
   content: string;
+  linkUrl?: string;
   publishedDate: string;
 }
 
@@ -121,6 +123,7 @@ export interface ActiveQuest {
   dungeonId: string; // 'all' or specific dungeonId
   title: string;
   instructions: string;
+  linkUrl?: string;
   deadline: string;
   maxExp: number;
   difficulty: QuestDifficulty;

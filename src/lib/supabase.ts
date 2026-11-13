@@ -320,6 +320,7 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
         id: n.id,
         title: n.title,
         description: n.description,
+        linkUrl: n.link_url || '',
         priority: n.priority || 'Medium',
         targetDungeonId: n.target_dungeon_id || 'all',
         releaseDate: n.release_date || '',
@@ -341,6 +342,7 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
         readMinutes: Number(t.read_minutes) || 8,
         summary: t.summary || '',
         content: t.content || '',
+        linkUrl: t.link_url || '',
         publishedDate: t.published_date || '',
       })),
       quests: qList.map((q: any) => ({
@@ -349,6 +351,7 @@ export async function fetchAcademyFromSupabase(): Promise<Partial<AcademyState> 
         dungeonId: q.dungeon_id || 'all',
         title: q.title,
         instructions: q.instructions || '',
+        linkUrl: q.link_url || '',
         deadline: q.deadline || '',
         maxExp: Number(q.max_exp) || 200,
         difficulty: q.difficulty || 'Normal',
@@ -529,12 +532,24 @@ export async function cloudSyncNotice(notice: QuestNotice): Promise<CloudSyncRes
       id: notice.id,
       title: notice.title,
       description: notice.description,
+      link_url: notice.linkUrl || '',
       priority: notice.priority,
       target_dungeon_id: notice.targetDungeonId,
       release_date: notice.releaseDate,
       author: notice.author,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      const { error: fallbackErr } = await client.from('notices').upsert({
+        id: notice.id,
+        title: notice.title,
+        description: notice.description,
+        priority: notice.priority,
+        target_dungeon_id: notice.targetDungeonId,
+        release_date: notice.releaseDate,
+        author: notice.author,
+      });
+      if (fallbackErr) return { ok: false, error: fallbackErr.message };
+    }
     return { ok: true };
   } catch (err: any) {
     console.warn('Cloud sync notice failed:', err);
@@ -603,9 +618,22 @@ export async function cloudSyncTome(tome: AncientTome): Promise<CloudSyncResult>
       read_minutes: tome.readMinutes,
       summary: tome.summary,
       content: tome.content,
+      link_url: tome.linkUrl || '',
       published_date: tome.publishedDate,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      const { error: fallbackErr } = await client.from('tomes').upsert({
+        id: tome.id,
+        realm_id: tome.realmId || null,
+        title: tome.title,
+        chapter: tome.chapter,
+        read_minutes: tome.readMinutes,
+        summary: tome.summary,
+        content: tome.content,
+        published_date: tome.publishedDate,
+      });
+      if (fallbackErr) return { ok: false, error: fallbackErr.message };
+    }
     return { ok: true };
   } catch (err: any) {
     console.warn('Cloud sync tome failed:', err);
@@ -636,11 +664,24 @@ export async function cloudSyncQuest(quest: ActiveQuest): Promise<CloudSyncResul
       dungeon_id: quest.dungeonId,
       title: quest.title,
       instructions: quest.instructions,
+      link_url: quest.linkUrl || '',
       deadline: quest.deadline,
       max_exp: quest.maxExp,
       difficulty: quest.difficulty,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      const { error: fallbackErr } = await client.from('quests').upsert({
+        id: quest.id,
+        realm_id: quest.realmId || null,
+        dungeon_id: quest.dungeonId,
+        title: quest.title,
+        instructions: quest.instructions,
+        deadline: quest.deadline,
+        max_exp: quest.maxExp,
+        difficulty: quest.difficulty,
+      });
+      if (fallbackErr) return { ok: false, error: fallbackErr.message };
+    }
     return { ok: true };
   } catch (err: any) {
     console.warn('Cloud sync quest failed:', err);
@@ -810,10 +851,25 @@ export async function uploadAllLocalToSupabase(
           read_minutes: t.readMinutes,
           summary: t.summary,
           content: t.content,
+          link_url: t.linkUrl || '',
           published_date: t.publishedDate,
         }))
       );
-      if (error) throw new Error(`Tabel tomes: ${error.message}`);
+      if (error) {
+        const { error: fbErr } = await client.from('tomes').upsert(
+          state.tomes.map((t) => ({
+            id: t.id,
+            realm_id: t.realmId || null,
+            title: t.title,
+            chapter: t.chapter,
+            read_minutes: t.readMinutes,
+            summary: t.summary,
+            content: t.content,
+            published_date: t.publishedDate,
+          }))
+        );
+        if (fbErr) throw new Error(`Tabel tomes: ${fbErr.message}`);
+      }
     }
 
     // 5. Quests
@@ -825,12 +881,27 @@ export async function uploadAllLocalToSupabase(
           dungeon_id: q.dungeonId,
           title: q.title,
           instructions: q.instructions,
+          link_url: q.linkUrl || '',
           deadline: q.deadline,
           max_exp: q.maxExp,
           difficulty: q.difficulty,
         }))
       );
-      if (error) throw new Error(`Tabel quests: ${error.message}`);
+      if (error) {
+        const { error: fbErr } = await client.from('quests').upsert(
+          state.quests.map((q) => ({
+            id: q.id,
+            realm_id: q.realmId || null,
+            dungeon_id: q.dungeonId,
+            title: q.title,
+            instructions: q.instructions,
+            deadline: q.deadline,
+            max_exp: q.maxExp,
+            difficulty: q.difficulty,
+          }))
+        );
+        if (fbErr) throw new Error(`Tabel quests: ${fbErr.message}`);
+      }
     }
 
     // 6. Notices
@@ -840,13 +911,27 @@ export async function uploadAllLocalToSupabase(
           id: n.id,
           title: n.title,
           description: n.description,
+          link_url: n.linkUrl || '',
           priority: n.priority,
           target_dungeon_id: n.targetDungeonId,
           release_date: n.releaseDate,
           author: n.author,
         }))
       );
-      if (error) throw new Error(`Tabel notices: ${error.message}`);
+      if (error) {
+        const { error: fbErr } = await client.from('notices').upsert(
+          state.notices.map((n) => ({
+            id: n.id,
+            title: n.title,
+            description: n.description,
+            priority: n.priority,
+            target_dungeon_id: n.targetDungeonId,
+            release_date: n.releaseDate,
+            author: n.author,
+          }))
+        );
+        if (fbErr) throw new Error(`Tabel notices: ${fbErr.message}`);
+      }
     }
 
     // 7. Grades

@@ -165,6 +165,7 @@ app.get('/api/academy', async (req, res) => {
             readMinutes: t.read_minutes || t.readMinutes,
             summary: t.summary,
             content: t.content,
+            linkUrl: t.link_url || t.linkUrl || '',
             publishedDate: t.published_date || t.publishedDate,
           })),
           quests: (qData || []).map((q: any) => ({
@@ -173,6 +174,7 @@ app.get('/api/academy', async (req, res) => {
             dungeonId: q.dungeon_id || q.dungeonId,
             title: q.title,
             instructions: q.instructions,
+            linkUrl: q.link_url || q.linkUrl || '',
             deadline: q.deadline,
             maxExp: q.max_exp || q.maxExp,
             difficulty: q.difficulty,
@@ -181,6 +183,7 @@ app.get('/api/academy', async (req, res) => {
             id: n.id,
             title: n.title,
             description: n.description,
+            linkUrl: n.link_url || n.linkUrl || '',
             priority: n.priority,
             targetDungeonId: n.target_dungeon_id || n.targetDungeonId,
             releaseDate: n.release_date || n.releaseDate,
@@ -285,15 +288,27 @@ app.post('/api/notices', async (req, res) => {
   try {
     await upsertNotice(req.body);
     if (supabaseAdmin) {
-      await supabaseAdmin.from('notices').upsert({
+      const { error } = await supabaseAdmin.from('notices').upsert({
         id: req.body.id,
         title: req.body.title,
         description: req.body.description,
+        link_url: req.body.linkUrl || '',
         priority: req.body.priority,
         target_dungeon_id: req.body.targetDungeonId,
         release_date: req.body.releaseDate,
         author: req.body.author,
       });
+      if (error) {
+        await supabaseAdmin.from('notices').upsert({
+          id: req.body.id,
+          title: req.body.title,
+          description: req.body.description,
+          priority: req.body.priority,
+          target_dungeon_id: req.body.targetDungeonId,
+          release_date: req.body.releaseDate,
+          author: req.body.author,
+        });
+      }
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -353,7 +368,7 @@ app.post('/api/tomes', async (req, res) => {
   try {
     await upsertTome(req.body);
     if (supabaseAdmin) {
-      await supabaseAdmin.from('tomes').upsert({
+      const { error } = await supabaseAdmin.from('tomes').upsert({
         id: req.body.id,
         realm_id: req.body.realmId,
         title: req.body.title,
@@ -361,8 +376,21 @@ app.post('/api/tomes', async (req, res) => {
         read_minutes: req.body.readMinutes,
         summary: req.body.summary,
         content: req.body.content,
+        link_url: req.body.linkUrl || '',
         published_date: req.body.publishedDate,
       });
+      if (error) {
+        await supabaseAdmin.from('tomes').upsert({
+          id: req.body.id,
+          realm_id: req.body.realmId,
+          title: req.body.title,
+          chapter: req.body.chapter,
+          read_minutes: req.body.readMinutes,
+          summary: req.body.summary,
+          content: req.body.content,
+          published_date: req.body.publishedDate,
+        });
+      }
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -387,16 +415,29 @@ app.post('/api/quests', async (req, res) => {
   try {
     await upsertQuest(req.body);
     if (supabaseAdmin) {
-      await supabaseAdmin.from('quests').upsert({
+      const { error } = await supabaseAdmin.from('quests').upsert({
         id: req.body.id,
         realm_id: req.body.realmId,
         dungeon_id: req.body.dungeonId,
         title: req.body.title,
         instructions: req.body.instructions,
+        link_url: req.body.linkUrl || '',
         deadline: req.body.deadline,
         max_exp: req.body.maxExp,
         difficulty: req.body.difficulty,
       });
+      if (error) {
+        await supabaseAdmin.from('quests').upsert({
+          id: req.body.id,
+          realm_id: req.body.realmId,
+          dungeon_id: req.body.dungeonId,
+          title: req.body.title,
+          instructions: req.body.instructions,
+          deadline: req.body.deadline,
+          max_exp: req.body.maxExp,
+          difficulty: req.body.difficulty,
+        });
+      }
     }
     res.json({ success: true });
   } catch (error: any) {
