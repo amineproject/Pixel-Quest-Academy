@@ -431,10 +431,14 @@ export async function upsertHero(h: HeroStudent) {
 
 export async function verifyHeroLoginSql(identifier: string, pin: string) {
   const q = identifier.trim().toLowerCase();
+  if (!q) {
+    return { ok: false, error: 'not_found' };
+  }
   const rows = await db.select().from(heroes);
   const matched = rows.find(
     (h) =>
-      h.username.toLowerCase() === q || h.studentCode.toLowerCase() === q
+      (h.username.trim() !== '' && h.username.toLowerCase() === q) ||
+      h.studentCode.toLowerCase() === q
   );
   if (!matched) {
     return { ok: false, error: 'not_found' };
@@ -451,6 +455,37 @@ export async function verifyHeroLoginSql(identifier: string, pin: string) {
     }
   }
   return { ok: true, heroId: matched.id, hasPin: Boolean(matched.hasPin) };
+}
+
+export async function updateOwnHeroUsernameSql(
+  heroId: string,
+  currentPin: string,
+  newUsername: string
+) {
+  const rows = await db.select().from(heroes);
+  const hero = rows.find((h) => h.id === heroId);
+  if (!hero) return { ok: false, error: 'Hero tidak ditemukan.' };
+  if (!hero.active) return { ok: false, error: 'Akun Hero sedang dinonaktifkan.' };
+  if (hero.hasPin && hero.pinHash) {
+    if (!verifyPinSecret(currentPin.trim(), hero.pinHash)) {
+      return { ok: false, error: 'Sesi siswa tidak valid.' };
+    }
+  }
+  const clean = newUsername.trim().replace(/\s+/g, '').toLowerCase();
+  if (clean.length < 1 || clean.length > 5) {
+    return { ok: false, error: 'Username harus 1 hingga 5 karakter (tanpa spasi).' };
+  }
+  const conflict = rows.some(
+    (h) =>
+      h.id !== heroId &&
+      ((h.username.trim() !== '' && h.username.toLowerCase() === clean) ||
+        h.studentCode.toLowerCase() === clean)
+  );
+  if (conflict) {
+    return { ok: false, error: 'Username sudah digunakan siswa lain!' };
+  }
+  await db.update(heroes).set({ username: clean }).where(eq(heroes.id, heroId));
+  return { ok: true, username: clean };
 }
 
 export async function changeOwnHeroPinSql(

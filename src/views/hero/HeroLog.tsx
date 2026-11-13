@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
+  AtSign,
   CheckCircle2,
   Pencil,
   XCircle,
@@ -16,6 +17,8 @@ import { PixelAvatar, PixelRealmGlyph } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyChest,
+  PixelFieldLabel,
+  PixelInput,
   PixelModal,
   PixelSectionTitle,
 } from '../../components/PixelUI';
@@ -29,6 +32,9 @@ interface HeroLogProps {
   state: AcademyState;
   hero: HeroStudent;
   onUpdateAvatar?: (avatar: AvatarClass) => void;
+  onUpdateUsername?: (
+    username: string
+  ) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const HERO_AVATAR_OPTIONS: { value: AvatarClass; label: string }[] = [
@@ -45,33 +51,33 @@ function renderStatusSymbol(status: GradeStatus) {
       return {
         label: 'Tuntas',
         badgeClass:
-          'bg-emerald-600/25 border-emerald-400 text-emerald-300',
-        iconBoxClass: 'bg-emerald-500 text-[#0B1F13] border-emerald-200',
+          'bg-emerald-100 border-emerald-700 text-emerald-900 rounded',
+        iconBoxClass: 'bg-emerald-600 text-white border-[var(--border-pixel)] rounded-md',
         icon: <CheckCircle2 size={20} strokeWidth={2.75} />,
       };
     case 'proses':
       return {
         label: 'Masih Proses Dinilai',
         badgeClass:
-          'bg-emerald-700/25 border-lime-400 text-lime-200',
-        iconBoxClass: 'bg-emerald-600 text-lime-200 border-lime-300',
+          'bg-teal-100 border-teal-700 text-teal-900 rounded',
+        iconBoxClass: 'bg-teal-600 text-white border-[var(--border-pixel)] rounded-md',
         icon: <AlertCircle size={20} strokeWidth={2.75} />,
       };
     case 'remidial':
       return {
         label: 'Remidial',
         badgeClass:
-          'bg-gradient-to-r from-amber-500/25 to-rose-600/25 border-amber-400 text-amber-200',
+          'bg-amber-100 border-amber-700 text-amber-900 rounded',
         iconBoxClass:
-          'bg-gradient-to-br from-amber-400 to-rose-600 text-[#11131E] border-amber-200',
+          'bg-amber-400 text-[#18181b] border-[var(--border-pixel)] rounded-md',
         icon: <AlertTriangle size={20} strokeWidth={2.75} />,
       };
     case 'belum':
     default:
       return {
         label: 'Belum Dikerjakan',
-        badgeClass: 'bg-rose-600/25 border-rose-400 text-rose-300',
-        iconBoxClass: 'bg-rose-600 text-white border-rose-200',
+        badgeClass: 'bg-rose-100 border-rose-700 text-rose-900 rounded',
+        iconBoxClass: 'bg-rose-600 text-white border-[var(--border-pixel)] rounded-md',
         icon: <XCircle size={20} strokeWidth={2.75} />,
       };
   }
@@ -81,9 +87,17 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   state,
   hero,
   onUpdateAvatar,
+  onUpdateUsername,
 }) => {
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarClass>(hero.avatar);
+
+  const [usernameModalOpen, setUsernameModalOpen] = useState(false);
+  const [usernameInput, setUsernameInput] = useState(
+    (hero.username || '').slice(0, 5)
+  );
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   const heroGrades = state.grades.filter((g) => g.heroId === hero.id);
   const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
@@ -113,46 +127,76 @@ export const HeroLog: React.FC<HeroLogProps> = ({
     <div className="space-y-5">
       <PixelSectionTitle
         title="Hero Log / Status Tugas"
-        subtitle="Status penyelesaian tugas per mata pelajaran (simbol)"
+        subtitle="Status tugas, avatar, dan username akun siswa"
         action={
-          onUpdateAvatar ? (
-            <PixelButton
-              type="button"
-              size="sm"
-              variant="warning"
-              onClick={() => {
-                setSelectedAvatar(hero.avatar);
-                setAvatarModalOpen(true);
-              }}
-            >
-              <Pencil size={13} />
-              Edit Avatar
-            </PixelButton>
+          (onUpdateAvatar || onUpdateUsername) ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {onUpdateUsername && (
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    setUsernameInput((hero.username || '').slice(0, 5));
+                    setUsernameError(null);
+                    setUsernameModalOpen(true);
+                  }}
+                >
+                  <AtSign size={13} />
+                  Username
+                </PixelButton>
+              )}
+              {onUpdateAvatar && (
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="warning"
+                  onClick={() => {
+                    setSelectedAvatar(hero.avatar);
+                    setAvatarModalOpen(true);
+                  }}
+                >
+                  <Pencil size={13} />
+                  Avatar
+                </PixelButton>
+              )}
+            </div>
           ) : undefined
         }
       />
 
       {/* Status Symbol Legend & Counters (NO numeric points) */}
-      <section className="pixel-box p-4 space-y-3">
+      <section className="pixel-box p-4 space-y-3 overflow-hidden">
         <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-pixel)]/40">
-          <PixelAvatar avatar={hero.avatar} size={42} />
-          <div className="min-w-0">
-            <h3 className="font-pixel-display text-[12px] text-[var(--text-primary)] truncate">
-              {hero.name}
-            </h3>
-            <p className="text-[12.5px] text-[var(--text-secondary)]">
-              {hero.heroClass} · Total {relevantQuests.length} Tugas Terdaftar
+          <PixelAvatar avatar={hero.avatar} size={42} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <h3 className="font-pixel-display text-[12px] text-[var(--text-primary)] truncate">
+                {hero.name}
+              </h3>
+              {hero.username ? (
+                <span className="text-[11px] font-bold px-1.5 py-0.5 border border-[var(--accent-warning)]/60 bg-[var(--bg-inset)] text-[var(--accent-warning)] shrink-0">
+                  @{hero.username}
+                </span>
+              ) : (
+                <span className="text-[10.5px] px-1.5 py-0.5 border border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] text-[var(--text-muted)] shrink-0">
+                  Belum ada username
+                </span>
+              )}
+            </div>
+            <p className="text-[12.5px] text-[var(--text-secondary)] truncate mt-0.5">
+              {hero.heroClass} · NIS {hero.studentCode} · {relevantQuests.length} Tugas Terdaftar
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
-            <span className="w-8 h-8 shrink-0 border-2 border-emerald-200 bg-emerald-500 text-[#0B1F13] flex items-center justify-center">
+            <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-emerald-600 text-white flex items-center justify-center">
               <CheckCircle2 size={18} strokeWidth={2.75} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-emerald-300 leading-tight">
+              <p className="text-[12px] font-bold text-emerald-800 leading-tight">
                 Tuntas ({counts.tuntas})
               </p>
               <p className="text-[11px] text-[var(--text-muted)] leading-tight">
@@ -162,11 +206,11 @@ export const HeroLog: React.FC<HeroLogProps> = ({
           </div>
 
           <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
-            <span className="w-8 h-8 shrink-0 border-2 border-rose-200 bg-rose-600 text-white flex items-center justify-center">
+            <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-rose-600 text-white flex items-center justify-center">
               <XCircle size={18} strokeWidth={2.75} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-rose-300 leading-tight">
+              <p className="text-[12px] font-bold text-rose-800 leading-tight">
                 Belum Dikerjakan ({counts.belum})
               </p>
               <p className="text-[11px] text-[var(--text-muted)] leading-tight">
@@ -176,11 +220,11 @@ export const HeroLog: React.FC<HeroLogProps> = ({
           </div>
 
           <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
-            <span className="w-8 h-8 shrink-0 border-2 border-lime-300 bg-emerald-600 text-lime-200 flex items-center justify-center">
+            <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-teal-600 text-white flex items-center justify-center">
               <AlertCircle size={18} strokeWidth={2.75} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-lime-200 leading-tight">
+              <p className="text-[12px] font-bold text-teal-800 leading-tight">
                 Proses Dinilai ({counts.proses})
               </p>
               <p className="text-[11px] text-[var(--text-muted)] leading-tight">
@@ -190,15 +234,15 @@ export const HeroLog: React.FC<HeroLogProps> = ({
           </div>
 
           <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
-            <span className="w-8 h-8 shrink-0 border-2 border-amber-200 bg-gradient-to-br from-amber-400 to-rose-600 text-[#11131E] flex items-center justify-center">
+            <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-amber-400 text-[#18181b] flex items-center justify-center">
               <AlertTriangle size={18} strokeWidth={2.75} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-amber-300 leading-tight">
+              <p className="text-[12px] font-bold text-amber-800 leading-tight">
                 Remidial ({counts.remidial})
               </p>
               <p className="text-[11px] text-[var(--text-muted)] leading-tight">
-                Seru Merah-Kuning
+                Perlu Perbaikan
               </p>
             </div>
           </div>
@@ -344,6 +388,99 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               </PixelButton>
             </div>
           </div>
+        </PixelModal>
+      )}
+      {/* Student Username Picker Modal (Max 5 Characters) */}
+      {onUpdateUsername && (
+        <PixelModal
+          open={usernameModalOpen}
+          title="Edit Username Hero"
+          onClose={() => setUsernameModalOpen(false)}
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setUsernameError(null);
+              const clean = usernameInput.trim().replace(/\s+/g, '').toLowerCase();
+              if (clean.length < 1) {
+                setUsernameError('Masukkan username (1–5 karakter).');
+                return;
+              }
+              if (clean.length > 5) {
+                setUsernameError('Username maksimal hanya 5 karakter!');
+                return;
+              }
+              setIsSavingUsername(true);
+              const res = await onUpdateUsername(clean);
+              setIsSavingUsername(false);
+              if (!res.ok) {
+                setUsernameError(res.error || 'Gagal menyimpan username.');
+                return;
+              }
+              setUsernameModalOpen(false);
+            }}
+            autoComplete="off"
+            className="space-y-3"
+          >
+            <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+              Buat <strong>username singkat maksimal 5 karakter</strong> (tanpa spasi). Gunakan kata yang sopan karena Admin berhak menghapus username yang tidak pantas.
+            </p>
+
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <PixelFieldLabel htmlFor="hero-edit-username">
+                  Username Baru (Maks. 5 Karakter)
+                </PixelFieldLabel>
+                <span
+                  className={`font-pixel-ui text-[10px] tabular-nums ${
+                    usernameInput.length >= 5
+                      ? 'text-[var(--accent-warning)] font-bold'
+                      : 'text-[var(--text-muted)]'
+                  }`}
+                >
+                  {usernameInput.length}/5
+                </span>
+              </div>
+              <PixelInput
+                id="hero-edit-username"
+                maxLength={5}
+                autoComplete="off"
+                required
+                placeholder="Contoh: rian5"
+                value={usernameInput}
+                onChange={(e) => {
+                  const sanitized = e.target.value
+                    .replace(/\s+/g, '')
+                    .toLowerCase()
+                    .slice(0, 5);
+                  setUsernameInput(sanitized);
+                  if (usernameError) setUsernameError(null);
+                }}
+              />
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                Login tetap bisa menggunakan NIS (<strong>{hero.studentCode}</strong>) atau username baru ini.
+              </p>
+            </div>
+
+            {usernameError && (
+              <p className="text-[12.5px] font-semibold text-[var(--accent-danger)]">
+                [!] {usernameError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <PixelButton
+                type="button"
+                variant="neutral"
+                onClick={() => setUsernameModalOpen(false)}
+              >
+                Batal
+              </PixelButton>
+              <PixelButton type="submit" variant="success" disabled={isSavingUsername}>
+                {isSavingUsername ? 'Menyimpan...' : 'Simpan Username'}
+              </PixelButton>
+            </div>
+          </form>
         </PixelModal>
       )}
     </div>

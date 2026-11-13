@@ -97,7 +97,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
     const matched = latestState.heroes.find(
       (h) =>
-        h.username.toLowerCase() === query ||
+        (h.username.trim() !== '' && h.username.toLowerCase() === query) ||
         h.studentCode.toLowerCase() === query
     );
 
@@ -329,36 +329,42 @@ export const LoginView: React.FC<LoginViewProps> = ({
       data-theme={state.settings.theme}
       className="min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-6 sm:px-4"
     >
-      {/* Desktop Arcade Cabinet Exterior Trim */}
-      <div className="w-full max-w-[560px] sm:max-w-[620px] md:max-w-[680px] sm:p-3 sm:bg-[var(--bezel-body)] sm:border-4 sm:border-[var(--bezel-trim)] sm:shadow-[0_20px_50px_rgba(0,0,0,0.7)] transition-all">
+      {/* Desktop Arcade / Retro OS Cabinet Exterior Trim */}
+      <div className="w-full max-w-[560px] sm:max-w-[620px] md:max-w-[680px] sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)] transition-all">
         {/* Hardware Trim Top */}
-        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-warning)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
+        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
           <span>★ ARCADE ADVENTURE CONSOLE ★</span>
           <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span className="w-4 h-1.5 bg-black/30 inline-block" />
-            <span className="w-4 h-1.5 bg-black/30 inline-block" />
-            <span className="w-4 h-1.5 bg-black/30 inline-block" />
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+              −
+            </span>
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[8px] flex items-center justify-center leading-none font-bold">
+              □
+            </span>
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+              ×
+            </span>
           </div>
         </div>
 
         {/* Arcade Screen Viewport */}
         <div
-          className={`relative w-full min-h-screen sm:min-h-[780px] flex flex-col bg-[var(--bg-canvas)] sm:border-4 sm:border-black overflow-y-auto pixel-scroll ${
+          className={`relative w-full min-h-screen sm:min-h-[780px] flex flex-col bg-[var(--bg-canvas)] sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)] overflow-y-auto pixel-scroll ${
             state.settings.crtScanlines ? 'crt-scanlines' : ''
           }`}
         >
           {/* Top Audio & Quick Theme Bar */}
-          <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-surface)] border-b-2 border-[var(--border-pixel)] shrink-0">
+          <div className="flex items-center justify-between px-3 py-2 bg-[var(--surface-tint)] border-b-2 border-[var(--border-pixel)] shrink-0">
             <div className="flex items-center gap-1.5">
               <PixelStar size={16} className="animate-pixel-float" />
-              <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)]">
+              <span className="font-pixel-ui text-[10px] font-bold text-[var(--text-primary)]">
                 PIXEL QUEST ACADEMY
               </span>
             </div>
             <button
               type="button"
               onClick={onToggleSound}
-              className="pixel-btn min-h-[32px] px-2 py-1 bg-[var(--bg-surface-alt)] text-[var(--text-primary)] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer"
+              className="pixel-btn min-h-[32px] px-2 py-1 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer"
               title={state.settings.soundEnabled ? 'Mute Audio SFX' : 'Enable Audio SFX'}
             >
               {state.settings.soundEnabled ? (
@@ -387,7 +393,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
 
               <div>
-                <h1 className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--accent-warning)] tracking-wide drop-shadow-[0_2px_0_rgba(0,0,0,0.8)]">
+                <h1 className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--accent-primary)] tracking-wide">
                   PIXEL QUEST
                 </h1>
                 <p className="font-pixel-display text-[12px] text-[var(--text-primary)] mt-0.5">
@@ -400,14 +406,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
               {/* Press Start Flashing Banner */}
               <div className="py-1">
-                <span className="font-pixel-ui text-[11px] text-[var(--accent-success)] animate-press-start bg-[var(--bg-inset)] px-3 py-1 border border-[var(--border-pixel)] inline-block">
+                <span className="font-pixel-ui text-[11px] font-bold text-[var(--accent-success)] animate-press-start bg-[var(--surface-tint)] px-3 py-1 rounded-md border-2 border-[var(--border-pixel)] shadow-[2px_2px_0_var(--shadow-ink)] inline-block">
                   ▶ PRESS START TO BEGIN
                 </span>
               </div>
             </div>
 
             {/* Role Tabs: Hero (Siswa) vs Game Master (Guru) */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => {
@@ -416,7 +422,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 }}
                 className={`pixel-btn min-h-[46px] p-2 flex items-center justify-center gap-2 font-pixel-ui text-[11px] cursor-pointer ${
                   selectedRoleTab === UserRole.HERO
-                    ? 'bg-[var(--accent-success)] text-[#11131E] font-bold border-2 border-white'
+                    ? 'bg-[var(--accent-success)] text-[var(--text-on-success)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
                 }`}
               >
@@ -432,7 +438,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 }}
                 className={`pixel-btn min-h-[46px] p-2 flex items-center justify-center gap-2 font-pixel-ui text-[11px] cursor-pointer ${
                   selectedRoleTab === UserRole.GAME_MASTER
-                    ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold border-2 border-white'
+                    ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
                 }`}
               >
@@ -673,17 +679,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </div>
 
             {/* Cheerful Theme Bar at Bottom of Title Screen */}
-            <div className="pt-2 border-t border-[var(--border-pixel)]/40 space-y-2">
+            <div className="pt-2 border-t-2 border-[var(--border-pixel)]/20 space-y-2">
               <span className="font-pixel-ui text-[9px] text-[var(--text-secondary)] block text-center">
                 CHOOSE RETRO THEME
               </span>
               <div className="grid grid-cols-5 gap-1.5">
                 {[
-                  { id: 'sunny_quest' as PixelTheme, label: 'Sunny', color: '#ffd13b' },
-                  { id: 'daylight_rpg' as PixelTheme, label: 'Daylight', color: '#38bdf8' },
-                  { id: 'nes_classic' as PixelTheme, label: 'NES', color: '#3b5dc9' },
-                  { id: 'cyber_retro' as PixelTheme, label: 'Cyber', color: '#ff4d6d' },
-                  { id: 'gameboy_green' as PixelTheme, label: 'GameBoy', color: '#8bac0f' },
+                  { id: 'sunny_quest' as PixelTheme, label: 'Cream', color: '#fcd34d' },
+                  { id: 'daylight_rpg' as PixelTheme, label: 'MintSky', color: '#86efac' },
+                  { id: 'nes_classic' as PixelTheme, label: 'RetroOS', color: '#b79ced' },
+                  { id: 'cyber_retro' as PixelTheme, label: 'Arcade', color: '#fde047' },
+                  { id: 'gameboy_green' as PixelTheme, label: 'Mono', color: '#beb8ad' },
                 ].map((th) => (
                   <button
                     key={th.id}
@@ -692,14 +698,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       onUpdateTheme(th.id);
                       playRetroSound('blip', state.settings.soundEnabled);
                     }}
-                    className={`p-1.5 text-center font-pixel-ui text-[8px] cursor-pointer border-2 transition-all ${
+                    className={`p-1.5 rounded-md text-center font-pixel-ui text-[8px] cursor-pointer border-2 transition-all ${
                       state.settings.theme === th.id
-                        ? 'border-white bg-[var(--bg-surface-alt)] font-bold scale-105'
-                        : 'border-[var(--border-pixel)]/50 bg-[var(--bg-inset)] opacity-70 hover:opacity-100'
+                        ? 'border-[var(--border-pixel)] bg-[var(--surface-tint)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]'
+                        : 'border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] opacity-80 hover:opacity-100'
                     }`}
                   >
                     <span
-                      className="w-3 h-3 rounded-full mx-auto block mb-1 border border-black/40"
+                      className="w-3.5 h-3.5 rounded-full mx-auto block mb-1 border-2 border-[var(--border-pixel)]"
                       style={{ backgroundColor: th.color }}
                     />
                     {th.label}
@@ -711,7 +717,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         </div>
 
         {/* Hardware Trim Bottom */}
-        <div className="hidden sm:flex items-center justify-between px-2 pt-2 text-[var(--text-on-warning)] font-pixel-ui text-[9px]">
+        <div className="hidden sm:flex items-center justify-between px-2 pt-2 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
           <span>© 2026 PIXEL QUEST ACADEMY</span>
           <span>SELECT / START</span>
         </div>

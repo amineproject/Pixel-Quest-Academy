@@ -140,7 +140,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                       type="button"
                       onClick={() => setDeleteTarget(realm)}
                       aria-label={`Delete ${realm.name}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
+                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[var(--text-on-danger)] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -219,10 +219,10 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                   type="button"
                   aria-label={`Color ${col}`}
                   onClick={() => setAccentColor(col)}
-                  className={`w-10 h-10 border-3 cursor-pointer ${
+                  className={`w-10 h-10 rounded-md border-2 cursor-pointer transition-transform ${
                     accentColor === col
-                      ? 'border-white scale-105'
-                      : 'border-black/60'
+                      ? 'border-[var(--border-pixel)] ring-2 ring-[var(--accent-primary)] scale-105 shadow-[2px_2px_0_var(--shadow-ink)]'
+                      : 'border-[var(--border-pixel)]/50'
                   }`}
                   style={{ backgroundColor: col }}
                 />

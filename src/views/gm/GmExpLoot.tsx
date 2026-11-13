@@ -48,25 +48,25 @@ const STATUS_OPTIONS: {
   {
     id: 'tuntas',
     label: 'Tuntas',
-    activeClass: 'bg-emerald-600 text-white border-emerald-300 font-bold',
+    activeClass: 'bg-emerald-600 text-white border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
     icon: <CheckCircle2 size={14} />,
   },
   {
     id: 'proses',
     label: 'Proses Dinilai',
-    activeClass: 'bg-emerald-700/80 text-lime-200 border-lime-300 font-bold',
+    activeClass: 'bg-teal-600 text-white border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
     icon: <AlertCircle size={14} />,
   },
   {
     id: 'remidial',
     label: 'Remidial',
-    activeClass: 'bg-gradient-to-r from-amber-500 to-rose-600 text-white border-amber-200 font-bold',
+    activeClass: 'bg-amber-400 text-[#18181b] border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
     icon: <AlertTriangle size={14} />,
   },
   {
     id: 'belum',
     label: 'Belum Dikerjakan',
-    activeClass: 'bg-rose-600 text-white border-rose-300 font-bold',
+    activeClass: 'bg-rose-600 text-white border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
     icon: <XCircle size={14} />,
   },
 ];
@@ -495,10 +495,10 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
                         </p>
                         <p className="text-[11px] text-[var(--text-secondary)] truncate">
                           {row.dungeonName} · NIS {row.hero.studentCode} ·{' '}
-                          <span className="text-emerald-400">✓{row.tuntasCount}</span>{' '}
-                          <span className="text-lime-300">!{row.prosesCount}</span>{' '}
-                          <span className="text-amber-300">▲{row.remidialCount}</span>{' '}
-                          <span className="text-rose-400">✗{row.belumCount}</span>
+                          <span className="text-emerald-700 font-bold">✓{row.tuntasCount}</span>{' '}
+                          <span className="text-teal-700 font-bold">!{row.prosesCount}</span>{' '}
+                          <span className="text-amber-700 font-bold">▲{row.remidialCount}</span>{' '}
+                          <span className="text-rose-700 font-bold">✗{row.belumCount}</span>
                         </p>
                       </div>
                       <div className="text-right shrink-0 tabular-nums">

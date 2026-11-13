@@ -43,28 +43,28 @@ interface GmSettingsProps {
 const THEMES: { id: PixelTheme; label: string; previewColors: string[] }[] = [
   {
     id: 'sunny_quest',
-    label: 'Sunny Quest (Cheerful)',
-    previewColors: ['#162B50', '#FFD13B', '#10B981', '#F43F5E'],
+    label: 'Retro Cream Studio',
+    previewColors: ['#FBF7EE', '#FCD34D', '#2563EB', '#18181B'],
   },
   {
     id: 'daylight_rpg',
-    label: 'Daylight RPG (Sunshine)',
-    previewColors: ['#F0F7FF', '#0284C7', '#FFD13B', '#16A34A'],
+    label: 'Mint & Sky Pixel',
+    previewColors: ['#CDECE3', '#F4F9FC', '#1D4ED8', '#1B365D'],
   },
   {
     id: 'nes_classic',
-    label: 'NES Classic',
-    previewColors: ['#1A1C2C', '#38B764', '#FEAE34', '#EF7D57'],
+    label: 'Retro OS Pastel',
+    previewColors: ['#FFF6DC', '#B79CED', '#FFB3D4', '#A3E635'],
   },
   {
     id: 'cyber_retro',
-    label: 'Cyber Retro',
-    previewColors: ['#120F24', '#2CE8F5', '#FEAE34', '#FF4D6D'],
+    label: 'Arcade Pop Grid',
+    previewColors: ['#FDE047', '#4C1D95', '#84CC16', '#EC4899'],
   },
   {
     id: 'gameboy_green',
-    label: 'Game Boy Green',
-    previewColors: ['#0F380F', '#306230', '#8BAC0F', '#9BBC0F'],
+    label: 'Paper Mono Retro',
+    previewColors: ['#F6F4EE', '#E6E1D7', '#BEB8AD', '#111111'],
   },
 ];
 
@@ -251,10 +251,10 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                 onClick={() =>
                   onUpdateSettings({ ...state.settings, theme: themeItem.id })
                 }
-                className={`w-full min-h-[48px] px-3 py-2 flex items-center justify-between border-2 cursor-pointer ${
+                className={`w-full min-h-[48px] px-3 py-2 rounded-md flex items-center justify-between border-2 cursor-pointer transition-all ${
                   selected
-                    ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)]'
-                    : 'border-[var(--border-pixel)] bg-[var(--bg-inset)]'
+                    ? 'border-[var(--border-pixel)] bg-[var(--surface-tint)] shadow-[2px_2px_0_var(--shadow-ink)] font-bold'
+                    : 'border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-alt)]'
                 }`}
               >
                 <span className="font-pixel-ui text-[11px] text-[var(--text-primary)]">
@@ -474,10 +474,10 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
             </h3>
           </div>
           <span
-            className={`font-pixel-ui text-[9px] px-2 py-0.5 border ${
+            className={`font-pixel-ui text-[9px] px-2 py-0.5 rounded border-2 font-bold ${
               isCloudConfigured
-                ? 'bg-emerald-950/40 text-[var(--accent-success)] border-[var(--accent-success)]'
-                : 'bg-amber-950/40 text-[var(--accent-warning)] border-[var(--accent-warning)]'
+                ? 'bg-emerald-100 text-emerald-800 border-emerald-700'
+                : 'bg-amber-100 text-amber-800 border-amber-700'
             }`}
           >
             {isCloudConfigured ? '☁️ CLOUD AKTIF' : '⚠️ MODE LOKAL'}
@@ -490,10 +490,10 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
 
         {isCloudConfigured && isHardenedSecurity !== null && (
           <div
-            className={`pixel-box-inset p-2.5 text-[12px] flex items-center gap-2 border ${
+            className={`pixel-box-inset p-2.5 text-[12px] font-medium flex items-center gap-2 border-2 ${
               isHardenedSecurity
-                ? 'border-emerald-500/60 text-emerald-300 bg-emerald-950/25'
-                : 'border-amber-500/60 text-amber-300 bg-amber-950/25'
+                ? 'border-emerald-700 text-emerald-900 bg-emerald-100'
+                : 'border-amber-700 text-amber-900 bg-amber-100'
             }`}
           >
             <Lock size={14} className="shrink-0" />

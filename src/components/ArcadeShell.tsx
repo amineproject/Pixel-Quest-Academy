@@ -148,14 +148,16 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
       className="min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-6 sm:px-4"
     >
       {/* Desktop Arcade Console Top Switcher */}
-      <div className="hidden sm:flex items-center justify-between w-full max-w-[620px] md:max-w-[680px] mb-3 px-2 gap-2">
+      <div className="hidden sm:flex items-center justify-between w-full max-w-[620px] md:max-w-[680px] mb-3 px-1 gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <PixelStar size={18} className="animate-pixel-float shrink-0" />
+          <div className="w-8 h-8 rounded-md bg-[var(--surface-tint)] border-2 border-[var(--border-pixel)] shadow-[2px_2px_0_var(--shadow-ink)] flex items-center justify-center shrink-0">
+            <PixelStar size={18} className="animate-pixel-float" />
+          </div>
           <div className="min-w-0">
-            <p className="font-pixel-display text-[11px] text-[var(--accent-warning)] truncate drop-shadow-sm">
+            <p className="font-pixel-display text-[11px] text-[var(--text-primary)] truncate">
               PIXEL QUEST ACADEMY
             </p>
-            <p className="text-[13px] text-[var(--text-secondary)] truncate">
+            <p className="text-[13px] font-medium text-[var(--text-secondary)] truncate">
               {isGm ? `Guild Master: ${gmName}` : `Hero: ${activeHeroName} (Read-Only)`}
             </p>
           </div>
@@ -165,7 +167,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           <button
             type="button"
             onClick={onLogout}
-            className="pixel-btn min-h-[34px] px-3 py-1 bg-[var(--accent-danger)] text-[#11131E] font-pixel-ui text-[10px] flex items-center gap-1.5 cursor-pointer font-bold"
+            className="pixel-btn min-h-[34px] px-3 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10px] flex items-center gap-1.5 cursor-pointer font-bold"
             title="Keluar ke Halaman Login"
           >
             <LogOut size={13} />
@@ -174,29 +176,35 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
         </div>
       </div>
 
-      {/* Handheld Arcade Bezel (Proportional: 360px on mobile, up to 680px on desktop) */}
-      <div className="w-full max-w-[560px] sm:max-w-[620px] md:max-w-[680px] sm:p-3 sm:bg-[var(--bezel-body)] sm:border-4 sm:border-[var(--bezel-trim)] sm:shadow-[0_20px_50px_rgba(0,0,0,0.7)] transition-all">
-        {/* Console Hardware Top Trim (Desktop only) */}
-        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-warning)] font-bold">
+      {/* Handheld / Retro OS Console Bezel */}
+      <div className="w-full max-w-[560px] sm:max-w-[620px] md:max-w-[680px] sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)] transition-all">
+        {/* Console Hardware Top Trim (Desktop only — Retro OS window controls) */}
+        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-bold">
           <div className="flex items-center gap-2 font-pixel-ui text-[10px] tracking-widest uppercase">
             <PixelCoin size={15} className="animate-coin-shine" />
             <span>8-BIT RETRO ACADEMY LMS</span>
           </div>
           <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span className="w-4 h-1.5 bg-black/40 inline-block" />
-            <span className="w-4 h-1.5 bg-black/40 inline-block" />
-            <span className="w-4 h-1.5 bg-black/40 inline-block" />
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+              −
+            </span>
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[8px] flex items-center justify-center leading-none font-bold">
+              □
+            </span>
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+              ×
+            </span>
           </div>
         </div>
 
         {/* Screen Viewport */}
         <div
-          className={`relative w-full min-h-screen sm:min-h-[780px] sm:h-[86vh] sm:max-h-[920px] flex flex-col bg-[var(--bg-canvas)] sm:border-4 sm:border-black overflow-hidden ${
+          className={`relative w-full min-h-screen sm:min-h-[780px] sm:h-[86vh] sm:max-h-[920px] flex flex-col bg-[var(--bg-canvas)] sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)] overflow-hidden ${
             crtScanlines ? 'crt-scanlines' : ''
           }`}
         >
-          {/* Cheerful Top App Bar (<= 56px, within 15% mobile sticky cap) */}
-          <header className="sticky top-0 z-30 h-[56px] shrink-0 bg-[var(--bg-surface)] border-b-3 border-[var(--border-pixel)] px-3 flex items-center justify-between gap-2 shadow-sm">
+          {/* Cheerful Top App Bar */}
+          <header className="sticky top-0 z-30 h-[56px] shrink-0 bg-[var(--surface-tint)] border-b-2 border-[var(--border-pixel)] px-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <PixelAvatar
                 avatar={isGm ? gmAvatar : activeHeroAvatar}
@@ -209,16 +217,16 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 </h1>
                 <p className="font-pixel-body text-[14px] text-[var(--text-secondary)] leading-none mt-0.5 truncate flex items-center gap-1">
                   {isGm ? (
-                    <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[9px]">
+                    <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[9px] font-bold">
                       <Crown size={10} /> GM ACCESS
                     </span>
                   ) : (
-                    <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[9px]">
+                    <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[9px] font-bold">
                       <Shield size={10} /> HERO READ-ONLY
                     </span>
                   )}
                   <span>·</span>
-                  <span className="truncate">{isGm ? gmName : activeHeroName}</span>
+                  <span className="truncate font-medium">{isGm ? gmName : activeHeroName}</span>
                 </p>
               </div>
             </div>
@@ -230,7 +238,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   type="button"
                   onClick={onManualSync}
                   disabled={isSyncing}
-                  className="pixel-btn min-w-[34px] min-h-[34px] px-2 flex items-center justify-center gap-1 bg-[var(--bg-surface-alt)] text-[var(--accent-warning)] cursor-pointer font-pixel-ui text-[9px]"
+                  className="pixel-btn min-w-[34px] min-h-[34px] px-2 flex items-center justify-center gap-1 bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer font-pixel-ui text-[9px]"
                   title="Sinkronkan Data Cloud"
                   aria-label="Sinkronkan Data Cloud"
                 >
@@ -243,7 +251,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               <button
                 type="button"
                 onClick={onToggleSound}
-                className="pixel-btn min-w-[34px] min-h-[34px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                className="pixel-btn min-w-[34px] min-h-[34px] flex items-center justify-center bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer"
                 title={soundEnabled ? 'Mute SFX' : 'Enable SFX'}
                 aria-label="Toggle sound"
               >
@@ -258,7 +266,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               <button
                 type="button"
                 onClick={onLogout}
-                className="pixel-btn min-h-[34px] px-2.5 py-1 bg-[var(--accent-danger)] text-[#11131E] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer font-bold"
+                className="pixel-btn min-h-[34px] px-2.5 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer font-bold"
                 title="Keluar / Logout"
                 aria-label="Keluar / Logout"
               >
@@ -276,7 +284,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           {/* Bottom Tab Bar Navigation */}
           <nav
             aria-label={isGm ? 'Game Master Navigation' : 'Hero Navigation'}
-            className="sticky bottom-0 left-0 w-full z-30 h-[58px] shrink-0 bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)] shadow-[0_-3px_12px_rgba(0,0,0,0.3)]"
+            className="sticky bottom-0 left-0 w-full z-30 h-[58px] shrink-0 bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)]"
           >
             {isGm ? (
               <div className="grid grid-cols-5 h-full">
@@ -288,7 +296,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       key={tabId}
                       type="button"
                       onClick={() => onSelectGmMenu(tabId)}
-                      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-1 cursor-pointer transition-colors border-r border-[var(--border-pixel)]/40 ${
+                      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-1 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
                         active
                           ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                           : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
@@ -325,7 +333,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       key={item.id}
                       type="button"
                       onClick={() => onSelectHeroMenu(item.id)}
-                      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-1 cursor-pointer transition-colors border-r last:border-r-0 border-[var(--border-pixel)]/40 ${
+                      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-1 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
                         active
                           ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                           : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
@@ -344,12 +352,12 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
         </div>
 
         {/* Handheld Console Footer Trim (Desktop only) */}
-        <div className="hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-warning)] font-pixel-ui text-[9px] font-bold">
+        <div className="hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
           <div className="flex items-center gap-1.5">
             <PixelStar size={12} />
             <span>PIXEL QUEST ACADEMY</span>
           </div>
-          <span>VIEWPORT 480PX</span>
+          <span>RETRO EDITION</span>
         </div>
       </div>
     </div>

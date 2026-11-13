@@ -21,13 +21,13 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
     'bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--text-on-accent)]',
   success:
-    'bg-[var(--accent-success)] hover:brightness-110 text-[#11131E]',
+    'bg-[var(--accent-success)] hover:brightness-110 text-[var(--text-on-success)]',
   warning:
     'bg-[var(--accent-warning)] hover:brightness-110 text-[var(--text-on-warning)]',
   danger:
-    'bg-[var(--accent-danger)] hover:brightness-110 text-[#11131E]',
+    'bg-[var(--accent-danger)] hover:brightness-110 text-[var(--text-on-danger)]',
   neutral:
-    'bg-[var(--bg-surface-alt)] hover:brightness-110 text-[var(--text-primary)]',
+    'bg-[var(--bg-surface-alt)] hover:brightness-95 text-[var(--text-primary)]',
 };
 
 const SIZE_CLASSES = {
@@ -90,14 +90,14 @@ export const PixelLinkButton: React.FC<{
       target="_blank"
       rel="noopener noreferrer"
       onClick={onClick}
-      className={`pixel-btn max-w-full bg-[var(--bg-inset)] hover:bg-[var(--bg-surface-alt)] text-[var(--accent-warning)] border border-[var(--accent-warning)]/70 inline-flex items-center gap-2 font-semibold cursor-pointer overflow-hidden ${
+      className={`pixel-btn max-w-full bg-[var(--surface-tint)] hover:bg-[var(--bg-surface-alt)] text-[var(--text-primary)] inline-flex items-center gap-2 font-semibold cursor-pointer overflow-hidden ${
         compact
           ? 'min-h-[32px] px-2.5 py-1 text-[11.5px]'
           : 'min-h-[36px] px-3 py-1.5 text-[12px]'
       }`}
       title={safeHref}
     >
-      <ExternalLink size={14} className="shrink-0 text-[var(--accent-success)]" />
+      <ExternalLink size={14} className="shrink-0 text-[var(--accent-primary)]" />
       <span className="truncate">{label}</span>
       {hostPreview && (
         <span className="text-[11px] font-normal text-[var(--text-secondary)] truncate hidden xs:inline sm:inline">
@@ -237,7 +237,7 @@ export const PixelModal: React.FC<{
       aria-label={title}
     >
       <div className="pixel-box w-full max-w-[468px] sm:max-w-[540px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)] overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] min-w-0">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] bg-[var(--surface-tint)] min-w-0">
           <h3 className="font-pixel-display text-[11px] text-[var(--text-primary)] truncate min-w-0">
             {title}
           </h3>
@@ -335,10 +335,10 @@ export const PixelToast: React.FC<{
   if (!message) return null;
   const bg =
     tone === 'danger'
-      ? 'bg-[var(--accent-danger)] text-[#11131E]'
+      ? 'bg-[var(--accent-danger)] text-[var(--text-on-danger)]'
       : tone === 'warning'
         ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
-        : 'bg-[var(--accent-success)] text-[#11131E]';
+        : 'bg-[var(--accent-success)] text-[var(--text-on-success)]';
 
   return (
     <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] max-w-[432px] pointer-events-none">

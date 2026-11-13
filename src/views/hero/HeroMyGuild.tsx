@@ -121,7 +121,7 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
                       {member.name} {isMe ? '(Kamu)' : ''}
                     </p>
                     <p className="text-[12px] text-[var(--text-secondary)] truncate">
-                      {member.heroClass}
+                      {member.heroClass}{member.username ? ` · @${member.username}` : ''}
                     </p>
                   </div>
                 </div>

@@ -175,7 +175,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                       type="button"
                       onClick={() => setDeleteTarget(notice)}
                       aria-label={`Delete ${notice.title}`}
-                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
+                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--accent-danger)] text-[var(--text-on-danger)] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>

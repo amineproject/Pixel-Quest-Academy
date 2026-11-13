@@ -13,6 +13,7 @@ import {
   deleteTome,
   getAllAcademyData,
   seedInitialDataIfEmpty,
+  updateOwnHeroUsernameSql,
   updateSystemSettings,
   upsertDungeon,
   upsertGrade,
@@ -274,6 +275,26 @@ app.post('/api/heroes/:id/pin', async (req, res) => {
   }
 });
 
+app.post('/api/heroes/:id/username', async (req, res) => {
+  try {
+    const { currentPin, username } = req.body || {};
+    const result = await updateOwnHeroUsernameSql(
+      req.params.id,
+      String(currentPin || ''),
+      String(username || '')
+    );
+    if (result.ok && supabaseAdmin) {
+      await supabaseAdmin
+        .from('heroes')
+        .update({ username: result.username })
+        .eq('id', req.params.id);
+    }
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message || 'Username update failed' });
+  }
+});
+
 app.post('/api/heroes', async (req, res) => {
   try {
     await upsertHero(req.body);
@@ -282,7 +303,7 @@ app.post('/api/heroes', async (req, res) => {
       await supabaseAdmin.from('heroes').upsert({
         id: req.body.id,
         name: req.body.name,
-        username: req.body.username,
+        username: req.body.username ?? '',
         student_code: req.body.studentCode,
         dungeon_id: dungeonIdVal,
         avatar: req.body.avatar || 'knight',

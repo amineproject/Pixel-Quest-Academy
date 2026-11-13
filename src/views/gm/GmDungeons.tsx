@@ -161,7 +161,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                       type="button"
                       onClick={() => setDeleteTarget(dungeon)}
                       aria-label={`Delete ${dungeon.name}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
+                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[var(--text-on-danger)] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>

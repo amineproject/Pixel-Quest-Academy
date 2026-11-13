@@ -53,6 +53,7 @@ import {
   isSupabaseConfigured,
   subscribeAcademyRealtime,
   updateOwnHeroAvatarCloud,
+  updateOwnHeroUsernameCloud,
 } from './lib/supabase';
 
 const BOOTSTRAPPED_CLOUD_FROM_URL = bootstrapSupabaseFromUrl();
@@ -586,6 +587,72 @@ export default function App() {
     showToast('Avatar Hero diperbarui!');
   };
 
+  const handleUpdateHeroUsername = async (
+    nextUsername: string
+  ): Promise<{ ok: boolean; error?: string }> => {
+    if (!activeHero) return { ok: false, error: 'Sesi Hero tidak ditemukan.' };
+    const clean = nextUsername.trim().replace(/\s+/g, '').toLowerCase();
+    if (clean.length < 1 || clean.length > 5) {
+      playRetroSound('error', stateRef.current.settings.soundEnabled);
+      return { ok: false, error: 'Username harus 1 hingga 5 karakter (tanpa spasi).' };
+    }
+
+    const conflict = stateRef.current.heroes.some(
+      (h) =>
+        h.id !== activeHero.id &&
+        ((h.username.trim() !== '' && h.username.toLowerCase() === clean) ||
+          h.studentCode.toLowerCase() === clean)
+    );
+    if (conflict) {
+      playRetroSound('error', stateRef.current.settings.soundEnabled);
+      return { ok: false, error: 'Username sudah digunakan siswa lain!' };
+    }
+
+    if (isSupabaseConfigured()) {
+      const res = await updateOwnHeroUsernameCloud(
+        activeHero.id,
+        authSessionRef.current.heroPin || '',
+        clean
+      );
+      if (!res.ok) {
+        playRetroSound('error', stateRef.current.settings.soundEnabled);
+        return { ok: false, error: res.error || 'Gagal memperbarui username di Cloud.' };
+      }
+    } else {
+      try {
+        const apiRes = await fetch(`/api/heroes/${activeHero.id}/username`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentPin: authSessionRef.current.heroPin || '',
+            username: clean,
+          }),
+        });
+        if (apiRes.headers.get('content-type')?.includes('application/json')) {
+          const data = await apiRes.json();
+          if (!apiRes.ok || !data.ok) {
+            playRetroSound('error', stateRef.current.settings.soundEnabled);
+            return { ok: false, error: data.error || 'Gagal menyimpan username.' };
+          }
+        }
+      } catch {
+        // Pure local mode fallback
+      }
+    }
+
+    const updatedHero: HeroStudent = { ...activeHero, username: clean };
+    const next = {
+      ...stateRef.current,
+      heroes: upsertItem(stateRef.current.heroes, updatedHero),
+    };
+    stateRef.current = next;
+    setState(next);
+
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    showToast(`Username diperbarui menjadi @${clean}!`, 'success');
+    return { ok: true };
+  };
+
   const handleChangeOwnHeroPin = async (
     currentPin: string,
     newPin: string
@@ -982,6 +1049,7 @@ export default function App() {
                 state={state}
                 hero={activeHero}
                 onUpdateAvatar={handleUpdateHeroAvatar}
+                onUpdateUsername={handleUpdateHeroUsername}
               />
             )}
           </>
@@ -1008,7 +1076,7 @@ export default function App() {
                     : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
                 }`}
               >
-                <span className="text-[var(--accent-warning)]">
+                <span className={active ? 'text-[var(--text-on-accent)]' : 'text-[var(--accent-warning)]'}>
                   {getGmMenuIcon(item.id, 20)}
                 </span>
                 <span className="font-pixel-ui text-[10px] leading-tight">

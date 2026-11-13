@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dices, KeyRound, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Dices, Eraser, KeyRound, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { AcademyState, AvatarClass, HeroStudent } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
@@ -45,6 +45,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHero, setEditingHero] = useState<HeroStudent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<HeroStudent | null>(null);
+  const [clearUsernameTarget, setClearUsernameTarget] = useState<HeroStudent | null>(null);
 
   const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
 
@@ -144,13 +145,14 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !username.trim()) return;
+    if (!name.trim()) return;
+    if (!editingHero && !username.trim()) return;
     const resolvedDungeonId = dungeonId || sortedDungeons[0]?.id || '';
     const trimmedPin = pin.trim();
     onSaveHero({
       id: editingHero?.id || `hr-${Date.now()}`,
       name: name.trim(),
-      username: username.trim().toLowerCase(),
+      username: username.trim().replace(/\s+/g, '').toLowerCase(),
       studentCode: studentCode.trim() || String(Math.floor(261000 + Math.random() * 900)),
       dungeonId: resolvedDungeonId,
       avatar,
@@ -251,7 +253,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   <span
                     className="w-2 h-2 inline-block shrink-0"
                     style={{
-                      backgroundColor: activeChip ? '#11131E' : realm.accentColor,
+                      backgroundColor: activeChip ? '#FFFFFF' : realm.accentColor,
                     }}
                   />
                   <span>{realm.name}</span>
@@ -287,7 +289,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                         </h3>
                         {hero.hasPin && (
                           <span
-                            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 border border-emerald-400/70 bg-emerald-950/40 text-emerald-300 shrink-0"
+                            className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded border-2 border-emerald-700 bg-emerald-100 text-emerald-900 shrink-0"
                             title="Akun siswa dilindungi PIN Rahasia"
                           >
                             <Lock size={10} />
@@ -296,7 +298,13 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                         )}
                       </div>
                       <p className="text-[12px] text-[var(--text-secondary)] truncate">
-                        @{hero.username} · NIS {hero.studentCode}
+                        {hero.username ? (
+                          <>@{hero.username} · NIS {hero.studentCode}</>
+                        ) : (
+                          <span className="text-amber-800 font-semibold">
+                            Username dihapus/kosong · NIS {hero.studentCode}
+                          </span>
+                        )}
                       </p>
                       <p className="text-[12px] font-semibold text-[var(--accent-warning)] tabular-nums truncate">
                         LV.{lvl.level} ({exp} EXP) · {dungeon ? `${dungeon.name} (${dungeon.guildCode})` : 'Belum ada kelas'}
@@ -316,7 +324,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                       type="button"
                       onClick={() => setDeleteTarget(hero)}
                       aria-label={`Delete ${hero.name}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[#11131E] cursor-pointer"
+                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[var(--text-on-danger)] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -365,15 +373,28 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                       {hero.active ? 'ACTIVE' : 'INACTIVE'}
                     </strong>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onSaveHero({ ...hero, active: !hero.active })
-                    }
-                    className="pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[10px] bg-[var(--bg-surface-alt)] text-[var(--text-primary)] shrink-0 cursor-pointer"
-                  >
-                    {hero.active ? 'Set Inactive' : 'Activate'}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    {hero.username && (
+                      <button
+                        type="button"
+                        onClick={() => setClearUsernameTarget(hero)}
+                        title="Hapus username jika mengandung kata tidak pantas"
+                        className="pixel-btn min-h-[36px] px-2 font-pixel-ui text-[9.5px] bg-amber-100 text-amber-900 border-2 border-amber-700 flex items-center gap-1 cursor-pointer font-bold"
+                      >
+                        <Eraser size={12} />
+                        Hapus Username
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onSaveHero({ ...hero, active: !hero.active })
+                      }
+                      className="pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[10px] bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                    >
+                      {hero.active ? 'Set Inactive' : 'Activate'}
+                    </button>
+                  </div>
                 </div>
               </article>
             );
@@ -399,11 +420,13 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <PixelFieldLabel htmlFor="hr-user">Username</PixelFieldLabel>
+              <PixelFieldLabel htmlFor="hr-user">
+                Username {editingHero ? '(Kosongkan utk hapus)' : ''}
+              </PixelFieldLabel>
               <PixelInput
                 id="hr-user"
-                required
-                placeholder="rian_x1"
+                required={!editingHero}
+                placeholder={editingHero ? 'Kosongkan jika ingin dihapus' : 'rian5'}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -570,12 +593,12 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                 </span>
               </PixelFieldLabel>
               {editingHero?.hasPin && !clearPin && (
-                <span className="text-[10.5px] font-semibold text-emerald-400">
+                <span className="text-[10.5px] font-bold text-emerald-700">
                   ✓ PIN Aktif
                 </span>
               )}
               {clearPin && (
-                <span className="text-[10.5px] font-semibold text-rose-400">
+                <span className="text-[10.5px] font-bold text-rose-700">
                   PIN akan dihapus saat disimpan
                 </span>
               )}
@@ -662,6 +685,20 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
           if (deleteTarget) {
             onDeleteHero(deleteTarget.id);
             setDeleteTarget(null);
+          }
+        }}
+      />
+
+      <PixelConfirmDialog
+        open={Boolean(clearUsernameTarget)}
+        title="Hapus Username Siswa"
+        message={`Hapus username "@${clearUsernameTarget?.username}" milik ${clearUsernameTarget?.name} (misalnya karena kata tidak pantas)? Siswa tetap bisa login menggunakan NIS ${clearUsernameTarget?.studentCode}.`}
+        confirmLabel="Hapus Username"
+        onCancel={() => setClearUsernameTarget(null)}
+        onConfirm={() => {
+          if (clearUsernameTarget) {
+            onSaveHero({ ...clearUsernameTarget, username: '' });
+            setClearUsernameTarget(null);
           }
         }}
       />

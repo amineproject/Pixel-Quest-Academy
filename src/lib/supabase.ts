@@ -438,6 +438,43 @@ export async function updateOwnHeroAvatarCloud(
   }
 }
 
+export async function updateOwnHeroUsernameCloud(
+  heroId: string,
+  pin: string,
+  username: string
+): Promise<{ ok: boolean; username?: string; error?: string }> {
+  const clean = username.trim().replace(/\s+/g, '').toLowerCase();
+  if (clean.length < 1 || clean.length > 5) {
+    return { ok: false, error: 'Username harus 1 hingga 5 karakter (tanpa spasi).' };
+  }
+
+  const client = getSupabase();
+  if (!client) return { ok: true, username: clean };
+  try {
+    const { data, error } = await client.rpc('update_own_hero_username', {
+      p_hero_id: heroId,
+      p_pin: pin.trim(),
+      p_username: clean,
+    });
+    if (error && isMissingRpcError(error)) {
+      const { error: fbErr } = await client
+        .from('heroes')
+        .update({ username: clean })
+        .eq('id', heroId);
+      if (fbErr) return { ok: false, error: fbErr.message };
+      return { ok: true, username: clean };
+    }
+    if (error) return { ok: false, error: error.message };
+    const res = data as any;
+    if (res && res.ok === false) {
+      return { ok: false, error: res.error || 'Gagal memperbarui username.' };
+    }
+    return { ok: true, username: res?.username || clean };
+  } catch (err: any) {
+    return { ok: false, error: err?.message };
+  }
+}
+
 // ----------------------------------------------------------------------------
 // Cloud Fetch (Respects Role & Confidentiality)
 // ----------------------------------------------------------------------------

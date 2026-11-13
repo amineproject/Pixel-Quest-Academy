@@ -3,113 +3,148 @@
 @layer base {
   :root,
   [data-theme="sunny_quest"] {
-    --bg-outer: #0f1f3d;
-    --bg-canvas: #162b50;
-    --bg-surface: #223f73;
-    --bg-surface-alt: #2e5399;
-    --bg-inset: #11213f;
-    --border-pixel: #ffd13b;
-    --border-highlight: #ffe57f;
-    --text-primary: #ffffff;
-    --text-secondary: #cde2fe;
-    --text-muted: #8bb6ec;
-    --accent-primary: #3b82f6;
-    --accent-primary-hover: #60a5fa;
-    --accent-success: #10b981;
-    --accent-warning: #f59e0b;
-    --accent-danger: #f43f5e;
+    /* Theme 1: Retro Cream Studio (Ref Images #1, #6, #7) */
+    --bg-outer: #f3e7d3;
+    --bg-canvas: #fbf7ee;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #f4ece0;
+    --bg-inset: #f2e8d6;
+    --surface-tint: #fef3c7;
+    --border-pixel: #18181b;
+    --border-highlight: #18181b;
+    --shadow-ink: #18181b;
+    --text-primary: #18181b;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --accent-primary: #2563eb;
+    --accent-primary-hover: #1d4ed8;
+    --accent-success: #15803d;
+    --accent-warning: #b45309;
+    --accent-danger: #be123c;
     --text-on-accent: #ffffff;
-    --text-on-warning: #1c1500;
-    --bezel-body: #0284c7;
-    --bezel-trim: #ffd13b;
+    --text-on-success: #ffffff;
+    --text-on-warning: #ffffff;
+    --text-on-danger: #ffffff;
+    --bezel-body: #fcd34d;
+    --bezel-trim: #18181b;
+    --text-on-bezel: #18181b;
+    --grid-line: rgba(24, 24, 27, 0.07);
   }
 
   [data-theme="daylight_rpg"] {
-    --bg-outer: #38bdf8;
-    --bg-canvas: #f0f7ff;
+    /* Theme 2: Mint & Sky Pixel (Ref Images #2, #4) */
+    --bg-outer: #cdece3;
+    --bg-canvas: #f4f9fc;
     --bg-surface: #ffffff;
-    --bg-surface-alt: #e0effe;
-    --bg-inset: #f1f5f9;
-    --border-pixel: #0284c7;
-    --border-highlight: #f59e0b;
-    --text-primary: #0f172a;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
-    --accent-primary: #0284c7;
-    --accent-primary-hover: #0369a1;
-    --accent-success: #16a34a;
-    --accent-warning: #d97706;
-    --accent-danger: #e11d48;
+    --bg-surface-alt: #e6f2fa;
+    --bg-inset: #edf5fa;
+    --surface-tint: #dcf2ea;
+    --border-pixel: #1b365d;
+    --border-highlight: #1b365d;
+    --shadow-ink: #1b365d;
+    --text-primary: #1b365d;
+    --text-secondary: #3b5578;
+    --text-muted: #5a7496;
+    --accent-primary: #1d4ed8;
+    --accent-primary-hover: #1e40af;
+    --accent-success: #15803d;
+    --accent-warning: #b45309;
+    --accent-danger: #be123c;
     --text-on-accent: #ffffff;
-    --text-on-warning: #0f172a;
-    --bezel-body: #ffd13b;
-    --bezel-trim: #0284c7;
+    --text-on-success: #ffffff;
+    --text-on-warning: #ffffff;
+    --text-on-danger: #ffffff;
+    --bezel-body: #cfe3f5;
+    --bezel-trim: #1b365d;
+    --text-on-bezel: #1b365d;
+    --grid-line: rgba(27, 54, 93, 0.08);
   }
 
   [data-theme="nes_classic"] {
-    --bg-outer: #0d0e17;
-    --bg-canvas: #1a1c2c;
-    --bg-surface: #252840;
-    --bg-surface-alt: #303554;
-    --bg-inset: #131522;
-    --border-pixel: #566c86;
-    --border-highlight: #94b0c2;
-    --text-primary: #f4f4f4;
-    --text-secondary: #a8bfd1;
-    --text-muted: #7b93a8;
-    --accent-primary: #3b5dc9;
-    --accent-primary-hover: #4f73e3;
-    --accent-success: #38b764;
-    --accent-warning: #feae34;
-    --accent-danger: #ef7d57;
+    /* Theme 3: Retro OS Pastel (Ref Image #5) */
+    --bg-outer: #e9dff7;
+    --bg-canvas: #fff6dc;
+    --bg-surface: #fffdf5;
+    --bg-surface-alt: #fde8b2;
+    --bg-inset: #f9ecc7;
+    --surface-tint: #ffb3d4;
+    --border-pixel: #18181b;
+    --border-highlight: #18181b;
+    --shadow-ink: #18181b;
+    --text-primary: #18181b;
+    --text-secondary: #44403c;
+    --text-muted: #6b645c;
+    --accent-primary: #6d28d9;
+    --accent-primary-hover: #5b21b6;
+    --accent-success: #3f6212;
+    --accent-warning: #a16207;
+    --accent-danger: #be185d;
     --text-on-accent: #ffffff;
-    --text-on-warning: #1a1c2c;
-    --bezel-body: #262938;
-    --bezel-trim: #3b4058;
-  }
-
-  [data-theme="gameboy_green"] {
-    --bg-outer: #071b07;
-    --bg-canvas: #0f380f;
-    --bg-surface: #1b4d1b;
-    --bg-surface-alt: #286228;
-    --bg-inset: #0a290a;
-    --border-pixel: #8bac0f;
-    --border-highlight: #9bbc0f;
-    --text-primary: #e2f59e;
-    --text-secondary: #b8d85d;
-    --text-muted: #8bac0f;
-    --accent-primary: #306230;
-    --accent-primary-hover: #3e7c3e;
-    --accent-success: #8bac0f;
-    --accent-warning: #9bbc0f;
-    --accent-danger: #d4e86f;
-    --text-on-accent: #e2f59e;
-    --text-on-warning: #0f380f;
-    --bezel-body: #2b332b;
-    --bezel-trim: #485648;
+    --text-on-success: #ffffff;
+    --text-on-warning: #ffffff;
+    --text-on-danger: #ffffff;
+    --bezel-body: #b79ced;
+    --bezel-trim: #18181b;
+    --text-on-bezel: #18181b;
+    --grid-line: rgba(24, 24, 27, 0.06);
   }
 
   [data-theme="cyber_retro"] {
-    --bg-outer: #090714;
-    --bg-canvas: #120f24;
-    --bg-surface: #1d1838;
-    --bg-surface-alt: #28214d;
-    --bg-inset: #0c0a1a;
-    --border-pixel: #a855f7;
-    --border-highlight: #2ce8f5;
-    --text-primary: #eef6ff;
-    --text-secondary: #b4c6e7;
-    --text-muted: #8294bd;
-    --accent-primary: #8b5cf6;
-    --accent-primary-hover: #a78bfa;
-    --accent-success: #2ce8f5;
-    --accent-warning: #feae34;
-    --accent-danger: #ff4d6d;
+    /* Theme 4: Arcade Pop Grid (Ref Image #8) */
+    --bg-outer: #fde047;
+    --bg-canvas: #faf5ff;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #f3e8ff;
+    --bg-inset: #ede9fe;
+    --surface-tint: #e9d5ff;
+    --border-pixel: #1e1b4b;
+    --border-highlight: #1e1b4b;
+    --shadow-ink: #1e1b4b;
+    --text-primary: #1e1b4b;
+    --text-secondary: #4c1d95;
+    --text-muted: #6b21a8;
+    --accent-primary: #5b21b6;
+    --accent-primary-hover: #4c1d95;
+    --accent-success: #3f6212;
+    --accent-warning: #a16207;
+    --accent-danger: #be185d;
     --text-on-accent: #ffffff;
-    --text-on-warning: #120f24;
-    --bezel-body: #2e1065;
-    --bezel-trim: #ec4899;
+    --text-on-success: #ffffff;
+    --text-on-warning: #ffffff;
+    --text-on-danger: #ffffff;
+    --bezel-body: #4c1d95;
+    --bezel-trim: #1e1b4b;
+    --text-on-bezel: #fde047;
+    --grid-line: rgba(76, 29, 149, 0.11);
+  }
+
+  [data-theme="gameboy_green"] {
+    /* Theme 5: Paper Mono Retro (Ref Image #3) */
+    --bg-outer: #e6e1d7;
+    --bg-canvas: #f6f4ee;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #efece4;
+    --bg-inset: #e9e4d9;
+    --surface-tint: #e6e1d7;
+    --border-pixel: #111111;
+    --border-highlight: #111111;
+    --shadow-ink: #111111;
+    --text-primary: #111111;
+    --text-secondary: #333333;
+    --text-muted: #57534e;
+    --accent-primary: #27272a;
+    --accent-primary-hover: #18181b;
+    --accent-success: #365314;
+    --accent-warning: #92400e;
+    --accent-danger: #991b1b;
+    --text-on-accent: #f6f4ee;
+    --text-on-success: #ffffff;
+    --text-on-warning: #ffffff;
+    --text-on-danger: #ffffff;
+    --bezel-body: #beb8ad;
+    --bezel-trim: #111111;
+    --text-on-bezel: #111111;
+    --grid-line: rgba(17, 17, 17, 0.06);
   }
 
   html,
@@ -149,48 +184,46 @@
 .pixel-box {
   background-color: var(--bg-surface);
   border: 2px solid var(--border-pixel);
+  border-radius: 8px;
   max-width: 100%;
   min-width: 0;
   overflow-wrap: anywhere;
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
-    inset 0 -2px 0 0 rgba(0, 0, 0, 0.25),
-    3px 3px 0 0 rgba(0, 0, 0, 0.35);
+  box-shadow: 3px 3px 0 0 var(--shadow-ink);
 }
 
 .pixel-box-inset {
   background-color: var(--bg-inset);
   border: 2px solid var(--border-pixel);
+  border-radius: 6px;
   max-width: 100%;
   min-width: 0;
   overflow-wrap: anywhere;
-  box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.25);
+  box-shadow: inset 2px 2px 0 0 rgba(24, 24, 27, 0.08);
 }
 
 .pixel-btn {
   border: 2px solid var(--border-highlight);
-  box-shadow:
-    inset -2px -2px 0 0 rgba(0, 0, 0, 0.35),
-    inset 2px 2px 0 0 rgba(255, 255, 255, 0.2);
-  transition: transform 80ms ease, filter 120ms ease;
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 0 var(--shadow-ink);
+  transition: transform 80ms ease, box-shadow 80ms ease, filter 120ms ease;
 }
 
 .pixel-btn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: inset 2px 2px 0 0 rgba(0, 0, 0, 0.45);
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 var(--shadow-ink);
 }
 
 .pixel-btn:focus-visible,
 .pixel-focus:focus-visible {
-  outline: 3px solid var(--accent-warning);
+  outline: 3px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
 .pixel-grid-bg {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 16px 16px;
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 .crt-scanlines::after {
@@ -203,8 +236,8 @@
     to bottom,
     rgba(0, 0, 0, 0) 0px,
     rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0.14) 3px,
-    rgba(0, 0, 0, 0.14) 4px
+    rgba(0, 0, 0, 0.045) 3px,
+    rgba(0, 0, 0, 0.045) 4px
   );
 }
 

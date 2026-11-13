@@ -133,11 +133,12 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
                 {hero.name}
               </h2>
               <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
+                {hero.username ? `@${hero.username} · ` : ''}
                 {dungeon ? `${dungeon.guildCode} · ${dungeon.name}` : 'Belum Ada Kelas'} · NIS {hero.studentCode}
               </p>
               <p className="text-[11px] mt-0.5 flex items-center gap-1">
-                <Lock size={11} className={hero.hasPin ? 'text-emerald-400' : 'text-amber-400'} />
-                <span className={hero.hasPin ? 'text-emerald-400 font-semibold' : 'text-amber-300'}>
+                <Lock size={11} className={hero.hasPin ? 'text-emerald-700' : 'text-amber-800'} />
+                <span className={hero.hasPin ? 'text-emerald-700 font-semibold' : 'text-amber-800 font-semibold'}>
                   {hero.hasPin ? 'Akun Dilindungi PIN' : 'Belum Pasang PIN Rahasia'}
                 </span>
               </p>
@@ -184,19 +185,19 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
           className="w-full text-left pixel-box-inset p-2.5 grid grid-cols-4 gap-1.5 hover:border-[var(--accent-warning)] transition-colors cursor-pointer"
           title="Lihat Detail Status Tugas"
         >
-          <div className="flex items-center justify-center gap-1 text-emerald-400">
+          <div className="flex items-center justify-center gap-1 text-emerald-700 font-bold">
             <CheckCircle2 size={15} />
             <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.tuntas}</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-lime-300">
+          <div className="flex items-center justify-center gap-1 text-teal-700 font-bold">
             <AlertCircle size={15} />
             <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.proses}</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-amber-400">
-            <AlertTriangle size={15} className="text-amber-400" />
-            <span className="font-pixel-ui text-[10px] text-rose-400 tabular-nums">{statusCounts.remidial}</span>
+          <div className="flex items-center justify-center gap-1 text-amber-700 font-bold">
+            <AlertTriangle size={15} className="text-amber-700" />
+            <span className="font-pixel-ui text-[10px] text-amber-800 tabular-nums">{statusCounts.remidial}</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-rose-500">
+          <div className="flex items-center justify-center gap-1 text-rose-700 font-bold">
             <XCircle size={15} />
             <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.belum}</span>
           </div>

@@ -471,6 +471,47 @@ BEGIN
 END;
 $$;
 
+-- E2. Siswa Ubah Username Sendiri (Maksimal 5 Karakter, Unik & Aman)
+CREATE OR REPLACE FUNCTION public.update_own_hero_username(
+  p_hero_id TEXT,
+  p_pin TEXT,
+  p_username TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+DECLARE
+  v_clean TEXT := LOWER(REGEXP_REPLACE(TRIM(COALESCE(p_username, '')), '\s+', '', 'g'));
+BEGIN
+  IF NOT public._pqa_is_hero_valid(p_hero_id, p_pin) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Sesi siswa tidak valid.');
+  END IF;
+
+  IF LENGTH(v_clean) < 1 OR LENGTH(v_clean) > 5 THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Username harus 1 sampai 5 karakter (tanpa spasi).');
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.heroes
+    WHERE id <> p_hero_id
+      AND (
+        (username <> '' AND LOWER(username) = v_clean)
+        OR LOWER(student_code) = v_clean
+      )
+  ) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Username sudah digunakan siswa lain!');
+  END IF;
+
+  UPDATE public.heroes
+  SET username = v_clean
+  WHERE id = p_hero_id;
+
+  RETURN jsonb_build_object('ok', true, 'username', v_clean);
+END;
+$$;
+
 -- F. Ambil Status Nilai Siswa (Hanya Milik Siswa Tersebut & TANPA Skor Angka)
 CREATE OR REPLACE FUNCTION public.get_hero_grade_statuses(
   p_hero_id TEXT,
@@ -885,6 +926,7 @@ GRANT EXECUTE ON FUNCTION public.update_gm_credentials(TEXT, TEXT, TEXT, TEXT) T
 GRANT EXECUTE ON FUNCTION public.verify_hero_login(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.change_own_hero_pin(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_own_hero_avatar(TEXT, TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.update_own_hero_username(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_hero_grade_statuses(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_gm_grades(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_upsert_dungeon(TEXT, TEXT, JSONB) TO anon, authenticated;
