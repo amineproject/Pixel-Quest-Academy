@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { AcademyState, AncientTome } from '../../types/lms';
 import {
   PixelButton,
@@ -13,11 +13,16 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { ScheduleConfigSection } from '../../components/ScheduleConfigSection';
 import {
   ThemedPanelCard,
   ThemedReadingSurface,
 } from '../../components/ThemePrimitives';
-import { formatRetroDate } from '../../utils/exp';
+import {
+  formatChapterLabel,
+  formatRetroDate,
+  getScheduleStatusSummary,
+} from '../../utils/exp';
 
 interface GmScrollsProps {
   state: AcademyState;
@@ -38,15 +43,22 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
 
   const [realmId, setRealmId] = useState(state.realms[0]?.id || '');
   const [title, setTitle] = useState('');
-  const [chapter, setChapter] = useState(1);
-  const [readMinutes, setReadMinutes] = useState(8);
+  const [chapter, setChapter] = useState('Bab 1');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [targetDungeonId, setTargetDungeonId] = useState('all');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [classSchedules, setClassSchedules] = useState<Record<string, string>>({});
 
   const filtered = state.tomes
     .filter((t) => realmFilter === 'all' || t.realmId === realmFilter)
-    .sort((a, b) => a.chapter - b.chapter);
+    .sort((a, b) =>
+      String(a.chapter || '').localeCompare(String(b.chapter || ''), 'id', {
+        numeric: true,
+        sensitivity: 'base',
+      })
+    );
 
   const openCreate = () => {
     setEditing(null);
@@ -54,11 +66,13 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
       realmFilter !== 'all' ? realmFilter : state.realms[0]?.id || ''
     );
     setTitle('');
-    setChapter(1);
-    setReadMinutes(8);
+    setChapter('Bab 1');
     setSummary('');
     setContent('');
     setLinkUrl('');
+    setTargetDungeonId('all');
+    setScheduledAt('');
+    setClassSchedules({});
     setModalOpen(true);
   };
 
@@ -66,11 +80,13 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     setEditing(t);
     setRealmId(t.realmId);
     setTitle(t.title);
-    setChapter(t.chapter);
-    setReadMinutes(t.readMinutes);
+    setChapter(String(t.chapter || 'Bab 1'));
     setSummary(t.summary);
     setContent(t.content);
     setLinkUrl(t.linkUrl || '');
+    setTargetDungeonId(t.targetDungeonId || 'all');
+    setScheduledAt(t.scheduledAt || '');
+    setClassSchedules(t.classSchedules || {});
     setModalOpen(true);
   };
 
@@ -81,11 +97,13 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
       id: editing?.id || `tm-${Date.now()}`,
       realmId,
       title: title.trim(),
-      chapter: Math.max(1, Number(chapter) || 1),
-      readMinutes: Math.max(1, Number(readMinutes) || 5),
+      chapter: chapter.trim() || 'Bab 1',
       summary: summary.trim() || content.trim().slice(0, 90),
       content: content.trim(),
       linkUrl: linkUrl.trim(),
+      targetDungeonId,
+      scheduledAt,
+      classSchedules,
       publishedDate:
         editing?.publishedDate || new Date().toISOString().slice(0, 10),
     });
@@ -96,7 +114,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     <div className="space-y-4">
       <PixelSectionTitle
         title="Ancient Tomes / Modul"
-        subtitle="Publikasikan materi bacaan terstruktur per Realm"
+        subtitle="Publikasikan materi bacaan terstruktur & terjadwal per kelas"
         action={
           <PixelButton type="button" size="sm" variant="success" onClick={openCreate}>
             <Plus size={15} />
@@ -132,13 +150,13 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
         <div className="space-y-3">
           {filtered.map((tome) => {
             const realm = state.realms.find((r) => r.id === tome.realmId);
+            const sched = getScheduleStatusSummary(tome, state.dungeons);
             return (
               <ThemedPanelCard key={tome.id} className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2 min-w-0">
                   <div className="min-w-0 flex-1">
                     <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
-                      Bab {tome.chapter} · {realm?.name || 'General'} ·{' '}
-                      {tome.readMinutes} min read
+                      {formatChapterLabel(tome.chapter)} · {realm?.name || 'General'}
                     </p>
                     <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
                       {tome.title}
@@ -169,6 +187,19 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                   {tome.summary}
                 </p>
 
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 border font-semibold ${
+                      sched.isScheduledFuture
+                        ? 'bg-amber-100 text-amber-900 border-amber-700'
+                        : 'bg-[var(--bg-inset)] text-[var(--text-secondary)] border-[var(--border-pixel)]/50'
+                    }`}
+                  >
+                    <CalendarClock size={11} />
+                    {sched.label}
+                  </span>
+                </div>
+
                 {tome.linkUrl && (
                   <div>
                     <PixelLinkButton url={tome.linkUrl} label="Buka Tautan Materi" />
@@ -198,14 +229,17 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
       {/* Reader Preview Modal */}
       <PixelModal
         open={Boolean(previewTome)}
-        title={previewTome ? `Bab ${previewTome.chapter}: ${previewTome.title}` : ''}
+        title={
+          previewTome
+            ? `${formatChapterLabel(previewTome.chapter)}: ${previewTome.title}`
+            : ''
+        }
         onClose={() => setPreviewTome(null)}
       >
         {previewTome && (
           <div className="space-y-3 min-w-0">
             <p className="text-[12.5px] font-semibold text-[var(--accent-warning)] break-words">
-              {state.realms.find((r) => r.id === previewTome.realmId)?.name} ·{' '}
-              {previewTome.readMinutes} min read
+              {state.realms.find((r) => r.id === previewTome.realmId)?.name}
             </p>
             {previewTome.linkUrl && (
               <div>
@@ -261,27 +295,16 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <PixelFieldLabel htmlFor="tm-chap">Bab / Chapter</PixelFieldLabel>
-              <PixelInput
-                id="tm-chap"
-                type="number"
-                min={1}
-                value={chapter}
-                onChange={(e) => setChapter(Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <PixelFieldLabel htmlFor="tm-min">Estimasi Baca (Menit)</PixelFieldLabel>
-              <PixelInput
-                id="tm-min"
-                type="number"
-                min={1}
-                value={readMinutes}
-                onChange={(e) => setReadMinutes(Number(e.target.value))}
-              />
-            </div>
+          <div>
+            <PixelFieldLabel htmlFor="tm-chap">Bab / Chapter / Teks</PixelFieldLabel>
+            <PixelInput
+              id="tm-chap"
+              type="text"
+              required
+              placeholder="Contoh: Bab 1, Pertemuan 2, atau Teks Prosedur"
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+            />
           </div>
           <div>
             <PixelFieldLabel htmlFor="tm-sum">Ringkasan Singkat</PixelFieldLabel>
@@ -313,6 +336,19 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
               onChange={(e) => setLinkUrl(e.target.value)}
             />
           </div>
+
+          <ScheduleConfigSection
+            idPrefix="tm-sched"
+            targetLabel="Target Kelas Penerima Materi"
+            dungeons={state.dungeons}
+            targetDungeonId={targetDungeonId}
+            onChangeTargetDungeonId={setTargetDungeonId}
+            scheduledAt={scheduledAt}
+            onChangeScheduledAt={setScheduledAt}
+            classSchedules={classSchedules}
+            onChangeClassSchedules={setClassSchedules}
+          />
+
           <div className="grid grid-cols-2 gap-3 pt-2">
             <PixelButton
               type="button"

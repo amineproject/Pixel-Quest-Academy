@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dices,
   Download,
@@ -34,9 +34,11 @@ import {
 } from '../../utils/exp';
 import {
   buildHeroesFromImportRows,
-  downloadImportedCredentialsCsv,
+  downloadImportedCredentialsExcel,
   downloadStudentImportTemplate,
+  downloadStudentsExcel,
   ParsedStudentImportRow,
+  parseStudentImportFile,
   parseStudentImportText,
 } from '../../utils/studentImport';
 
@@ -71,9 +73,11 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
   const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
 
-  // Bulk CSV / Excel Import state
+  // Bulk Excel / CSV Import state
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importRawText, setImportRawText] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFileRows, setUploadedFileRows] = useState<ParsedStudentImportRow[] | null>(null);
   const [importDefaultDungeonId, setImportDefaultDungeonId] = useState(
     () => sortedDungeons[0]?.id || ''
   );
@@ -84,18 +88,57 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   >(null);
   const csvFileRef = useRef<HTMLInputElement | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    if (!importModalOpen || !uploadedFile) {
+      setUploadedFileRows(null);
+      return;
+    }
+    parseStudentImportFile(uploadedFile, {
+      dungeons: state.dungeons,
+      realms: state.realms,
+      existingHeroes: state.heroes,
+      defaultDungeonId: importDefaultDungeonId || sortedDungeons[0]?.id || '',
+      autoGeneratePin: importAutoPin,
+    })
+      .then((rows) => {
+        if (active) setUploadedFileRows(rows);
+      })
+      .catch(() => {
+        if (active) setUploadedFileRows([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    importModalOpen,
+    uploadedFile,
+    state.dungeons,
+    state.realms,
+    state.heroes,
+    importDefaultDungeonId,
+    sortedDungeons,
+    importAutoPin,
+  ]);
+
   const parsedImportRows = useMemo(() => {
-    if (!importModalOpen || !importRawText.trim()) return [];
+    if (!importModalOpen) return [];
+    if (uploadedFile && uploadedFileRows) return uploadedFileRows;
+    if (!importRawText.trim()) return [];
     return parseStudentImportText(importRawText, {
       dungeons: state.dungeons,
+      realms: state.realms,
       existingHeroes: state.heroes,
       defaultDungeonId: importDefaultDungeonId || sortedDungeons[0]?.id || '',
       autoGeneratePin: importAutoPin,
     });
   }, [
     importModalOpen,
+    uploadedFile,
+    uploadedFileRows,
     importRawText,
     state.dungeons,
+    state.realms,
     state.heroes,
     importDefaultDungeonId,
     sortedDungeons,
@@ -233,15 +276,17 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   const openImportModal = () => {
     setImportDefaultDungeonId(sortedDungeons[0]?.id || '');
     setImportRawText('');
+    setUploadedFile(null);
+    setUploadedFileRows(null);
     setImportedSnapshot(null);
     setImportModalOpen(true);
   };
 
-  const handleCsvFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const text = await file.text();
-    setImportRawText(text);
+    setUploadedFile(file);
+    setImportRawText('');
     setImportedSnapshot(null);
     e.target.value = '';
   };
@@ -258,15 +303,29 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
     setIsImporting(false);
     setImportedSnapshot(validImportRows);
     setImportRawText('');
+    setUploadedFile(null);
+    setUploadedFileRows(null);
   };
 
   return (
     <div className="space-y-4">
       <PixelSectionTitle
         title="Adventurers / Heroes"
-        subtitle="Manajemen siswa, kelas, dan pengelompokan mapel"
+        subtitle="Manajemen siswa, kelas, pengelompokan mapel, & impor kolektif Excel"
         action={
           <div className="flex flex-wrap items-center gap-1.5">
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="neutral"
+              onClick={() =>
+                downloadStudentsExcel(filtered, state.dungeons, state.realms)
+              }
+              title="Unduh daftar siswa terfilter dalam format Excel (.xlsx)"
+            >
+              <Download size={15} />
+              Unduh Excel
+            </PixelButton>
             <PixelButton
               type="button"
               size="sm"
@@ -274,7 +333,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
               onClick={openImportModal}
             >
               <FileSpreadsheet size={15} />
-              Import CSV
+              Import Excel
             </PixelButton>
             <PixelButton type="button" size="sm" variant="success" onClick={openCreate}>
               <Plus size={15} />
@@ -804,10 +863,10 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
         }}
       />
 
-      {/* Bulk Import Students (CSV / Excel Paste) Modal */}
+      {/* Bulk Import Students (Excel .xlsx / CSV) Modal */}
       <PixelModal
         open={importModalOpen}
-        title="Import Siswa (Excel / CSV)"
+        title="Import Siswa Kolektif (Excel .xlsx)"
         onClose={() => setImportModalOpen(false)}
       >
         <div className="space-y-3.5">
@@ -818,17 +877,19 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   ✓ {importedSnapshot.length} SISWA BERHASIL DIIMPOR!
                 </p>
                 <p className="text-[12.5px] text-emerald-900 leading-relaxed">
-                  Unduh daftar akun &amp; PIN awal sekarang agar guru memiliki salinan untuk dibagikan kepada siswa.
+                  Unduh file Excel daftar akun, username, NIS, mapel, dan PIN awal untuk dibagikan kepada siswa.
                 </p>
               </div>
               <PixelButton
                 type="button"
                 variant="warning"
                 fullWidth
-                onClick={() => downloadImportedCredentialsCsv(importedSnapshot)}
+                onClick={() =>
+                  downloadImportedCredentialsExcel(importedSnapshot, state.realms)
+                }
               >
                 <Download size={15} />
-                Unduh Daftar Akun &amp; PIN (.csv)
+                Unduh Daftar Akun &amp; PIN (.xlsx)
               </PixelButton>
               <div className="grid grid-cols-2 gap-2.5">
                 <PixelButton
@@ -850,7 +911,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
           ) : (
             <>
               <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
-                Unggah file <strong>.csv</strong> atau salin-tempel (copy-paste) langsung baris tabel dari <strong>Excel / Google Sheets</strong> dengan urutan kolom: <em>Nama Lengkap, Kelas, NIS, Username, PIN</em>.
+                Unduh format Excel berkolom lengkap (<em>Nama Lengkap, Username, NIS, Kelas, Mapel, Avatar, Julukan Karakter, PIN, Status Aktif</em>), isi di Excel, lalu unggah kembali file <strong>.xlsx</strong> atau salin-tempel dari spreadsheet.
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -858,17 +919,19 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   type="button"
                   size="sm"
                   variant="neutral"
-                  onClick={() => downloadStudentImportTemplate(state.dungeons)}
+                  onClick={() =>
+                    downloadStudentImportTemplate(state.dungeons, state.realms)
+                  }
                 >
                   <Download size={14} />
-                  Unduh Template (.csv)
+                  Unduh Format Excel (.xlsx)
                 </PixelButton>
 
                 <input
                   ref={csvFileRef}
                   type="file"
-                  accept=".csv,.txt,.tsv"
-                  onChange={handleCsvFileUpload}
+                  accept=".xlsx,.xls,.csv,.txt,.tsv"
+                  onChange={handleExcelFileUpload}
                   className="hidden"
                 />
                 <PixelButton
@@ -878,9 +941,27 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   onClick={() => csvFileRef.current?.click()}
                 >
                   <Upload size={14} />
-                  Pilih File CSV/TSV
+                  Unggah File Excel (.xlsx)
                 </PixelButton>
               </div>
+
+              {uploadedFile && (
+                <div className="pixel-box-inset p-2.5 border border-[var(--accent-success)] bg-[var(--bg-inset)] flex items-center justify-between gap-2 text-[12px]">
+                  <span className="font-semibold text-[var(--accent-success)] truncate">
+                    ✓ File Excel terpilih: {uploadedFile.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadedFile(null);
+                      setUploadedFileRows(null);
+                    }}
+                    className="text-[11px] font-bold text-[var(--accent-danger)] hover:underline shrink-0 cursor-pointer"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
@@ -908,21 +989,25 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                     className="w-4 h-4 accent-[var(--accent-success)] shrink-0"
                   />
                   <span className="text-[12.5px] font-semibold text-[var(--text-primary)] leading-tight">
-                    Buat PIN Acak 6-digit otomatis jika kosong
+                    Buat PIN Acak 6-digit otomatis jika kolom PIN kosong
                   </span>
                 </label>
               </div>
 
               <div>
                 <PixelFieldLabel htmlFor="imp-raw-text">
-                  Data CSV / Tempel Baris dari Excel
+                  Atau Tempel Baris Langsung dari Excel / CSV (Opsional)
                 </PixelFieldLabel>
                 <PixelTextarea
                   id="imp-raw-text"
-                  rows={5}
-                  placeholder={`Contoh (pisahkan koma, titik koma, atau paste dari Excel):\nNama Lengkap,Kelas,NIS,Username,PIN\nRian Pratama,X-IPA-1,261101,rian5,482910\nSiti Aminah,X-IPA-1,,,`}
+                  rows={4}
+                  placeholder={`Contoh header & isi:\nNama Lengkap\tUsername\tNIS\tKelas\tMapel\tAvatar\tJulukan Karakter\tPIN\tStatus Aktif`}
                   value={importRawText}
-                  onChange={(e) => setImportRawText(e.target.value)}
+                  onChange={(e) => {
+                    setUploadedFile(null);
+                    setUploadedFileRows(null);
+                    setImportRawText(e.target.value);
+                  }}
                 />
               </div>
 
@@ -939,29 +1024,49 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                     {validImportRows.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => downloadImportedCredentialsCsv(validImportRows)}
+                        onClick={() =>
+                          downloadImportedCredentialsExcel(
+                            validImportRows,
+                            state.realms
+                          )
+                        }
                         className="text-[11px] font-bold text-[var(--accent-success)] hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Download size={12} />
-                        Unduh CSV Akun &amp; PIN
+                        Unduh Excel Akun &amp; PIN
                       </button>
                     )}
                   </div>
 
-                  <div className="pixel-box-inset max-h-48 overflow-y-auto pixel-scroll divide-y divide-[var(--border-pixel)]/30">
+                  <div className="pixel-box-inset max-h-52 overflow-y-auto pixel-scroll divide-y divide-[var(--border-pixel)]/30">
                     {parsedImportRows.map((row) => (
                       <div
                         key={row.rowNumber}
                         className="p-2 text-[12px] flex flex-wrap items-center justify-between gap-1.5"
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-[var(--text-primary)] truncate">
-                            {row.name}
-                          </p>
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="font-bold text-[var(--text-primary)] truncate">
+                              {row.name}
+                            </p>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 font-bold border ${
+                                row.active
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-700'
+                                  : 'bg-rose-100 text-rose-800 border-rose-700'
+                              }`}
+                            >
+                              {row.active ? 'Aktif' : 'Nonaktif'}
+                            </span>
+                          </div>
                           <p className="text-[11px] text-[var(--text-secondary)] truncate">
                             {row.matchedDungeonLabel} · NIS {row.studentCode}
                             {row.username ? ` · @${row.username}` : ''}
                             {row.pin ? ` · PIN ${row.pin}` : ' · Tanpa PIN'}
+                          </p>
+                          <p className="text-[10.5px] text-[var(--text-muted)] truncate">
+                            Sprite: {row.avatar} ({row.heroClass}) · Mapel:{' '}
+                            {row.enrolledRealmLabels.join(', ') || 'Default Kelas'}
                           </p>
                           {row.error && (
                             <p className="text-[11px] font-bold text-rose-700">

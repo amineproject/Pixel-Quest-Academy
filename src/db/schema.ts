@@ -48,6 +48,8 @@ export const notices = pgTable('notices', {
   priority: text('priority').notNull().default('Medium'),
   targetDungeonId: text('target_dungeon_id').notNull().default('all'),
   releaseDate: text('release_date').notNull(),
+  scheduledAt: text('scheduled_at').default(''),
+  classSchedules: text('class_schedules').default('{}'),
   author: text('author').notNull().default('Guild Master'),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -68,11 +70,14 @@ export const tomes = pgTable('tomes', {
   id: text('id').primaryKey(),
   realmId: text('realm_id').references(() => realms.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
-  chapter: integer('chapter').notNull().default(1),
-  readMinutes: integer('read_minutes').notNull().default(8),
+  chapter: text('chapter').notNull().default('Bab 1'),
+  readMinutes: integer('read_minutes').default(0),
   summary: text('summary').notNull(),
   content: text('content').notNull(),
   linkUrl: text('link_url'),
+  targetDungeonId: text('target_dungeon_id').notNull().default('all'),
+  scheduledAt: text('scheduled_at').default(''),
+  classSchedules: text('class_schedules').default('{}'),
   publishedDate: text('published_date').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -88,6 +93,8 @@ export const quests = pgTable('quests', {
   deadline: text('deadline').notNull(),
   maxExp: integer('max_exp').notNull().default(200),
   difficulty: text('difficulty').notNull().default('Normal'),
+  scheduledAt: text('scheduled_at').default(''),
+  classSchedules: text('class_schedules').default('{}'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

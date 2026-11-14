@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
@@ -38,9 +38,12 @@ import {
 } from '../../components/ThemePrimitives';
 import {
   formatRetroDate,
+  formatScheduleDateTime,
   getDeadlineUrgency,
   getEffectiveGradeStatus,
+  getEffectiveScheduleForClass,
   getHeroEffectiveRealmIds,
+  isContentVisibleToHero,
 } from '../../utils/exp';
 
 const HERO_AVATAR_OPTIONS: { value: AvatarClass; label: string }[] = [
@@ -86,13 +89,17 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   const [pinError, setPinError] = useState<string | null>(null);
   const [isSavingPin, setIsSavingPin] = useState(false);
 
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const dungeon = state.dungeons.find((d) => d.id === hero.dungeonId);
 
   const visibleNotices = [...state.notices]
-    .filter(
-      (n) =>
-        n.targetDungeonId === 'all' || n.targetDungeonId === hero.dungeonId
-    )
+    .filter((n) => isContentVisibleToHero(n, hero.dungeonId, now))
     .filter((n) => filter === 'all' || n.priority === filter)
     .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
 
@@ -102,7 +109,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   const assignedQuests = state.quests
     .filter(
       (q) =>
-        (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId) &&
+        isContentVisibleToHero(q, hero.dungeonId, now) &&
         (!allowedRealmIds || allowedRealmIds.includes(q.realmId))
     )
     .map((q) => {
@@ -314,11 +321,16 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
                     ? '[•] INFO'
                     : '[-] CATATAN';
 
+              const effSchedule = getEffectiveScheduleForClass(notice, hero.dungeonId);
+              const metaTimeLabel = effSchedule.releaseTime
+                ? formatScheduleDateTime(effSchedule.rawSchedule)
+                : formatRetroDate(notice.releaseDate);
+
               return (
                 <ThemedNoticeCard
                   key={notice.id}
                   speaker={`${priorityLabel} · ${notice.author}`}
-                  metaRight={formatRetroDate(notice.releaseDate)}
+                  metaRight={metaTimeLabel}
                   footer={
                     notice.linkUrl ? (
                       <div className="pt-1 border-t border-[var(--border-pixel)]/30">

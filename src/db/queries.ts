@@ -79,11 +79,14 @@ export async function seedInitialDataIfEmpty() {
           id: t.id,
           realmId: t.realmId,
           title: t.title,
-          chapter: t.chapter,
-          readMinutes: t.readMinutes,
+          chapter: String(t.chapter || 'Bab 1'),
+          readMinutes: t.readMinutes ?? 0,
           summary: t.summary,
           content: t.content,
           linkUrl: t.linkUrl || '',
+          targetDungeonId: t.targetDungeonId || 'all',
+          scheduledAt: t.scheduledAt || '',
+          classSchedules: JSON.stringify(t.classSchedules || {}),
           publishedDate: t.publishedDate,
         });
       }
@@ -100,6 +103,8 @@ export async function seedInitialDataIfEmpty() {
           deadline: q.deadline,
           maxExp: q.maxExp,
           difficulty: q.difficulty,
+          scheduledAt: q.scheduledAt || '',
+          classSchedules: JSON.stringify(q.classSchedules || {}),
         });
       }
 
@@ -113,6 +118,8 @@ export async function seedInitialDataIfEmpty() {
           priority: n.priority,
           targetDungeonId: n.targetDungeonId,
           releaseDate: n.releaseDate,
+          scheduledAt: n.scheduledAt || '',
+          classSchedules: JSON.stringify(n.classSchedules || {}),
           author: n.author,
         });
       }
@@ -241,16 +248,24 @@ export async function getAllAcademyData() {
           hasPin: Boolean(h.hasPin),
         };
       }),
-      notices: noticesList.map((n) => ({
-        id: n.id,
-        title: n.title,
-        description: n.description,
-        linkUrl: n.linkUrl || '',
-        priority: n.priority as any,
-        targetDungeonId: n.targetDungeonId,
-        releaseDate: n.releaseDate,
-        author: n.author,
-      })),
+      notices: noticesList.map((n) => {
+        let cs: Record<string, string> = {};
+        try {
+          if (n.classSchedules) cs = JSON.parse(n.classSchedules);
+        } catch {}
+        return {
+          id: n.id,
+          title: n.title,
+          description: n.description,
+          linkUrl: n.linkUrl || '',
+          priority: n.priority as any,
+          targetDungeonId: n.targetDungeonId,
+          releaseDate: n.releaseDate,
+          scheduledAt: n.scheduledAt || '',
+          classSchedules: cs,
+          author: n.author,
+        };
+      }),
       realms: realmsList.map((r) => ({
         id: r.id,
         name: r.name,
@@ -259,28 +274,44 @@ export async function getAllAcademyData() {
         accentColor: r.accentColor,
         description: r.description || '',
       })),
-      tomes: tomesList.map((t) => ({
-        id: t.id,
-        realmId: t.realmId || '',
-        title: t.title,
-        chapter: t.chapter,
-        readMinutes: t.readMinutes,
-        summary: t.summary,
-        content: t.content,
-        linkUrl: t.linkUrl || '',
-        publishedDate: t.publishedDate,
-      })),
-      quests: questsList.map((q) => ({
-        id: q.id,
-        realmId: q.realmId || '',
-        dungeonId: q.dungeonId,
-        title: q.title,
-        instructions: q.instructions,
-        linkUrl: q.linkUrl || '',
-        deadline: q.deadline,
-        maxExp: q.maxExp,
-        difficulty: q.difficulty as any,
-      })),
+      tomes: tomesList.map((t) => {
+        let cs: Record<string, string> = {};
+        try {
+          if (t.classSchedules) cs = JSON.parse(t.classSchedules);
+        } catch {}
+        return {
+          id: t.id,
+          realmId: t.realmId || '',
+          title: t.title,
+          chapter: String(t.chapter || 'Bab 1'),
+          summary: t.summary,
+          content: t.content,
+          linkUrl: t.linkUrl || '',
+          targetDungeonId: t.targetDungeonId || 'all',
+          scheduledAt: t.scheduledAt || '',
+          classSchedules: cs,
+          publishedDate: t.publishedDate,
+        };
+      }),
+      quests: questsList.map((q) => {
+        let cs: Record<string, string> = {};
+        try {
+          if (q.classSchedules) cs = JSON.parse(q.classSchedules);
+        } catch {}
+        return {
+          id: q.id,
+          realmId: q.realmId || '',
+          dungeonId: q.dungeonId,
+          title: q.title,
+          instructions: q.instructions,
+          linkUrl: q.linkUrl || '',
+          deadline: q.deadline,
+          maxExp: q.maxExp,
+          difficulty: q.difficulty as any,
+          scheduledAt: q.scheduledAt || '',
+          classSchedules: cs,
+        };
+      }),
       grades: gradesList.map((g) => ({
         id: g.id,
         heroId: g.heroId || '',
@@ -530,6 +561,7 @@ export async function deleteHero(id: string) {
 export async function upsertNotice(n: QuestNotice) {
   try {
     const cleanLink = (n.linkUrl || '').trim();
+    const csJson = JSON.stringify(n.classSchedules || {});
     return await db
       .insert(notices)
       .values({
@@ -540,6 +572,8 @@ export async function upsertNotice(n: QuestNotice) {
         priority: n.priority,
         targetDungeonId: n.targetDungeonId,
         releaseDate: n.releaseDate,
+        scheduledAt: n.scheduledAt || '',
+        classSchedules: csJson,
         author: n.author,
       })
       .onConflictDoUpdate({
@@ -551,6 +585,8 @@ export async function upsertNotice(n: QuestNotice) {
           priority: n.priority,
           targetDungeonId: n.targetDungeonId,
           releaseDate: n.releaseDate,
+          scheduledAt: n.scheduledAt || '',
+          classSchedules: csJson,
         },
       });
   } catch (error) {
@@ -613,17 +649,21 @@ export async function deleteRealm(id: string) {
 export async function upsertTome(t: AncientTome) {
   try {
     const cleanLink = (t.linkUrl || '').trim();
+    const csJson = JSON.stringify(t.classSchedules || {});
     return await db
       .insert(tomes)
       .values({
         id: t.id,
         realmId: t.realmId,
         title: t.title,
-        chapter: t.chapter,
-        readMinutes: t.readMinutes,
+        chapter: String(t.chapter || 'Bab 1'),
+        readMinutes: t.readMinutes ?? 0,
         summary: t.summary,
         content: t.content,
         linkUrl: cleanLink,
+        targetDungeonId: t.targetDungeonId || 'all',
+        scheduledAt: t.scheduledAt || '',
+        classSchedules: csJson,
         publishedDate: t.publishedDate,
       })
       .onConflictDoUpdate({
@@ -631,11 +671,14 @@ export async function upsertTome(t: AncientTome) {
         set: {
           realmId: t.realmId,
           title: t.title,
-          chapter: t.chapter,
-          readMinutes: t.readMinutes,
+          chapter: String(t.chapter || 'Bab 1'),
+          readMinutes: t.readMinutes ?? 0,
           summary: t.summary,
           content: t.content,
           linkUrl: cleanLink,
+          targetDungeonId: t.targetDungeonId || 'all',
+          scheduledAt: t.scheduledAt || '',
+          classSchedules: csJson,
         },
       });
   } catch (error) {
@@ -657,6 +700,7 @@ export async function deleteTome(id: string) {
 export async function upsertQuest(q: ActiveQuest) {
   try {
     const cleanLink = (q.linkUrl || '').trim();
+    const csJson = JSON.stringify(q.classSchedules || {});
     return await db
       .insert(quests)
       .values({
@@ -669,6 +713,8 @@ export async function upsertQuest(q: ActiveQuest) {
         deadline: q.deadline,
         maxExp: q.maxExp,
         difficulty: q.difficulty,
+        scheduledAt: q.scheduledAt || '',
+        classSchedules: csJson,
       })
       .onConflictDoUpdate({
         target: quests.id,
@@ -681,6 +727,8 @@ export async function upsertQuest(q: ActiveQuest) {
           deadline: q.deadline,
           maxExp: q.maxExp,
           difficulty: q.difficulty,
+          scheduledAt: q.scheduledAt || '',
+          classSchedules: csJson,
         },
       });
   } catch (error) {

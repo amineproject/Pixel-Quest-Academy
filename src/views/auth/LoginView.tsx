@@ -252,11 +252,47 @@ export const LoginView: React.FC<LoginViewProps> = ({
         }
         return;
       }
+
+      if (gmRes.ok) {
+        setIsCheckingGm(false);
+        playRetroSound('start', state.settings.soundEnabled);
+        onLoginAsGm(gmUsername.trim(), inputPass);
+        return;
+      }
+
+      // If legacy Cloud settings row existed and failed, or password is protected, never fall back to local 'admin'
+      if (!gmRes.error) {
+        setIsCheckingGm(false);
+        setGmError('Username atau Password Game Master salah!');
+        playRetroSound('error', state.settings.soundEnabled);
+        return;
+      }
+
+      if (gmRes.error !== 'no_settings') {
+        setIsCheckingGm(false);
+        setGmError(
+          `Gagal memverifikasi kredensial GM di Cloud (${gmRes.error}). Periksa koneksi Supabase atau jalankan supabase-schema.sql.`
+        );
+        playRetroSound('error', state.settings.soundEnabled);
+        return;
+      }
     }
 
     const synced = await onSyncData();
     const latestState = synced || state;
     setIsCheckingGm(false);
+
+    if (
+      isSupabaseConfigured() &&
+      (!latestState.gmProfile.password ||
+        latestState.gmProfile.password === '[PROTECTED]')
+    ) {
+      setGmError(
+        'Kredensial GM Cloud tidak dapat diverifikasi. Pastikan skema supabase-schema.sql sudah dijalankan.'
+      );
+      playRetroSound('error', state.settings.soundEnabled);
+      return;
+    }
 
     const expectedUsername = (latestState.gmProfile.username || 'admin').trim().toLowerCase();
     const expectedPassword = latestState.gmProfile.password || 'admin';

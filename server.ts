@@ -161,38 +161,65 @@ app.get('/api/academy', async (req, res) => {
             accentColor: r.accent_color || r.accentColor,
             description: r.description || '',
           })),
-          tomes: (tData || []).map((t: any) => ({
-            id: t.id,
-            realmId: t.realm_id || t.realmId,
-            title: t.title,
-            chapter: t.chapter,
-            readMinutes: t.read_minutes || t.readMinutes,
-            summary: t.summary,
-            content: t.content,
-            linkUrl: t.link_url || t.linkUrl || '',
-            publishedDate: t.published_date || t.publishedDate,
-          })),
-          quests: (qData || []).map((q: any) => ({
-            id: q.id,
-            realmId: q.realm_id || q.realmId,
-            dungeonId: q.dungeon_id || q.dungeonId,
-            title: q.title,
-            instructions: q.instructions,
-            linkUrl: q.link_url || q.linkUrl || '',
-            deadline: q.deadline,
-            maxExp: q.max_exp || q.maxExp,
-            difficulty: q.difficulty,
-          })),
-          notices: (nData || []).map((n: any) => ({
-            id: n.id,
-            title: n.title,
-            description: n.description,
-            linkUrl: n.link_url || n.linkUrl || '',
-            priority: n.priority,
-            targetDungeonId: n.target_dungeon_id || n.targetDungeonId,
-            releaseDate: n.release_date || n.releaseDate,
-            author: n.author,
-          })),
+          tomes: (tData || []).map((t: any) => {
+            let cs: Record<string, string> = {};
+            try {
+              const raw = t.class_schedules ?? t.classSchedules;
+              if (raw) cs = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            } catch {}
+            return {
+              id: t.id,
+              realmId: t.realm_id || t.realmId,
+              title: t.title,
+              chapter: String(t.chapter ?? 'Bab 1'),
+              summary: t.summary,
+              content: t.content,
+              linkUrl: t.link_url || t.linkUrl || '',
+              targetDungeonId: t.target_dungeon_id || t.targetDungeonId || 'all',
+              scheduledAt: t.scheduled_at || t.scheduledAt || '',
+              classSchedules: cs,
+              publishedDate: t.published_date || t.publishedDate,
+            };
+          }),
+          quests: (qData || []).map((q: any) => {
+            let cs: Record<string, string> = {};
+            try {
+              const raw = q.class_schedules ?? q.classSchedules;
+              if (raw) cs = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            } catch {}
+            return {
+              id: q.id,
+              realmId: q.realm_id || q.realmId,
+              dungeonId: q.dungeon_id || q.dungeonId,
+              title: q.title,
+              instructions: q.instructions,
+              linkUrl: q.link_url || q.linkUrl || '',
+              deadline: q.deadline,
+              maxExp: q.max_exp || q.maxExp,
+              difficulty: q.difficulty,
+              scheduledAt: q.scheduled_at || q.scheduledAt || '',
+              classSchedules: cs,
+            };
+          }),
+          notices: (nData || []).map((n: any) => {
+            let cs: Record<string, string> = {};
+            try {
+              const raw = n.class_schedules ?? n.classSchedules;
+              if (raw) cs = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            } catch {}
+            return {
+              id: n.id,
+              title: n.title,
+              description: n.description,
+              linkUrl: n.link_url || n.linkUrl || '',
+              priority: n.priority,
+              targetDungeonId: n.target_dungeon_id || n.targetDungeonId,
+              releaseDate: n.release_date || n.releaseDate,
+              scheduledAt: n.scheduled_at || n.scheduledAt || '',
+              classSchedules: cs,
+              author: n.author,
+            };
+          }),
           grades: (gData || []).map((g: any) => ({
             id: g.id,
             heroId: g.hero_id || g.heroId,
@@ -345,6 +372,8 @@ app.post('/api/notices', async (req, res) => {
         priority: req.body.priority,
         target_dungeon_id: req.body.targetDungeonId,
         release_date: req.body.releaseDate,
+        scheduled_at: req.body.scheduledAt || '',
+        class_schedules: JSON.stringify(req.body.classSchedules || {}),
         author: req.body.author,
       });
       if (error) {
@@ -421,11 +450,14 @@ app.post('/api/tomes', async (req, res) => {
         id: req.body.id,
         realm_id: req.body.realmId,
         title: req.body.title,
-        chapter: req.body.chapter,
-        read_minutes: req.body.readMinutes,
+        chapter: String(req.body.chapter || 'Bab 1'),
+        read_minutes: req.body.readMinutes ?? 0,
         summary: req.body.summary,
         content: req.body.content,
         link_url: req.body.linkUrl || '',
+        target_dungeon_id: req.body.targetDungeonId || 'all',
+        scheduled_at: req.body.scheduledAt || '',
+        class_schedules: JSON.stringify(req.body.classSchedules || {}),
         published_date: req.body.publishedDate,
       });
       if (error) {
@@ -433,8 +465,8 @@ app.post('/api/tomes', async (req, res) => {
           id: req.body.id,
           realm_id: req.body.realmId,
           title: req.body.title,
-          chapter: req.body.chapter,
-          read_minutes: req.body.readMinutes,
+          chapter: String(req.body.chapter || 'Bab 1'),
+          read_minutes: req.body.readMinutes ?? 0,
           summary: req.body.summary,
           content: req.body.content,
           published_date: req.body.publishedDate,
@@ -474,6 +506,8 @@ app.post('/api/quests', async (req, res) => {
         deadline: req.body.deadline,
         max_exp: req.body.maxExp,
         difficulty: req.body.difficulty,
+        scheduled_at: req.body.scheduledAt || '',
+        class_schedules: JSON.stringify(req.body.classSchedules || {}),
       });
       if (error) {
         await supabaseAdmin.from('quests').upsert({

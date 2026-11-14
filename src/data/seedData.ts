@@ -191,9 +191,9 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
     {
       id: 'tm-1',
       realmId: 'rlm-chem',
+      targetDungeonId: 'all',
       title: 'Struktur Atom & Konfigurasi Elektron',
-      chapter: 1,
-      readMinutes: 8,
+      chapter: 'Bab 1',
       summary: 'Memahami inti atom, proton, neutron, dan aturan Aufbau pada kulit elektron.',
       publishedDate: '2026-11-02',
       content: `1. PARTIKEL PENYUSUN ATOM
@@ -214,9 +214,9 @@ Elektron pada kulit terluar disebut elektron valensi. Nilai ini sangat menentuka
     {
       id: 'tm-2',
       realmId: 'rlm-chem',
+      targetDungeonId: 'all',
       title: 'Ikatan Ionik vs Ikatan Kovalen',
-      chapter: 2,
-      readMinutes: 10,
+      chapter: 'Bab 2',
       summary: 'Perbedaan serah-terima elektron pada logam-nonlogam dan pemakaian bersama elektron.',
       publishedDate: '2026-11-08',
       content: `1. ATURAN OKTET
@@ -231,9 +231,9 @@ Terjadi antar unsur nonlogam yang sama-sama membutuhkan elektron sehingga pasang
     {
       id: 'tm-3',
       realmId: 'rlm-math',
+      targetDungeonId: 'all',
       title: 'Sifat Dasar Logaritma & Eksponen',
-      chapter: 1,
-      readMinutes: 7,
+      chapter: 'Bab 1',
       summary: 'Invers dari fungsi pangkat dan hukum perkalian/pembagian logaritma.',
       publishedDate: '2026-11-04',
       content: `1. DEFINISI LOGARITMA
@@ -251,9 +251,9 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
     {
       id: 'tm-4',
       realmId: 'rlm-bio',
+      targetDungeonId: 'all',
       title: 'Organel Sel Tumbuhan & Hewan',
-      chapter: 1,
-      readMinutes: 9,
+      chapter: 'Bab 1',
       summary: 'Perbandingan fungsi mitokondria, kloroplas, ribosom, dan dinding sel.',
       publishedDate: '2026-11-06',
       content: `1. PUSAT KENDALI & ENERGI

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   AcademyState,
   NoticePriority,
   QuestNotice,
 } from '../../types/lms';
 import {
-  DungeonOptGroupOptions,
   PixelButton,
   PixelConfirmDialog,
   PixelEmptyChest,
@@ -18,8 +17,9 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { ScheduleConfigSection } from '../../components/ScheduleConfigSection';
 import { ThemedNoticeCard } from '../../components/ThemePrimitives';
-import { formatRetroDate } from '../../utils/exp';
+import { formatRetroDate, getScheduleStatusSummary } from '../../utils/exp';
 
 interface GmQuestBoardProps {
   state: AcademyState;
@@ -45,6 +45,8 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
   const [releaseDate, setReleaseDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [classSchedules, setClassSchedules] = useState<Record<string, string>>({});
 
   const sorted = [...state.notices]
     .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate))
@@ -58,6 +60,8 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
     setPriority('Medium');
     setTargetDungeonId('all');
     setReleaseDate(new Date().toISOString().slice(0, 10));
+    setScheduledAt('');
+    setClassSchedules({});
     setModalOpen(true);
   };
 
@@ -69,6 +73,8 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
     setPriority(n.priority);
     setTargetDungeonId(n.targetDungeonId);
     setReleaseDate(n.releaseDate);
+    setScheduledAt(n.scheduledAt || '');
+    setClassSchedules(n.classSchedules || {});
     setModalOpen(true);
   };
 
@@ -83,6 +89,8 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
       priority,
       targetDungeonId,
       releaseDate,
+      scheduledAt,
+      classSchedules,
       author: state.gmProfile.name,
     });
     setModalOpen(false);
@@ -104,7 +112,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
     <div className="space-y-4">
       <PixelSectionTitle
         title="Quest Board"
-        subtitle="Siarkan pengumuman ke seluruh Guild atau kelas"
+        subtitle="Siarkan pengumuman langsung atau terjadwal sesuai jam kelas"
         action={
           <PixelButton type="button" size="sm" variant="success" onClick={openCreate}>
             <Plus size={15} />
@@ -141,6 +149,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
             const targetDungeon = state.dungeons.find(
               (d) => d.id === notice.targetDungeonId
             );
+            const sched = getScheduleStatusSummary(notice, state.dungeons);
             return (
               <ThemedNoticeCard
                 key={notice.id}
@@ -149,15 +158,25 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                 }`}
                 metaRight={formatRetroDate(notice.releaseDate)}
                 footer={
-                  notice.linkUrl ? (
-                    <div className="pt-1 border-t border-[var(--border-pixel)]/30">
+                  <div className="pt-1 border-t border-[var(--border-pixel)]/30 flex flex-wrap items-center justify-between gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] border font-semibold ${
+                        sched.isScheduledFuture
+                          ? 'bg-amber-100 text-amber-900 border-amber-700'
+                          : 'bg-[var(--bg-inset)] text-[var(--text-secondary)] border-[var(--border-pixel)]/50'
+                      }`}
+                    >
+                      <CalendarClock size={11} />
+                      {sched.label}
+                    </span>
+                    {notice.linkUrl && (
                       <PixelLinkButton
                         url={notice.linkUrl}
                         label="Buka Tautan Pengumuman"
                         compact
                       />
-                    </div>
-                  ) : undefined
+                    )}
+                  </div>
                 }
               >
                 <div className="flex items-start justify-between gap-2 min-w-0">
@@ -228,7 +247,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
               </PixelSelect>
             </div>
             <div>
-              <PixelFieldLabel htmlFor="ntc-date">Tanggal Rilis</PixelFieldLabel>
+              <PixelFieldLabel htmlFor="ntc-date">Tanggal Label</PixelFieldLabel>
               <PixelInput
                 id="ntc-date"
                 type="date"
@@ -238,17 +257,19 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
               />
             </div>
           </div>
-          <div>
-            <PixelFieldLabel htmlFor="ntc-target">Target Dungeon</PixelFieldLabel>
-            <PixelSelect
-              id="ntc-target"
-              value={targetDungeonId}
-              onChange={(e) => setTargetDungeonId(e.target.value)}
-            >
-              <option value="all">All Guilds (Semua Kelas)</option>
-              <DungeonOptGroupOptions dungeons={state.dungeons} />
-            </PixelSelect>
-          </div>
+
+          <ScheduleConfigSection
+            idPrefix="ntc-sched"
+            targetLabel="Target Dungeon"
+            dungeons={state.dungeons}
+            targetDungeonId={targetDungeonId}
+            onChangeTargetDungeonId={setTargetDungeonId}
+            scheduledAt={scheduledAt}
+            onChangeScheduledAt={setScheduledAt}
+            classSchedules={classSchedules}
+            onChangeClassSchedules={setClassSchedules}
+          />
+
           <div>
             <PixelFieldLabel htmlFor="ntc-body">Isi Pengumuman</PixelFieldLabel>
             <PixelTextarea

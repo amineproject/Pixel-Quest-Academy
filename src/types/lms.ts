@@ -99,6 +99,8 @@ export interface QuestNotice {
   targetDungeonId: string; // 'all' or specific dungeonId
   releaseDate: string; // YYYY-MM-DD
   author: string;
+  scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
+  classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
 }
 
 export interface Realm {
@@ -113,13 +115,16 @@ export interface Realm {
 export interface AncientTome {
   id: string;
   realmId: string;
+  targetDungeonId?: string; // 'all' or specific dungeonId
   title: string;
-  chapter: number;
-  readMinutes: number;
+  chapter: string; // Bab / Chapter / Teks manual
+  readMinutes?: number; // Deprecated optional legacy field
   summary: string;
   content: string;
   linkUrl?: string;
   publishedDate: string;
+  scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
+  classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
 }
 
 export interface ActiveQuest {
@@ -132,6 +137,8 @@ export interface ActiveQuest {
   deadline: string;
   maxExp: number;
   difficulty: QuestDifficulty;
+  scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
+  classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
 }
 
 export type GradeStatus = 'tuntas' | 'belum' | 'proses' | 'remidial';

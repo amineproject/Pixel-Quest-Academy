@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
@@ -6,14 +6,19 @@ import {
   Award,
   CheckCircle2,
   Compass,
+  Crown,
   Flame,
+  KeyRound,
   Lock,
   Palette,
   Pencil,
   ShieldCheck,
   Sparkles,
+  Star,
+  Swords,
   Trophy,
   XCircle,
+  Zap,
 } from 'lucide-react';
 import {
   AcademyState,
@@ -41,6 +46,7 @@ import {
   getEffectiveGradeStatus,
   getHeroAchievements,
   getHeroEffectiveRealmIds,
+  isContentVisibleToHero,
 } from '../../utils/exp';
 
 interface HeroLogProps {
@@ -118,16 +124,23 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const heroGrades = state.grades.filter((g) => g.heroId === hero.id);
   const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
 
-  // Combine quests assigned to this student's class/realms AND any quest that already has a grade entry
+  // Combine quests assigned to this student's class/realms (and currently released) OR any quest that already has a grade entry
   const relevantQuests = state.quests.filter((q) => {
     const hasGrade = heroGrades.some((g) => g.questId === q.id);
     if (hasGrade) return true;
-    const matchDungeon = q.dungeonId === 'all' || q.dungeonId === hero.dungeonId;
+    const matchSchedule = isContentVisibleToHero(q, hero.dungeonId, now);
     const matchRealm = !allowedRealmIds || allowedRealmIds.includes(q.realmId);
-    return matchDungeon && matchRealm;
+    return matchSchedule && matchRealm;
   });
 
   // Compute summary counts by symbol status (NO numeric points/scores)
@@ -155,12 +168,22 @@ export const HeroLog: React.FC<HeroLogProps> = ({
         return <Sparkles size={18} />;
       case 'ontime_streak':
         return <Flame size={18} />;
+      case 'streak_master':
+        return <Zap size={18} />;
       case 'no_remidial':
         return <ShieldCheck size={18} />;
       case 'realm_explorer':
         return <Compass size={18} />;
+      case 'all_rounder':
+        return <Star size={18} />;
+      case 'elite_slayer':
+        return <Swords size={18} />;
       case 'mission_master':
         return <Trophy size={18} />;
+      case 'academy_legend':
+        return <Crown size={18} />;
+      case 'pin_guardian':
+        return <KeyRound size={18} />;
       default:
         return <Award size={18} />;
     }

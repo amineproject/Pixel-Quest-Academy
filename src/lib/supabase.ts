@@ -479,6 +479,22 @@ export async function updateOwnHeroUsernameCloud(
 // Cloud Fetch (Respects Role & Confidentiality)
 // ----------------------------------------------------------------------------
 
+function parseClassSchedules(raw: any): Record<string, string> {
+  if (!raw) return {};
+  try {
+    if (typeof raw === 'object' && !Array.isArray(raw)) {
+      return raw as Record<string, string>;
+    }
+    if (typeof raw === 'string') {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? parsed
+        : {};
+    }
+  } catch {}
+  return {};
+}
+
 function mapGradeRows(rows: any[], hideScores = false): ExpGrade[] {
   return (rows || []).map((g: any) => ({
     id: g.id,
@@ -615,6 +631,8 @@ export async function fetchAcademyFromSupabase(
         priority: n.priority || 'Medium',
         targetDungeonId: n.target_dungeon_id || 'all',
         releaseDate: n.release_date || '',
+        scheduledAt: n.scheduled_at || '',
+        classSchedules: parseClassSchedules(n.class_schedules),
         author: n.author || 'Guild Master',
       })),
       realms: rList.map((r: any) => ({
@@ -629,11 +647,13 @@ export async function fetchAcademyFromSupabase(
         id: t.id,
         realmId: t.realm_id || '',
         title: t.title,
-        chapter: Number(t.chapter) || 1,
-        readMinutes: Number(t.read_minutes) || 8,
+        chapter: String(t.chapter ?? 'Bab 1'),
         summary: t.summary || '',
         content: t.content || '',
         linkUrl: t.link_url || '',
+        targetDungeonId: t.target_dungeon_id || 'all',
+        scheduledAt: t.scheduled_at || '',
+        classSchedules: parseClassSchedules(t.class_schedules),
         publishedDate: t.published_date || '',
       })),
       quests: qList.map((q: any) => ({
@@ -646,6 +666,8 @@ export async function fetchAcademyFromSupabase(
         deadline: q.deadline || '',
         maxExp: Number(q.max_exp) || 200,
         difficulty: q.difficulty || 'Normal',
+        scheduledAt: q.scheduled_at || '',
+        classSchedules: parseClassSchedules(q.class_schedules),
       })),
       grades: gradesList,
       settings: sRow
@@ -719,6 +741,16 @@ async function runGmRpc(
   extraArgs: Record<string, any>
 ): Promise<{ handled: boolean; result: CloudSyncResult }> {
   if (!gmAuth?.username || !gmAuth?.password) {
+    const hardened = await checkHardenedSecurityStatus();
+    if (hardened) {
+      return {
+        handled: true,
+        result: {
+          ok: false,
+          error: 'Sesi GM Cloud belum terverifikasi. Silakan verifikasi ulang kredensial GM.',
+        },
+      };
+    }
     return { handled: false, result: { ok: false, error: 'Sesi GM belum terverifikasi.' } };
   }
   const { data, error } = await client.rpc(fnName, {
@@ -877,6 +909,8 @@ export async function cloudSyncNotice(
       priority: notice.priority,
       target_dungeon_id: notice.targetDungeonId,
       release_date: notice.releaseDate,
+      scheduled_at: notice.scheduledAt || '',
+      class_schedules: JSON.stringify(notice.classSchedules || {}),
       author: notice.author,
     };
     const rpc = await runGmRpc(client, 'gm_upsert_notice', gmAuth, { p_data: payload });
@@ -977,11 +1011,14 @@ export async function cloudSyncTome(
       id: tome.id,
       realm_id: tome.realmId || null,
       title: tome.title,
-      chapter: tome.chapter,
-      read_minutes: tome.readMinutes,
+      chapter: String(tome.chapter || 'Bab 1'),
+      read_minutes: tome.readMinutes ?? 0,
       summary: tome.summary,
       content: tome.content,
       link_url: tome.linkUrl || '',
+      target_dungeon_id: tome.targetDungeonId || 'all',
+      scheduled_at: tome.scheduledAt || '',
+      class_schedules: JSON.stringify(tome.classSchedules || {}),
       published_date: tome.publishedDate,
     };
     const rpc = await runGmRpc(client, 'gm_upsert_tome', gmAuth, { p_data: payload });
@@ -993,8 +1030,8 @@ export async function cloudSyncTome(
         id: tome.id,
         realm_id: tome.realmId || null,
         title: tome.title,
-        chapter: tome.chapter,
-        read_minutes: tome.readMinutes,
+        chapter: String(tome.chapter || 'Bab 1'),
+        read_minutes: tome.readMinutes ?? 0,
         summary: tome.summary,
         content: tome.content,
         published_date: tome.publishedDate,
@@ -1042,6 +1079,8 @@ export async function cloudSyncQuest(
       deadline: quest.deadline,
       max_exp: quest.maxExp,
       difficulty: quest.difficulty,
+      scheduled_at: quest.scheduledAt || '',
+      class_schedules: JSON.stringify(quest.classSchedules || {}),
     };
     const rpc = await runGmRpc(client, 'gm_upsert_quest', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
@@ -1129,7 +1168,8 @@ export async function cloudSyncGrade(
 export async function cloudSyncSettings(
   settings: SystemSettings,
   gmProfile: GameMasterProfile,
-  gmAuth?: GmAuthCredentials
+  gmAuth?: GmAuthCredentials,
+  updateAuthCredentials = false
 ): Promise<CloudSyncResult> {
   const client = getSupabase();
   if (!client) return { ok: true };
@@ -1143,10 +1183,13 @@ export async function cloudSyncSettings(
       gm_title: gmProfile.title,
       gm_specialty: gmProfile.specialty,
       gm_avatar: gmProfile.avatar,
-      gm_username: gmProfile.username || gmAuth?.username || 'admin',
+      gm_username: updateAuthCredentials
+        ? gmProfile.username || gmAuth?.username || 'admin'
+        : gmAuth?.username || gmProfile.username || 'admin',
       gm_require_password: true,
+      update_auth: Boolean(updateAuthCredentials),
     };
-    if (gmProfile.password && gmProfile.password !== '[PROTECTED]') {
+    if (updateAuthCredentials && gmProfile.password && gmProfile.password !== '[PROTECTED]') {
       payload.gm_password = gmProfile.password;
     }
 
@@ -1155,7 +1198,16 @@ export async function cloudSyncSettings(
 
     const { error } = await client.from('settings').upsert({
       id: 'global',
-      ...payload,
+      theme: settings.theme,
+      crt_scanlines: settings.crtScanlines,
+      sound_enabled: settings.soundEnabled,
+      academic_term: settings.academicTerm,
+      gm_name: gmProfile.name,
+      gm_title: gmProfile.title,
+      gm_specialty: gmProfile.specialty,
+      gm_avatar: gmProfile.avatar,
+      gm_username: payload.gm_username,
+      gm_require_password: true,
       gm_password: gmProfile.password || gmAuth?.password || 'admin',
     });
     if (error) {
@@ -1224,11 +1276,14 @@ export async function uploadAllLocalToSupabase(
         id: t.id,
         realm_id: t.realmId || null,
         title: t.title,
-        chapter: t.chapter,
-        read_minutes: t.readMinutes,
+        chapter: String(t.chapter || 'Bab 1'),
+        read_minutes: t.readMinutes ?? 0,
         summary: t.summary,
         content: t.content,
         link_url: t.linkUrl || '',
+        target_dungeon_id: t.targetDungeonId || 'all',
+        scheduled_at: t.scheduledAt || '',
+        class_schedules: JSON.stringify(t.classSchedules || {}),
         published_date: t.publishedDate,
       })),
       quests: state.quests.map((q) => ({
@@ -1241,6 +1296,8 @@ export async function uploadAllLocalToSupabase(
         deadline: q.deadline,
         max_exp: q.maxExp,
         difficulty: q.difficulty,
+        scheduled_at: q.scheduledAt || '',
+        class_schedules: JSON.stringify(q.classSchedules || {}),
       })),
       notices: state.notices.map((n) => ({
         id: n.id,
@@ -1250,6 +1307,8 @@ export async function uploadAllLocalToSupabase(
         priority: n.priority,
         target_dungeon_id: n.targetDungeonId,
         release_date: n.releaseDate,
+        scheduled_at: n.scheduledAt || '',
+        class_schedules: JSON.stringify(n.classSchedules || {}),
         author: n.author,
       })),
       grades: state.grades.map((g) => ({
@@ -1272,11 +1331,9 @@ export async function uploadAllLocalToSupabase(
         gm_title: state.gmProfile.title,
         gm_specialty: state.gmProfile.specialty,
         gm_avatar: state.gmProfile.avatar,
-        gm_username: state.gmProfile.username || gmAuth?.username || 'admin',
-        ...(state.gmProfile.password && state.gmProfile.password !== '[PROTECTED]'
-          ? { gm_password: state.gmProfile.password }
-          : {}),
+        gm_username: gmAuth?.username || state.gmProfile.username || 'admin',
         gm_require_password: true,
+        update_auth: false,
       },
     };
 

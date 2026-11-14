@@ -61,15 +61,30 @@ CREATE TABLE IF NOT EXISTS public.tomes (
     id TEXT PRIMARY KEY,
     realm_id TEXT REFERENCES public.realms(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    chapter INTEGER NOT NULL DEFAULT 1,
-    read_minutes INTEGER NOT NULL DEFAULT 8,
+    chapter TEXT NOT NULL DEFAULT 'Bab 1',
+    read_minutes INTEGER DEFAULT 0,
     summary TEXT NOT NULL,
     content TEXT NOT NULL,
     link_url TEXT DEFAULT '',
+    target_dungeon_id TEXT NOT NULL DEFAULT 'all',
+    scheduled_at TEXT NOT NULL DEFAULT '',
+    class_schedules TEXT NOT NULL DEFAULT '{}',
     published_date TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'tomes' AND column_name = 'chapter' AND data_type <> 'text'
+  ) THEN
+    ALTER TABLE public.tomes ALTER COLUMN chapter TYPE TEXT USING ('Bab ' || chapter::text);
+  END IF;
+END $$;
+ALTER TABLE public.tomes ALTER COLUMN chapter SET DEFAULT 'Bab 1';
 ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
+ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS target_dungeon_id TEXT NOT NULL DEFAULT 'all';
+ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
 
 -- ----------------------------------------------------------------------------
 -- 5. Active Quests table (Tugas & Misi Petualangan)
@@ -84,9 +99,13 @@ CREATE TABLE IF NOT EXISTS public.quests (
     deadline TEXT NOT NULL,
     max_exp INTEGER NOT NULL DEFAULT 200,
     difficulty TEXT NOT NULL DEFAULT 'Normal',
+    scheduled_at TEXT NOT NULL DEFAULT '',
+    class_schedules TEXT NOT NULL DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
 
 -- ----------------------------------------------------------------------------
 -- 6. Quest Notices table (Papan Pengumuman)
@@ -99,10 +118,14 @@ CREATE TABLE IF NOT EXISTS public.notices (
     priority TEXT NOT NULL DEFAULT 'Medium',
     target_dungeon_id TEXT NOT NULL DEFAULT 'all',
     release_date TEXT NOT NULL,
+    scheduled_at TEXT NOT NULL DEFAULT '',
+    class_schedules TEXT NOT NULL DEFAULT '{}',
     author TEXT NOT NULL DEFAULT 'Guild Master',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
+ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
 
 -- ----------------------------------------------------------------------------
 -- 7. EXP & Loot Grades table (Nilai Rahasia — Terkunci RLS dari akses publik)
@@ -238,11 +261,11 @@ BEGIN
   -- Migrasi otomatis jika tabel private_auth belum terisi dari settings lama
   SELECT * INTO v_set FROM public.settings WHERE id = 'global' LIMIT 1;
   IF FOUND AND COALESCE(v_set.gm_password, '') <> '[PROTECTED]' THEN
-    IF LOWER(TRIM(COALESCE(v_set.gm_username, 'admin'))) = v_clean_user
-       AND COALESCE(v_set.gm_password, 'admin') = v_clean_pass THEN
+    IF LOWER(TRIM(COALESCE(NULLIF(v_set.gm_username, ''), 'admin'))) = v_clean_user
+       AND COALESCE(NULLIF(v_set.gm_password, ''), 'admin') = v_clean_pass THEN
       v_salt := gen_random_uuid()::text;
       INSERT INTO public.private_auth (id, role, username, salt, secret_hash)
-      VALUES ('gm', 'gm', TRIM(COALESCE(v_set.gm_username, 'admin')), v_salt, public._pqa_hash_secret(v_salt, v_clean_pass))
+      VALUES ('gm', 'gm', TRIM(COALESCE(NULLIF(v_set.gm_username, ''), 'admin')), v_salt, public._pqa_hash_secret(v_salt, v_clean_pass))
       ON CONFLICT (id) DO NOTHING;
 
       UPDATE public.settings
@@ -676,18 +699,22 @@ CREATE OR REPLACE FUNCTION public.gm_upsert_notice(p_gm_user TEXT, p_gm_pass TEX
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
 BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak.');
+    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.notices (id, title, description, link_url, priority, target_dungeon_id, release_date, author)
+  INSERT INTO public.notices (id, title, description, link_url, priority, target_dungeon_id, release_date, scheduled_at, class_schedules, author)
   VALUES (
     p_data->>'id', p_data->>'title', p_data->>'description', COALESCE(p_data->>'link_url', ''),
     COALESCE(p_data->>'priority', 'Medium'), COALESCE(p_data->>'target_dungeon_id', 'all'),
-    COALESCE(p_data->>'release_date', to_char(now(), 'YYYY-MM-DD')), COALESCE(p_data->>'author', 'Guild Master')
+    COALESCE(p_data->>'release_date', to_char(now(), 'YYYY-MM-DD')),
+    COALESCE(p_data->>'scheduled_at', ''),
+    COALESCE(p_data->>'class_schedules', '{}'),
+    COALESCE(p_data->>'author', 'Guild Master')
   )
   ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title, description = EXCLUDED.description, link_url = EXCLUDED.link_url,
     priority = EXCLUDED.priority, target_dungeon_id = EXCLUDED.target_dungeon_id,
-    release_date = EXCLUDED.release_date, author = EXCLUDED.author;
+    release_date = EXCLUDED.release_date, scheduled_at = EXCLUDED.scheduled_at,
+    class_schedules = EXCLUDED.class_schedules, author = EXCLUDED.author;
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -740,20 +767,25 @@ CREATE OR REPLACE FUNCTION public.gm_upsert_tome(p_gm_user TEXT, p_gm_pass TEXT,
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
 BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak.');
+    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.tomes (id, realm_id, title, chapter, read_minutes, summary, content, link_url, published_date)
+  INSERT INTO public.tomes (id, realm_id, title, chapter, read_minutes, summary, content, link_url, target_dungeon_id, scheduled_at, class_schedules, published_date)
   VALUES (
     p_data->>'id', NULLIF(TRIM(COALESCE(p_data->>'realm_id', '')), ''),
-    p_data->>'title', COALESCE((p_data->>'chapter')::int, 1),
-    COALESCE((p_data->>'read_minutes')::int, 8), COALESCE(p_data->>'summary', ''),
+    p_data->>'title', COALESCE(NULLIF(TRIM(p_data->>'chapter'), ''), 'Bab 1'),
+    COALESCE((p_data->>'read_minutes')::int, 0), COALESCE(p_data->>'summary', ''),
     COALESCE(p_data->>'content', ''), COALESCE(p_data->>'link_url', ''),
+    COALESCE(NULLIF(TRIM(p_data->>'target_dungeon_id'), ''), 'all'),
+    COALESCE(p_data->>'scheduled_at', ''),
+    COALESCE(p_data->>'class_schedules', '{}'),
     COALESCE(p_data->>'published_date', to_char(now(), 'YYYY-MM-DD'))
   )
   ON CONFLICT (id) DO UPDATE SET
     realm_id = EXCLUDED.realm_id, title = EXCLUDED.title, chapter = EXCLUDED.chapter,
     read_minutes = EXCLUDED.read_minutes, summary = EXCLUDED.summary, content = EXCLUDED.content,
-    link_url = EXCLUDED.link_url, published_date = EXCLUDED.published_date;
+    link_url = EXCLUDED.link_url, target_dungeon_id = EXCLUDED.target_dungeon_id,
+    scheduled_at = EXCLUDED.scheduled_at, class_schedules = EXCLUDED.class_schedules,
+    published_date = EXCLUDED.published_date;
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -762,7 +794,7 @@ CREATE OR REPLACE FUNCTION public.gm_delete_tome(p_gm_user TEXT, p_gm_pass TEXT,
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
 BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak.');
+    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
   DELETE FROM public.tomes WHERE id = p_id;
   RETURN jsonb_build_object('ok', true);
@@ -773,20 +805,23 @@ CREATE OR REPLACE FUNCTION public.gm_upsert_quest(p_gm_user TEXT, p_gm_pass TEXT
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
 BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak.');
+    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.quests (id, realm_id, dungeon_id, title, instructions, link_url, deadline, max_exp, difficulty)
+  INSERT INTO public.quests (id, realm_id, dungeon_id, title, instructions, link_url, deadline, max_exp, difficulty, scheduled_at, class_schedules)
   VALUES (
     p_data->>'id', NULLIF(TRIM(COALESCE(p_data->>'realm_id', '')), ''),
     COALESCE(p_data->>'dungeon_id', 'all'), p_data->>'title',
     COALESCE(p_data->>'instructions', ''), COALESCE(p_data->>'link_url', ''),
     COALESCE(p_data->>'deadline', to_char(now(), 'YYYY-MM-DD')),
-    COALESCE((p_data->>'max_exp')::int, 200), COALESCE(p_data->>'difficulty', 'Normal')
+    COALESCE((p_data->>'max_exp')::int, 200), COALESCE(p_data->>'difficulty', 'Normal'),
+    COALESCE(p_data->>'scheduled_at', ''),
+    COALESCE(p_data->>'class_schedules', '{}')
   )
   ON CONFLICT (id) DO UPDATE SET
     realm_id = EXCLUDED.realm_id, dungeon_id = EXCLUDED.dungeon_id, title = EXCLUDED.title,
     instructions = EXCLUDED.instructions, link_url = EXCLUDED.link_url, deadline = EXCLUDED.deadline,
-    max_exp = EXCLUDED.max_exp, difficulty = EXCLUDED.difficulty;
+    max_exp = EXCLUDED.max_exp, difficulty = EXCLUDED.difficulty,
+    scheduled_at = EXCLUDED.scheduled_at, class_schedules = EXCLUDED.class_schedules;
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -826,13 +861,20 @@ $$;
 CREATE OR REPLACE FUNCTION public.gm_update_settings(p_gm_user TEXT, p_gm_pass TEXT, p_data JSONB)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
 DECLARE
+  v_update_auth BOOLEAN := COALESCE((p_data->>'update_auth')::boolean, false);
   v_new_user TEXT := NULLIF(TRIM(COALESCE(p_data->>'gm_username', '')), '');
   v_new_pass TEXT := NULLIF(COALESCE(p_data->>'gm_password', ''), '');
+  v_effective_user TEXT;
   v_salt TEXT;
 BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
+
+  v_effective_user := CASE
+    WHEN v_update_auth AND v_new_user IS NOT NULL THEN v_new_user
+    ELSE p_gm_user
+  END;
 
   INSERT INTO public.settings (
     id, theme, crt_scanlines, sound_enabled, academic_term,
@@ -847,7 +889,7 @@ BEGIN
     COALESCE(p_data->>'gm_title', 'Guild Master of Science'),
     COALESCE(p_data->>'gm_specialty', 'Guru IPA & Pembina Sains'),
     COALESCE(p_data->>'gm_avatar', 'guild_master'),
-    COALESCE(v_new_user, p_gm_user),
+    v_effective_user,
     '[PROTECTED]',
     true
   )
@@ -860,20 +902,20 @@ BEGIN
     gm_title = EXCLUDED.gm_title,
     gm_specialty = EXCLUDED.gm_specialty,
     gm_avatar = EXCLUDED.gm_avatar,
-    gm_username = EXCLUDED.gm_username,
+    gm_username = CASE WHEN v_update_auth THEN EXCLUDED.gm_username ELSE public.settings.gm_username END,
     gm_password = '[PROTECTED]',
     gm_require_password = true;
 
   IF v_new_pass IS NOT NULL AND v_new_pass <> '[PROTECTED]' THEN
     v_salt := gen_random_uuid()::text;
     INSERT INTO public.private_auth (id, role, username, salt, secret_hash, updated_at)
-    VALUES ('gm', 'gm', COALESCE(v_new_user, p_gm_user), v_salt, public._pqa_hash_secret(v_salt, v_new_pass), now())
+    VALUES ('gm', 'gm', v_effective_user, v_salt, public._pqa_hash_secret(v_salt, v_new_pass), now())
     ON CONFLICT (id) DO UPDATE SET
       username = EXCLUDED.username,
       salt = EXCLUDED.salt,
       secret_hash = EXCLUDED.secret_hash,
       updated_at = now();
-  ELSIF v_new_user IS NOT NULL THEN
+  ELSIF v_update_auth AND v_new_user IS NOT NULL THEN
     UPDATE public.private_auth SET username = v_new_user, updated_at = now() WHERE id = 'gm';
   END IF;
 
@@ -970,10 +1012,10 @@ INSERT INTO public.realms (id, name, code, icon, accent_color, description) VALU
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.tomes (id, realm_id, title, chapter, read_minutes, summary, content, published_date) VALUES
-('tm-1', 'rlm-chem', 'Struktur Atom & Konfigurasi Elektron', 1, 8, 'Memahami inti atom, proton, neutron, dan aturan Aufbau pada kulit elektron.', '1. PARTIKEL PENYUSUN ATOM: Proton (+), Neutron (0), Elektron (-).\n2. PRINSIP AUFBAU: Pengisian orbital dimulai dari tingkat energi terendah.\n3. ELEKTRON VALENSI: Elektron pada kulit terluar menentukan reaktivitas unsur.', '2026-11-02'),
-('tm-2', 'rlm-chem', 'Ikatan Ionik vs Ikatan Kovalen', 2, 10, 'Perbedaan serah-terima elektron pada logam-nonlogam dan pemakaian bersama elektron.', '1. ATURAN OKTET: Mencapai 8 elektron valensi untuk stabil.\n2. IKATAN IONIK: Terjadi serah-terima elektron (contoh: NaCl).\n3. IKATAN KOVALEN: Pemakaian pasangan elektron bersama (contoh: H2O, CO2).', '2026-11-08'),
-('tm-3', 'rlm-math', 'Sifat Dasar Logaritma & Eksponen', 1, 7, 'Invers dari fungsi pangkat dan hukum perkalian/pembagian logaritma.', '1. DEFINISI: a^c = b <=> a_log(b) = c.\n2. HUKUM: a_log(xy) = a_log(x) + a_log(y), a_log(x/y) = a_log(x) - a_log(y).\n3. BASIS: Gunakan faktor prima terkecil saat menyederhanakan ekspresi.', '2026-11-04'),
-('tm-4', 'rlm-bio', 'Organel Sel Tumbuhan & Hewan', 1, 9, 'Perbandingan fungsi mitokondria, kloroplas, ribosom, dan dinding sel.', '1. NUKLEUS: Pusat kendali sel dan penyimpanan DNA.\n2. MITOKONDRIA: Pembangkit energi seluler (ATP).\n3. SEL TUMBUHAN: Memiliki dinding sel selulosa, kloroplas untuk fotosintesis, dan vakuola besar.', '2026-11-06')
+('tm-1', 'rlm-chem', 'Struktur Atom & Konfigurasi Elektron', 'Bab 1', 0, 'Memahami inti atom, proton, neutron, dan aturan Aufbau pada kulit elektron.', '1. PARTIKEL PENYUSUN ATOM: Proton (+), Neutron (0), Elektron (-).\n2. PRINSIP AUFBAU: Pengisian orbital dimulai dari tingkat energi terendah.\n3. ELEKTRON VALENSI: Elektron pada kulit terluar menentukan reaktivitas unsur.', '2026-11-02'),
+('tm-2', 'rlm-chem', 'Ikatan Ionik vs Ikatan Kovalen', 'Bab 2', 0, 'Perbedaan serah-terima elektron pada logam-nonlogam dan pemakaian bersama elektron.', '1. ATURAN OKTET: Mencapai 8 elektron valensi untuk stabil.\n2. IKATAN IONIK: Terjadi serah-terima elektron (contoh: NaCl).\n3. IKATAN KOVALEN: Pemakaian pasangan elektron bersama (contoh: H2O, CO2).', '2026-11-08'),
+('tm-3', 'rlm-math', 'Sifat Dasar Logaritma & Eksponen', 'Bab 1', 0, 'Invers dari fungsi pangkat dan hukum perkalian/pembagian logaritma.', '1. DEFINISI: a^c = b <=> a_log(b) = c.\n2. HUKUM: a_log(xy) = a_log(x) + a_log(y), a_log(x/y) = a_log(x) - a_log(y).\n3. BASIS: Gunakan faktor prima terkecil saat menyederhanakan ekspresi.', '2026-11-04'),
+('tm-4', 'rlm-bio', 'Organel Sel Tumbuhan & Hewan', 'Bab 1', 0, 'Perbandingan fungsi mitokondria, kloroplas, ribosom, dan dinding sel.', '1. NUKLEUS: Pusat kendali sel dan penyimpanan DNA.\n2. MITOKONDRIA: Pembangkit energi seluler (ATP).\n3. SEL TUMBUHAN: Memiliki dinding sel selulosa, kloroplas untuk fotosintesis, dan vakuola besar.', '2026-11-06')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.quests (id, realm_id, dungeon_id, title, instructions, deadline, max_exp, difficulty) VALUES

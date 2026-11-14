@@ -25,6 +25,9 @@ import {
 } from './components/ArcadeShell';
 import {
   AccessDeniedModal,
+  PixelButton,
+  PixelFieldLabel,
+  PixelInput,
   PixelModal,
   PixelToast,
 } from './components/PixelUI';
@@ -56,6 +59,7 @@ import {
   subscribeAcademyRealtime,
   updateOwnHeroAvatarCloud,
   updateOwnHeroUsernameCloud,
+  verifyGmLoginCloud,
 } from './lib/supabase';
 
 const BOOTSTRAPPED_CLOUD_FROM_URL = bootstrapSupabaseFromUrl();
@@ -201,6 +205,13 @@ export default function App() {
 
   // EC-01 Access Denied Guard State
   const [deniedRoute, setDeniedRoute] = useState<string | null>(null);
+
+  // GM Cloud Re-Verification Modal State
+  const [gmReauthModalOpen, setGmReauthModalOpen] = useState(false);
+  const [reauthUser, setReauthUser] = useState('');
+  const [reauthPass, setReauthPass] = useState('');
+  const [reauthError, setReauthError] = useState<string | null>(null);
+  const [isVerifyingReauth, setIsVerifyingReauth] = useState(false);
 
   // Toast State
   const [toast, setToast] = useState<{
@@ -542,16 +553,76 @@ export default function App() {
     }
   }, [syncFromRemote, showToast]);
 
+  const openGmReauthModal = useCallback(() => {
+    setReauthUser(
+      authSessionRef.current.gmUsername ||
+        stateRef.current.gmProfile.username ||
+        'admin'
+    );
+    setReauthPass('');
+    setReauthError(null);
+    setGmReauthModalOpen(true);
+  }, []);
+
+  const isCredentialSyncError = (msg?: string) =>
+    Boolean(
+      msg &&
+        (msg.includes('Kredensial GM') ||
+          msg.includes('Sesi GM') ||
+          msg.includes('Akses ditolak'))
+    );
+
   const reportCloudSync = useCallback(
     (promise: Promise<CloudSyncResult>) => {
       promise.then((res) => {
         if (!res.ok && res.error) {
           showToast(`Gagal sync ke Cloud: ${res.error}`, 'danger');
+          if (
+            role === UserRole.GAME_MASTER &&
+            isCredentialSyncError(res.error)
+          ) {
+            openGmReauthModal();
+          }
         }
       });
     },
-    [showToast]
+    [showToast, role, openGmReauthModal]
   );
+
+  const handleSubmitGmReauth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReauthError(null);
+    const cleanUser = reauthUser.trim();
+    if (!cleanUser || !reauthPass) {
+      setReauthError('Masukkan Username dan Password GM Cloud.');
+      return;
+    }
+    setIsVerifyingReauth(true);
+    const verify = await verifyGmLoginCloud(cleanUser, reauthPass);
+    setIsVerifyingReauth(false);
+    if (!verify.ok) {
+      setReauthError(
+        verify.error === 'rpc_required'
+          ? 'Jalankan ulang supabase-schema.sql di Supabase SQL Editor.'
+          : 'Username atau Password GM Cloud salah!'
+      );
+      playRetroSound('error', stateRef.current.settings.soundEnabled);
+      return;
+    }
+    const updatedAuth: AuthSession = {
+      ...authSessionRef.current,
+      isLoggedIn: true,
+      role: UserRole.GAME_MASTER,
+      gmUsername: cleanUser,
+      gmPassword: reauthPass,
+    };
+    authSessionRef.current = updatedAuth;
+    setAuthSession(updatedAuth);
+    setGmReauthModalOpen(false);
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    showToast('Sesi GM Cloud terverifikasi! Silakan lanjutkan penyimpanan.', 'success');
+    syncFromRemote(updatedAuth);
+  };
 
   // CRUD Upsert & Delete Handlers
   const upsertItem = <T extends { id: string }>(list: T[], item: T): T[] => {
@@ -637,6 +708,9 @@ export default function App() {
     const firstErr = results.find((r) => !r.ok && r.error);
     if (firstErr?.error) {
       showToast(`Sebagian data gagal sync ke Cloud: ${firstErr.error}`, 'danger');
+      if (isCredentialSyncError(firstErr.error)) {
+        openGmReauthModal();
+      }
     } else {
       showToast(`Berhasil mengimpor ${newHeroes.length} siswa!`);
     }
@@ -951,20 +1025,96 @@ export default function App() {
     showToast(`Saved ${grade.score}/100 (+${grade.expEarned} EXP) for ${heroName}!`);
   };
 
-  const handleUpdateGmProfile = async (gmProfile: GameMasterProfile) => {
+  const handleSaveGradesBatch = async (gradesToSave: ExpGrade[]) => {
+    if (gradesToSave.length === 0) return;
     playRetroSound('save', stateRef.current.settings.soundEnabled);
-    const prevGmAuth = getGmAuth();
-    const nextProfileInState: GameMasterProfile = isSupabaseConfigured()
-      ? { ...gmProfile, password: '' }
-      : gmProfile;
-    const next = { ...stateRef.current, gmProfile: nextProfileInState };
+
+    const updatedGrades = [...stateRef.current.grades];
+    const canonicalList: ExpGrade[] = [];
+
+    gradesToSave.forEach((grade) => {
+      const idx = updatedGrades.findIndex(
+        (g) => g.heroId === grade.heroId && g.questId === grade.questId
+      );
+      if (idx >= 0) {
+        const canonical: ExpGrade = { ...grade, id: updatedGrades[idx].id };
+        updatedGrades[idx] = canonical;
+        canonicalList.push(canonical);
+      } else {
+        updatedGrades.unshift(grade);
+        canonicalList.push(grade);
+      }
+    });
+
+    const next = { ...stateRef.current, grades: updatedGrades };
     stateRef.current = next;
     setState(next);
 
-    const cloudRes = await cloudSyncSettings(next.settings, gmProfile, prevGmAuth);
+    const gmAuth = getGmAuth();
+    const results = await Promise.all(
+      canonicalList.map((g) => cloudSyncGrade(g, gmAuth))
+    );
+    const firstErr = results.find((r) => !r.ok && r.error);
+
+    canonicalList.forEach((canonicalGrade) => {
+      fetch('/api/grades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(canonicalGrade),
+      }).catch(() => {});
+    });
+
+    if (firstErr?.error) {
+      showToast(`Sebagian nilai gagal sync ke Cloud: ${firstErr.error}`, 'danger');
+      if (isCredentialSyncError(firstErr.error)) {
+        openGmReauthModal();
+      }
+    } else {
+      showToast(`Berhasil menyimpan ${canonicalList.length} nilai penilaian!`, 'success');
+    }
+  };
+
+  const handleUpdateGmProfile = async (
+    gmProfile: GameMasterProfile,
+    updatedSettings?: SystemSettings
+  ): Promise<boolean> => {
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const prevGmAuth = getGmAuth();
+    const mergedSettings = updatedSettings || stateRef.current.settings;
+    if (updatedSettings) {
+      try {
+        localStorage.setItem(PERSONAL_THEME_KEY, mergedSettings.theme);
+      } catch {
+        // Ignore storage error
+      }
+    }
+
+    const nextProfileInState: GameMasterProfile = isSupabaseConfigured()
+      ? { ...gmProfile, password: '' }
+      : gmProfile;
+    const next: AcademyState = {
+      ...stateRef.current,
+      settings: mergedSettings,
+      gmProfile: nextProfileInState,
+    };
+    stateRef.current = next;
+    setState(next);
+
+    const cloudRes = await cloudSyncSettings(
+      mergedSettings,
+      gmProfile,
+      prevGmAuth,
+      true
+    );
     if (!cloudRes.ok && cloudRes.error) {
       showToast(`Gagal sync profil ke Cloud: ${cloudRes.error}`, 'danger');
-    } else if (authSessionRef.current.role === UserRole.GAME_MASTER) {
+      if (isCredentialSyncError(cloudRes.error)) {
+        openGmReauthModal();
+      }
+      return false;
+    }
+
+    if (authSessionRef.current.role === UserRole.GAME_MASTER) {
       const updatedAuth: AuthSession = {
         ...authSessionRef.current,
         gmUsername: gmProfile.username || authSessionRef.current.gmUsername,
@@ -977,9 +1127,10 @@ export default function App() {
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings: next.settings, gmProfile }),
+      body: JSON.stringify({ settings: mergedSettings, gmProfile }),
     }).catch(() => {});
-    showToast('Game Master profile updated!');
+    showToast('Profil & pengaturan Game Master disimpan!');
+    return true;
   };
 
   const handleUpdateSettings = (settings: SystemSettings) => {
@@ -992,7 +1143,7 @@ export default function App() {
     const next = { ...stateRef.current, settings };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncSettings(settings, next.gmProfile, getGmAuth()));
+    reportCloudSync(cloudSyncSettings(settings, next.gmProfile, getGmAuth(), false));
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1110,7 +1261,11 @@ export default function App() {
             />
           )}
           {gmMenu === 'exp_loot' && (
-            <GmExpLoot state={state} onSaveGrade={handleSaveGrade} />
+            <GmExpLoot
+              state={state}
+              onSaveGrade={handleSaveGrade}
+              onSaveGradesBatch={handleSaveGradesBatch}
+            />
           )}
           {gmMenu === 'settings' && (
             <GmSettings
@@ -1123,6 +1278,7 @@ export default function App() {
               onTestAccessDenied={() =>
                 handleTriggerAccessDenied('#/gm/exp-loot/edit')
               }
+              onRequestGmReauth={openGmReauthModal}
             />
           )}
         </>
@@ -1200,6 +1356,58 @@ export default function App() {
         attemptedRoute={deniedRoute}
         onReturnToHub={handleReturnFromDenied}
       />
+
+      {/* GM Cloud Credential Re-Verification Modal */}
+      <PixelModal
+        open={gmReauthModalOpen}
+        title="Verifikasi Sesi GM Cloud"
+        onClose={() => setGmReauthModalOpen(false)}
+      >
+        <form onSubmit={handleSubmitGmReauth} autoComplete="off" className="space-y-3">
+          <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+            Database Cloud menolak sinkronisasi karena kredensial Game Master belum terverifikasi atau berubah di Cloud. Masukkan Username &amp; Password GM Cloud yang aktif agar semua menu admin bisa menyimpan data ke Cloud:
+          </p>
+          <div>
+            <PixelFieldLabel htmlFor="reauth-gm-user">Username GM</PixelFieldLabel>
+            <PixelInput
+              id="reauth-gm-user"
+              autoComplete="off"
+              required
+              value={reauthUser}
+              onChange={(e) => setReauthUser(e.target.value)}
+            />
+          </div>
+          <div>
+            <PixelFieldLabel htmlFor="reauth-gm-pass">Password GM Cloud</PixelFieldLabel>
+            <PixelInput
+              id="reauth-gm-pass"
+              type="password"
+              autoComplete="new-password"
+              required
+              placeholder="Masukkan password GM yang aktif di Cloud..."
+              value={reauthPass}
+              onChange={(e) => setReauthPass(e.target.value)}
+            />
+          </div>
+          {reauthError && (
+            <p className="text-[12.5px] font-semibold text-[var(--accent-danger)]">
+              [!] {reauthError}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <PixelButton
+              type="button"
+              variant="neutral"
+              onClick={() => setGmReauthModalOpen(false)}
+            >
+              Tutup
+            </PixelButton>
+            <PixelButton type="submit" variant="success" disabled={isVerifyingReauth}>
+              {isVerifyingReauth ? 'Memeriksa...' : 'Verifikasi'}
+            </PixelButton>
+          </div>
+        </form>
+      </PixelModal>
       </ArcadeShell>
     </ThemeProvider>
   );

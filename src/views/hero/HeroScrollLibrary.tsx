@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BookOpen, Sword } from 'lucide-react';
 import {
   AcademyState,
@@ -18,7 +18,14 @@ import {
   ThemedPanelCard,
   ThemedReadingSurface,
 } from '../../components/ThemePrimitives';
-import { formatRetroDate, getHeroEffectiveRealmIds } from '../../utils/exp';
+import {
+  formatChapterLabel,
+  formatRetroDate,
+  formatScheduleDateTime,
+  getEffectiveScheduleForClass,
+  getHeroEffectiveRealmIds,
+  isContentVisibleToHero,
+} from '../../utils/exp';
 
 interface HeroScrollLibraryProps {
   state: AcademyState;
@@ -33,21 +40,34 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
   const [tab, setTab] = useState<'tomes' | 'quests'>('tomes');
   const [readingTome, setReadingTome] = useState<AncientTome | null>(null);
 
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
   const visibleRealms = allowedRealmIds
     ? state.realms.filter((r) => allowedRealmIds.includes(r.id))
     : state.realms;
 
   const filteredTomes = state.tomes
+    .filter((t) => isContentVisibleToHero(t, hero.dungeonId, now))
     .filter((t) => !allowedRealmIds || allowedRealmIds.includes(t.realmId))
     .filter((t) => selectedRealmId === 'all' || t.realmId === selectedRealmId)
-    .sort((a, b) => a.chapter - b.chapter);
+    .sort((a, b) =>
+      String(a.chapter || '').localeCompare(String(b.chapter || ''), 'id', {
+        numeric: true,
+        sensitivity: 'base',
+      })
+    );
 
   const filteredQuests = state.quests.filter(
     (q) =>
+      isContentVisibleToHero(q, hero.dungeonId, now) &&
       (!allowedRealmIds || allowedRealmIds.includes(q.realmId)) &&
-      (selectedRealmId === 'all' || q.realmId === selectedRealmId) &&
-      (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId)
+      (selectedRealmId === 'all' || q.realmId === selectedRealmId)
   );
 
   return (
@@ -142,6 +162,10 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
           <div className="space-y-3">
             {filteredTomes.map((tome) => {
               const realm = state.realms.find((r) => r.id === tome.realmId);
+              const effSchedule = getEffectiveScheduleForClass(tome, hero.dungeonId);
+              const releasedLabel = effSchedule.releaseTime
+                ? formatScheduleDateTime(effSchedule.rawSchedule)
+                : formatRetroDate(tome.publishedDate);
               return (
                 <ThemedPanelCard key={tome.id} className="space-y-2.5">
                   <div className="flex items-start gap-3">
@@ -156,7 +180,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
-                        Bab {tome.chapter} · {realm?.name} · {tome.readMinutes} min read
+                        {formatChapterLabel(tome.chapter)} · {realm?.name}
                       </p>
                       <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
                         {tome.title}
@@ -175,7 +199,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40">
                     <span className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
-                      {formatRetroDate(tome.publishedDate)}
+                      {releasedLabel}
                     </span>
                     <PixelButton
                       type="button"
@@ -230,14 +254,17 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
       {/* Full Read-Only Tome Reader Modal */}
       <PixelModal
         open={Boolean(readingTome)}
-        title={readingTome ? `Bab ${readingTome.chapter}: ${readingTome.title}` : ''}
+        title={
+          readingTome
+            ? `${formatChapterLabel(readingTome.chapter)}: ${readingTome.title}`
+            : ''
+        }
         onClose={() => setReadingTome(null)}
       >
         {readingTome && (
           <div className="space-y-3 min-w-0">
             <p className="text-[12px] font-semibold text-[var(--accent-warning)] break-words">
-              {state.realms.find((r) => r.id === readingTome.realmId)?.name} ·{' '}
-              {readingTome.readMinutes} min read
+              {state.realms.find((r) => r.id === readingTome.realmId)?.name}
             </p>
             <ThemedReadingSurface>
               {readingTome.content}

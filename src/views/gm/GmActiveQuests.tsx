@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   AcademyState,
   ActiveQuest,
   QuestDifficulty,
 } from '../../types/lms';
 import {
-  DungeonOptGroupOptions,
   PixelButton,
   PixelConfirmDialog,
   PixelEmptyChest,
@@ -18,8 +17,9 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { ScheduleConfigSection } from '../../components/ScheduleConfigSection';
 import { QuestCard } from '../../components/ThemePrimitives';
-import { formatRetroDate } from '../../utils/exp';
+import { formatRetroDate, getScheduleStatusSummary } from '../../utils/exp';
 
 interface GmActiveQuestsProps {
   state: AcademyState;
@@ -45,6 +45,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   const [difficulty, setDifficulty] = useState<QuestDifficulty>('Normal');
   const [instructions, setInstructions] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [classSchedules, setClassSchedules] = useState<Record<string, string>>({});
 
   const filtered = state.quests.filter(
     (q) => realmFilter === 'all' || q.realmId === realmFilter
@@ -60,6 +62,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     setDifficulty('Normal');
     setInstructions('');
     setLinkUrl('');
+    setScheduledAt('');
+    setClassSchedules({});
     setModalOpen(true);
   };
 
@@ -73,6 +77,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     setDifficulty(q.difficulty);
     setInstructions(q.instructions);
     setLinkUrl(q.linkUrl || '');
+    setScheduledAt(q.scheduledAt || '');
+    setClassSchedules(q.classSchedules || {});
     setModalOpen(true);
   };
 
@@ -89,6 +95,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
       difficulty,
       instructions: instructions.trim(),
       linkUrl: linkUrl.trim(),
+      scheduledAt,
+      classSchedules,
     });
     setModalOpen(false);
   };
@@ -97,7 +105,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     <div className="space-y-4">
       <PixelSectionTitle
         title="Active Quests / Tugas"
-        subtitle="Publikasikan instruksi misi, tenggat, dan bobot EXP"
+        subtitle="Publikasikan instruksi misi, tenggat, & jadwal tayang per kelas"
         action={
           <PixelButton type="button" size="sm" variant="success" onClick={openCreate}>
             <Plus size={15} />
@@ -131,6 +139,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
             const dungeon = state.dungeons.find(
               (d) => d.id === quest.dungeonId
             );
+            const sched = getScheduleStatusSummary(quest, state.dungeons);
             return (
               <QuestCard key={quest.id} className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2 min-w-0">
@@ -168,6 +177,19 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                   {quest.instructions}
                 </p>
 
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 border font-semibold ${
+                      sched.isScheduledFuture
+                        ? 'bg-amber-100 text-amber-900 border-amber-700'
+                        : 'bg-[var(--bg-inset)] text-[var(--text-secondary)] border-[var(--border-pixel)]/50'
+                    }`}
+                  >
+                    <CalendarClock size={11} />
+                    {sched.label}
+                  </span>
+                </div>
+
                 {quest.linkUrl && (
                   <div>
                     <PixelLinkButton url={quest.linkUrl} label="Buka Tautan Tugas" />
@@ -202,32 +224,19 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <PixelFieldLabel htmlFor="qst-realm">Realm / Mapel</PixelFieldLabel>
-              <PixelSelect
-                id="qst-realm"
-                value={realmId}
-                onChange={(e) => setRealmId(e.target.value)}
-              >
-                {state.realms.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.code} — {r.name}
-                  </option>
-                ))}
-              </PixelSelect>
-            </div>
-            <div>
-              <PixelFieldLabel htmlFor="qst-dng">Target Guild</PixelFieldLabel>
-              <PixelSelect
-                id="qst-dng"
-                value={dungeonId}
-                onChange={(e) => setDungeonId(e.target.value)}
-              >
-                <option value="all">All Guilds (Semua Kelas)</option>
-                <DungeonOptGroupOptions dungeons={state.dungeons} />
-              </PixelSelect>
-            </div>
+          <div>
+            <PixelFieldLabel htmlFor="qst-realm">Realm / Mapel</PixelFieldLabel>
+            <PixelSelect
+              id="qst-realm"
+              value={realmId}
+              onChange={(e) => setRealmId(e.target.value)}
+            >
+              {state.realms.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.code} — {r.name}
+                </option>
+              ))}
+            </PixelSelect>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <div>
@@ -266,6 +275,19 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               />
             </div>
           </div>
+
+          <ScheduleConfigSection
+            idPrefix="qst-sched"
+            targetLabel="Target Guild / Kelas"
+            dungeons={state.dungeons}
+            targetDungeonId={dungeonId}
+            onChangeTargetDungeonId={setDungeonId}
+            scheduledAt={scheduledAt}
+            onChangeScheduledAt={setScheduledAt}
+            classSchedules={classSchedules}
+            onChangeClassSchedules={setClassSchedules}
+          />
+
           <div>
             <PixelFieldLabel htmlFor="qst-inst">Instruksi Tugas</PixelFieldLabel>
             <PixelTextarea

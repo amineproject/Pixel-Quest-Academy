@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   FileText,
   Save,
+  Upload,
   XCircle,
 } from 'lucide-react';
 import { AcademyState, ExpGrade, GradeStatus } from '../../types/lms';
@@ -31,13 +32,18 @@ import {
 } from '../../utils/exp';
 import {
   buildClassRecapData,
-  downloadRecapCsv,
+  buildGradesFromImportEntries,
+  downloadAssessmentExcel,
   downloadRecapHtmlReport,
+  formatStatusLabel,
+  parseAssessmentExcelFile,
+  ParsedAssessmentExcelResult,
 } from '../../utils/exportRecap';
 
 interface GmExpLootProps {
   state: AcademyState;
   onSaveGrade: (grade: ExpGrade) => void;
+  onSaveGradesBatch?: (grades: ExpGrade[]) => void | Promise<void>;
 }
 
 const STATUS_OPTIONS: {
@@ -72,7 +78,11 @@ const STATUS_OPTIONS: {
   },
 ];
 
-export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
+export const GmExpLoot: React.FC<GmExpLootProps> = ({
+  state,
+  onSaveGrade,
+  onSaveGradesBatch,
+}) => {
   const [selectedRealmId, setSelectedRealmId] = useState(
     state.realms[0]?.id || ''
   );
@@ -89,6 +99,13 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
   const [recapDungeonId, setRecapDungeonId] = useState('all');
   const [recapRealmId, setRecapRealmId] = useState('all');
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+
+  // Upload Assessment Excel Modal State
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [parsedExcel, setParsedExcel] = useState<ParsedAssessmentExcelResult | null>(null);
+  const [isApplyingExcel, setIsApplyingExcel] = useState(false);
+  const excelInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const nextQuests = state.quests.filter(
@@ -112,6 +129,39 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
     setRecapRealmId('all');
     setDownloadNotice(null);
     setRecapModalOpen(true);
+  };
+
+  const openUploadModal = () => {
+    setUploadFileName('');
+    setParsedExcel(null);
+    setUploadModalOpen(true);
+  };
+
+  const handleAssessmentFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadFileName(file.name);
+    const result = await parseAssessmentExcelFile(file, state);
+    setParsedExcel(result);
+    e.target.value = '';
+  };
+
+  const handleConfirmApplyExcelGrades = async () => {
+    if (!parsedExcel || parsedExcel.entries.length === 0) return;
+    setIsApplyingExcel(true);
+    const gradesToSave = buildGradesFromImportEntries(
+      parsedExcel.entries,
+      state.grades
+    );
+    if (onSaveGradesBatch) {
+      await onSaveGradesBatch(gradesToSave);
+    } else {
+      gradesToSave.forEach((g) => onSaveGrade(g));
+    }
+    setIsApplyingExcel(false);
+    setUploadModalOpen(false);
   };
 
   const recapPreview = recapModalOpen
@@ -198,17 +248,28 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
     <div className="space-y-4">
       <PixelSectionTitle
         title="EXP & Loot / Penilaian"
-        subtitle="Isi status & skor siswa per Realm & Quest (tampil simbol di akun siswa)"
+        subtitle="Isi status & skor siswa atau unduh/unggah tabel penilaian Excel"
         action={
-          <PixelButton
-            type="button"
-            size="sm"
-            variant="warning"
-            onClick={openRecapModal}
-          >
-            <Download size={14} />
-            Rekap Kelas
-          </PixelButton>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="primary"
+              onClick={openUploadModal}
+            >
+              <Upload size={14} />
+              Upload Nilai Excel
+            </PixelButton>
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="warning"
+              onClick={openRecapModal}
+            >
+              <Download size={14} />
+              Unduh Excel &amp; Rekap
+            </PixelButton>
+          </div>
         }
       />
 
@@ -422,15 +483,15 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
         </div>
       )}
 
-      {/* Download Class Recap Modal */}
+      {/* Download Class Recap & Excel Assessment Format Modal */}
       <PixelModal
         open={recapModalOpen}
-        title="Unduh Rekap Penilaian Kelas"
+        title="Unduh Format & Rekap Penilaian Excel"
         onClose={() => setRecapModalOpen(false)}
       >
         <div className="space-y-3.5">
           <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
-            Pilih kelas dan mata pelajaran untuk melihat ringkasan nilai lalu unduh dalam format Excel/CSV atau Laporan Cetak (HTML/PDF).
+            Pilih kelas dan mata pelajaran untuk mengunduh tabel penilaian berbentuk <strong>Excel (.xlsx)</strong> berkolom sesuai judul tugas guru (<em>Active Quests</em>), atau Laporan Cetak HTML/PDF.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -531,14 +592,14 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
               disabled={!recapPreview || recapPreview.rows.length === 0}
               onClick={() => {
                 if (!recapPreview) return;
-                downloadRecapCsv(state, recapPreview);
+                downloadAssessmentExcel(state, recapPreview);
                 setDownloadNotice(
-                  `File CSV rekap "${recapPreview.classLabel}" berhasil diunduh!`
+                  `File Excel penilaian "${recapPreview.classLabel}" berhasil diunduh!`
                 );
               }}
             >
               <FileSpreadsheet size={15} />
-              Unduh Excel / CSV (.csv)
+              Unduh Tabel Excel (.xlsx)
             </PixelButton>
 
             <PixelButton
@@ -566,6 +627,150 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
           >
             Tutup
           </PixelButton>
+        </div>
+      </PixelModal>
+
+      {/* Upload Excel Penilaian Modal */}
+      <PixelModal
+        open={uploadModalOpen}
+        title="Unggah Tabel Penilaian (Excel .xlsx)"
+        onClose={() => setUploadModalOpen(false)}
+      >
+        <div className="space-y-3.5">
+          <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+            Unggah kembali file <strong>.xlsx</strong> yang sudah diisi nilai angka (<strong>0–100</strong>) atau status (<em>Proses, Belum, Remidial, Tuntas</em>) pada kolom tugas. Nama kolom otomatis dicocokkan dengan tugas buatan guru.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="neutral"
+              onClick={() => {
+                const targetDng =
+                  selectedDungeonId !== 'all' ? selectedDungeonId : 'all';
+                const targetRlm = selectedRealmId || 'all';
+                const recap = buildClassRecapData(state, targetDng, targetRlm);
+                downloadAssessmentExcel(state, recap);
+              }}
+            >
+              <Download size={14} />
+              Unduh Format Tabel (.xlsx)
+            </PixelButton>
+
+            <input
+              ref={excelInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleAssessmentFileChange}
+              className="hidden"
+            />
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="primary"
+              onClick={() => excelInputRef.current?.click()}
+            >
+              <Upload size={14} />
+              Pilih File Excel (.xlsx)
+            </PixelButton>
+          </div>
+
+          {uploadFileName && (
+            <p className="text-[12px] font-semibold text-[var(--accent-warning)]">
+              File terbaca: {uploadFileName}
+            </p>
+          )}
+
+          {parsedExcel && (
+            <div className="space-y-2.5">
+              {parsedExcel.matchedQuestColumns.length > 0 && (
+                <div className="pixel-box-inset p-2.5 space-y-1">
+                  <span className="font-pixel-ui text-[9.5px] text-[var(--accent-success)] block">
+                    KOLOM TUGAS TERDETEKSI ({parsedExcel.matchedQuestColumns.length}):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {parsedExcel.matchedQuestColumns.map((col) => (
+                      <span
+                        key={col}
+                        className="text-[11px] font-semibold px-2 py-0.5 bg-[var(--bg-surface)] border border-[var(--border-pixel)]/60"
+                      >
+                        {col}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {parsedExcel.warnings.length > 0 && (
+                <div className="pixel-box-inset p-2.5 border border-amber-700 bg-amber-50 space-y-1 max-h-28 overflow-y-auto pixel-scroll">
+                  {parsedExcel.warnings.map((w, idx) => (
+                    <p key={idx} className="text-[11.5px] font-semibold text-amber-900">
+                      ⚠ {w}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {parsedExcel.entries.length > 0 ? (
+                <div className="pixel-box-inset max-h-52 overflow-y-auto pixel-scroll divide-y divide-[var(--border-pixel)]/30">
+                  {parsedExcel.entries.map((entry, idx) => (
+                    <div
+                      key={`${entry.heroId}-${entry.questId}-${idx}`}
+                      className="p-2 flex items-center justify-between gap-2 text-[12px]"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-[var(--text-primary)] truncate">
+                          {entry.heroName} ({entry.studentCode})
+                        </p>
+                        <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                          {entry.questTitle}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 tabular-nums">
+                        <p className="font-bold text-[var(--accent-warning)]">
+                          {entry.status === 'belum' || entry.status === 'proses'
+                            ? formatStatusLabel(entry.status)
+                            : `${entry.score} (${formatStatusLabel(entry.status)})`}
+                        </p>
+                        <p className="text-[10.5px] text-[var(--accent-success)]">
+                          +{entry.expEarned} EXP
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[12px] text-[var(--text-muted)] text-center py-2">
+                  Belum ada sel nilai yang terisi untuk diimpor.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <PixelButton
+              type="button"
+              variant="neutral"
+              onClick={() => setUploadModalOpen(false)}
+            >
+              Batal
+            </PixelButton>
+            <PixelButton
+              type="button"
+              variant="success"
+              disabled={
+                !parsedExcel ||
+                parsedExcel.entries.length === 0 ||
+                isApplyingExcel
+              }
+              onClick={handleConfirmApplyExcelGrades}
+            >
+              {isApplyingExcel
+                ? 'Menyimpan...'
+                : `Simpan ${parsedExcel?.entries.length || 0} Nilai`}
+            </PixelButton>
+          </div>
         </div>
       </PixelModal>
     </div>

@@ -28,17 +28,22 @@ import {
   saveSupabaseConfig,
   testSupabaseConnection,
   uploadAllLocalToSupabase,
+  verifyGmLoginCloud,
 } from '../../lib/supabase';
 import { Check, Cloud, Copy, Download, Eye, EyeOff, Link2, Lock, RefreshCw } from 'lucide-react';
 
 interface GmSettingsProps {
   state: AcademyState;
   gmAuth?: GmAuthCredentials;
-  onUpdateGmProfile: (profile: GameMasterProfile) => void;
+  onUpdateGmProfile: (
+    profile: GameMasterProfile,
+    updatedSettings?: SystemSettings
+  ) => void | Promise<boolean | void>;
   onUpdateSettings: (settings: SystemSettings) => void;
   onResetDemoData: () => void;
   onPullCloudData: () => Promise<AcademyState | null>;
   onTestAccessDenied: () => void;
+  onRequestGmReauth?: () => void;
 }
 
 export const GmSettings: React.FC<GmSettingsProps> = ({
@@ -49,6 +54,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   onResetDemoData,
   onPullCloudData,
   onTestAccessDenied,
+  onRequestGmReauth,
 }) => {
   const isProtectedPass =
     isSupabaseConfigured() &&
@@ -125,11 +131,22 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     setSyncStatusMsg('Menguji koneksi ke Supabase Cloud...');
     const testRes = await testSupabaseConnection();
     setIsHardenedSecurity(testRes.hardened);
+    let authMismatchMsg = '';
     if (testRes.ok && testRes.hasCloudData) {
       await onPullCloudData();
+      if (testRes.hardened) {
+        const authCheck = gmAuth?.username && gmAuth?.password
+          ? await verifyGmLoginCloud(gmAuth.username, gmAuth.password)
+          : { ok: false };
+        if (!authCheck.ok) {
+          authMismatchMsg =
+            ' Catatan: Kredensial GM di sesi ini berbeda dengan database Cloud — silakan verifikasi ulang akun GM Anda agar semua menu dapat tersinkron.';
+          onRequestGmReauth?.();
+        }
+      }
     }
     setIsSyncing(false);
-    setSyncStatusMsg(testRes.message);
+    setSyncStatusMsg(testRes.message + authMismatchMsg);
   };
 
   const handleSyncAllToCloud = async () => {
@@ -144,6 +161,13 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     if (res.ok) {
       setSyncStatusMsg('✓ Seluruh data sukses tersinkronisasi ke Supabase Cloud!');
     } else {
+      if (
+        res.errorMessage?.includes('Kredensial GM') ||
+        res.errorMessage?.includes('Sesi GM') ||
+        res.errorMessage?.includes('Akses ditolak')
+      ) {
+        onRequestGmReauth?.();
+      }
       setSyncStatusMsg(`Gagal mengunggah: ${res.errorMessage || 'Pastikan tabel Supabase sudah dibuat.'}`);
     }
   };
@@ -179,27 +203,32 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const resolvedPassword = password.trim() || gmAuth?.password || state.gmProfile.password || '';
     if (!username.trim() || !resolvedPassword) return;
-    onUpdateGmProfile({
-      ...state.gmProfile,
-      name: name.trim() || state.gmProfile.name,
-      title: title.trim() || state.gmProfile.title,
-      specialty: specialty.trim() || state.gmProfile.specialty,
-      avatar,
-      username: username.trim(),
-      password: resolvedPassword,
-      requirePassword: true,
-    });
-    onUpdateSettings({
+    const nextSettings: SystemSettings = {
       ...state.settings,
       academicTerm: term.trim() || state.settings.academicTerm,
-    });
-    if (isProtectedPass) setPassword('');
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2400);
+    };
+    const res = await onUpdateGmProfile(
+      {
+        ...state.gmProfile,
+        name: name.trim() || state.gmProfile.name,
+        title: title.trim() || state.gmProfile.title,
+        specialty: specialty.trim() || state.gmProfile.specialty,
+        avatar,
+        username: username.trim(),
+        password: resolvedPassword,
+        requirePassword: true,
+      },
+      nextSettings
+    );
+    if (res !== false) {
+      if (isProtectedPass) setPassword('');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2400);
+    }
   };
 
   return (
