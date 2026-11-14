@@ -149,12 +149,12 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   return (
     <div
       data-theme={theme}
-      className="relative min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-6 sm:px-4"
+      className="relative min-h-[100dvh] w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-4 sm:px-4"
     >
       <ThemeBackdropIllustration theme={theme} />
 
       {/* Desktop Top Header */}
-      <div className="relative z-10 hidden sm:flex items-center justify-between w-full max-w-[640px] md:max-w-[720px] lg:max-w-[800px] mb-3 px-1 gap-2">
+      <div className="relative z-10 hidden sm:flex items-center justify-between w-full max-w-[640px] md:max-w-[960px] lg:max-w-[1080px] mb-2.5 px-1 gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           {!isMinimalPaper && (
             <div className="w-9 h-9 rounded-[var(--btn-radius)] bg-[var(--comic-gold)] border-2 border-[var(--border-pixel)] shadow-[3px_3px_0_var(--shadow-ink)] flex items-center justify-center shrink-0">
@@ -176,7 +176,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           <button
             type="button"
             onClick={onLogout}
-            className="pixel-btn min-h-[34px] px-3 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10.5px] flex items-center gap-1.5 cursor-pointer font-bold"
+            className="md:hidden pixel-btn min-h-[34px] px-3 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10.5px] flex items-center gap-1.5 cursor-pointer font-bold"
             title="Keluar ke Halaman Login"
           >
             <LogOut size={13} />
@@ -187,7 +187,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
 
       {/* Theme-Adaptive Console / Editorial Frame */}
       <div
-        className={`relative z-10 w-full max-w-[560px] sm:max-w-[640px] md:max-w-[720px] lg:max-w-[800px] console-bezel transition-all ${
+        className={`relative z-10 w-full max-w-[560px] sm:max-w-[640px] md:max-w-[960px] lg:max-w-[1080px] console-bezel transition-all ${
           isMinimalPaper
             ? 'sm:p-0 sm:rounded-xl sm:border sm:border-[#d6d1c7] sm:bg-white'
             : 'sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]'
@@ -222,9 +222,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           </div>
         )}
 
-        {/* Screen Viewport */}
+        {/* Screen Viewport: Persistent Left Sidebar (md+) + Main Pane */}
         <div
-          className={`relative w-full min-h-screen sm:min-h-[780px] sm:h-[86vh] sm:max-h-[920px] flex flex-col bg-[var(--bg-canvas)] overflow-hidden ${
+          className={`relative w-full h-[100dvh] sm:h-[calc(100dvh-150px)] sm:min-h-[460px] sm:max-h-[860px] flex flex-col md:flex-row bg-[var(--bg-canvas)] overflow-hidden ${
             isMinimalPaper
               ? 'sm:rounded-xl'
               : theme === 'daylight_rpg'
@@ -232,161 +232,339 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 : 'sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)]'
           } ${crtScanlines && !isMinimalPaper ? 'crt-scanlines' : ''}`}
         >
-          {/* Top App Bar */}
-          <header
-            className={`sticky top-0 z-30 min-h-[56px] shrink-0 bg-[var(--surface-tint)] comic-halftone px-2.5 sm:px-3.5 py-1.5 flex items-center justify-between gap-2 ${
+          {/* Persistent Sidebar Navigation (Desktop & Tablet >= 768px) */}
+          <aside
+            aria-label={isGm ? 'Game Master Sidebar Navigation' : 'Hero Sidebar Navigation'}
+            className={`hidden md:flex md:flex-col md:w-[236px] lg:w-[258px] shrink-0 overflow-hidden ${
               isMinimalPaper
-                ? 'border-b border-[#d6d1c7] bg-white'
-                : 'border-b-2 border-[var(--border-pixel)]'
+                ? 'bg-white border-r border-[#d6d1c7]'
+                : theme === 'sunny_quest'
+                  ? 'bg-[#f6ead0] border-r-2 border-[var(--border-pixel)]'
+                  : theme === 'daylight_rpg'
+                    ? 'bg-white border-r-2 border-[var(--border-pixel)]'
+                    : theme === 'nes_classic'
+                      ? 'bg-[#f8f1e0] border-r-2 border-[var(--border-pixel)]'
+                      : 'bg-white border-r-[2.5px] border-[#09090f]'
             }`}
           >
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <PixelAvatar
-                avatar={isGm ? gmAvatar : activeHeroAvatar}
-                size={34}
-                className="shrink-0 animate-pixel-bounce"
-              />
-              <div className="min-w-0 flex-1">
-                <h1 className="font-pixel-display text-[12px] sm:text-[13.5px] text-[var(--text-primary)] truncate leading-snug">
-                  {activeTitle}
-                </h1>
-                <p className="text-[11.5px] sm:text-[12px] text-[var(--text-secondary)] leading-tight mt-0.5 truncate flex items-center gap-1">
-                  {isGm ? (
-                    <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[10.5px] font-bold shrink-0">
-                      <Crown size={11} /> GM
-                    </span>
-                  ) : (
-                    <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[10.5px] font-bold shrink-0">
-                      <Shield size={11} /> HERO
-                    </span>
-                  )}
-                  <span aria-hidden="true">·</span>
-                  <span className="truncate font-semibold">{isGm ? gmName : activeHeroName}</span>
-                </p>
+            {/* Sidebar User Identity Block */}
+            <div
+              className={`p-3.5 shrink-0 ${
+                isMinimalPaper
+                  ? 'border-b border-[#ece7dd]'
+                  : 'border-b-2 border-[var(--border-pixel)]/30 bg-[var(--surface-tint)]/35 comic-halftone'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <PixelAvatar
+                  avatar={isGm ? gmAvatar : activeHeroAvatar}
+                  size={40}
+                  className="shrink-0 animate-pixel-bounce"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-pixel-ui text-[10px] uppercase tracking-wider flex items-center gap-1 text-[var(--accent-warning)]">
+                    {isGm ? <Crown size={11} /> : <Shield size={11} />}
+                    <span>{isGm ? 'Game Master' : 'Hero · Read-Only'}</span>
+                  </p>
+                  <p className="text-[13.5px] font-bold text-[var(--text-primary)] truncate mt-0.5">
+                    {isGm ? gmName : activeHeroName}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="sm:hidden">
-                <PWAInstallButton compact />
-              </div>
-              {/* Cloud Sync button */}
-              {onManualSync && (
-                <button
-                  type="button"
-                  onClick={onManualSync}
-                  disabled={isSyncing}
-                  className="pixel-btn min-w-[36px] min-h-[36px] px-2 flex items-center justify-center gap-1 bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer font-pixel-ui text-[9.5px]"
-                  title="Sinkronkan Data Cloud"
-                  aria-label="Sinkronkan Data Cloud"
-                >
-                  <RefreshCw size={15} className={isSyncing ? 'animate-spin' : ''} />
-                  <span className="hidden sm:inline">Sync</span>
-                </button>
-              )}
+            {/* Sidebar Menu Links */}
+            <nav className="flex-1 overflow-y-auto pixel-scroll p-2.5 space-y-1">
+              <p className="px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wider text-[var(--text-muted)]">
+                {isGm ? 'Menu Pengelola (9)' : 'Menu Petualang'}
+              </p>
 
-              {/* Audio toggle button */}
-              <button
-                type="button"
-                onClick={onToggleSound}
-                className="pixel-btn min-w-[36px] min-h-[36px] flex items-center justify-center bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer"
-                title={soundEnabled ? 'Mute SFX' : 'Enable SFX'}
-                aria-label="Toggle sound"
-              >
-                {soundEnabled ? (
-                  <Volume2 size={16} className="text-[var(--accent-success)]" />
-                ) : (
-                  <VolumeX size={16} className="text-[var(--text-muted)]" />
-                )}
-              </button>
+              {isGm
+                ? GM_NAV_ITEMS.map((item) => {
+                    const active = gmMenu === item.id;
+                    const activeBtnClass = isMinimalPaper
+                      ? 'bg-[#f2eee6] text-[#18181b] border border-[#d6d1c7] font-bold'
+                      : theme === 'daylight_rpg'
+                        ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] rounded-[14px] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold'
+                        : theme === 'nes_classic'
+                          ? 'bg-[#5b21b6] text-white border-2 border-[#fbbf24] shadow-[2px_2px_0_0_#311b63] font-bold'
+                          : theme === 'cyber_retro'
+                            ? 'bg-[#00d8ff] text-[#09090f] border-2 border-[#09090f] shadow-[3px_3px_0_0_#09090f] font-bold'
+                            : 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold';
 
-              {/* Exit/Logout Button */}
+                    const idleBtnClass = isMinimalPaper
+                      ? 'text-[#3f3f46] border border-transparent hover:bg-[#faf8f4] hover:text-[#18181b]'
+                      : theme === 'daylight_rpg'
+                        ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
+                        : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onSelectGmMenu(item.id)}
+                        className={`w-full min-h-[42px] px-2.5 py-2 flex items-center gap-2.5 text-left transition-all cursor-pointer ${
+                          active ? activeBtnClass : idleBtnClass
+                        }`}
+                      >
+                        <span
+                          className={`shrink-0 ${
+                            active
+                              ? theme === 'nes_classic'
+                                ? 'text-[#fbbf24]'
+                                : 'text-current'
+                              : 'text-[var(--accent-warning)]'
+                          }`}
+                        >
+                          {getGmMenuIcon(item.id, 18)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[12.5px] leading-tight truncate">
+                            {item.shortLabel}
+                          </span>
+                          <span
+                            className={`block text-[10.5px] leading-tight truncate ${
+                              active ? 'opacity-90' : 'text-[var(--text-muted)]'
+                            }`}
+                          >
+                            {item.standardName}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })
+                : HERO_NAV_ITEMS.map((item) => {
+                    const active = heroMenu === item.id;
+                    const activeBtnClass = isMinimalPaper
+                      ? 'bg-[#f2eee6] text-[#18181b] border border-[#d6d1c7] font-bold'
+                      : theme === 'daylight_rpg'
+                        ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] rounded-[14px] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold'
+                        : theme === 'nes_classic'
+                          ? 'bg-[#5b21b6] text-white border-2 border-[#fbbf24] shadow-[2px_2px_0_0_#311b63] font-bold'
+                          : theme === 'cyber_retro'
+                            ? 'bg-[#00d8ff] text-[#09090f] border-2 border-[#09090f] shadow-[3px_3px_0_0_#09090f] font-bold'
+                            : 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold';
+
+                    const idleBtnClass = isMinimalPaper
+                      ? 'text-[#3f3f46] border border-transparent hover:bg-[#faf8f4] hover:text-[#18181b]'
+                      : theme === 'daylight_rpg'
+                        ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
+                        : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onSelectHeroMenu(item.id)}
+                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center gap-2.5 text-left transition-all cursor-pointer ${
+                          active ? activeBtnClass : idleBtnClass
+                        }`}
+                      >
+                        <span
+                          className={`shrink-0 ${
+                            active
+                              ? theme === 'nes_classic'
+                                ? 'text-[#fbbf24]'
+                                : 'text-current'
+                              : 'text-[var(--accent-warning)]'
+                          }`}
+                        >
+                          {getHeroMenuIcon(item.id, 18)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] leading-tight truncate">
+                            {item.shortLabel}
+                          </span>
+                          <span
+                            className={`block text-[11px] leading-tight truncate ${
+                              active ? 'opacity-90' : 'text-[var(--text-muted)]'
+                            }`}
+                          >
+                            {item.standardName}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+            </nav>
+
+            {/* Sidebar Bottom Actions */}
+            <div
+              className={`p-2.5 shrink-0 space-y-2 ${
+                isMinimalPaper
+                  ? 'border-t border-[#ece7dd]'
+                  : 'border-t-2 border-[var(--border-pixel)]/30'
+              }`}
+            >
               <button
                 type="button"
                 onClick={onLogout}
-                className="pixel-btn min-w-[36px] min-h-[36px] px-2 sm:px-2.5 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10px] flex items-center justify-center gap-1 cursor-pointer font-bold"
-                title="Keluar / Logout"
-                aria-label="Keluar / Logout"
+                className="w-full pixel-btn min-h-[38px] px-3 py-1.5 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10.5px] flex items-center justify-center gap-2 cursor-pointer font-bold"
               >
                 <LogOut size={14} />
-                <span className="hidden min-[390px]:inline">Keluar</span>
+                <span>Keluar (Logout)</span>
               </button>
             </div>
-          </header>
+          </aside>
 
-          {/* Main Scrollable Content Area */}
-          <main className="flex-1 overflow-y-auto pixel-scroll p-3.5 sm:p-5 pb-24 space-y-4">
-            {children}
-          </main>
-
-          {/* Bottom Tab Bar Navigation */}
-          <nav
-            aria-label={isGm ? 'Game Master Navigation' : 'Hero Navigation'}
-            className="sticky bottom-0 left-0 w-full z-30 h-[62px] shrink-0 bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)]"
-          >
-            {isGm ? (
-              <div className="grid grid-cols-5 h-full">
-                {quickGmTabs.map((tabId) => {
-                  const item = GM_NAV_ITEMS.find((i) => i.id === tabId)!;
-                  const active = gmMenu === tabId;
-                  return (
-                    <button
-                      key={tabId}
-                      type="button"
-                      onClick={() => onSelectGmMenu(tabId)}
-                      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
-                        active
-                          ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
-                      }`}
-                    >
-                      {getGmMenuIcon(tabId, 19)}
-                      <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
-                        {item.shortLabel}
+          {/* Right Main Column */}
+          <div className="flex-1 flex flex-col min-w-0 min-h-0">
+            {/* Top App Bar */}
+            <header
+              className={`z-30 min-h-[56px] shrink-0 bg-[var(--surface-tint)] comic-halftone px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2 ${
+                isMinimalPaper
+                  ? 'border-b border-[#d6d1c7] bg-white'
+                  : 'border-b-2 border-[var(--border-pixel)]'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <PixelAvatar
+                  avatar={isGm ? gmAvatar : activeHeroAvatar}
+                  size={34}
+                  className="md:hidden shrink-0 animate-pixel-bounce"
+                />
+                <div className="min-w-0 flex-1">
+                  <h1 className="font-pixel-display text-[12px] sm:text-[14px] text-[var(--text-primary)] truncate leading-snug">
+                    {activeTitle}
+                  </h1>
+                  <p className="text-[11.5px] sm:text-[12px] text-[var(--text-secondary)] leading-tight mt-0.5 truncate flex items-center gap-1">
+                    {isGm ? (
+                      <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[10.5px] font-bold shrink-0">
+                        <Crown size={11} /> GM
                       </span>
-                    </button>
-                  );
-                })}
+                    ) : (
+                      <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[10.5px] font-bold shrink-0">
+                        <Shield size={11} /> HERO
+                      </span>
+                    )}
+                    <span aria-hidden="true">·</span>
+                    <span className="truncate font-semibold">{isGm ? gmName : activeHeroName}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="sm:hidden">
+                  <PWAInstallButton compact />
+                </div>
+                {/* Cloud Sync button */}
+                {onManualSync && (
+                  <button
+                    type="button"
+                    onClick={onManualSync}
+                    disabled={isSyncing}
+                    className="pixel-btn min-w-[36px] min-h-[36px] px-2 flex items-center justify-center gap-1 bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer font-pixel-ui text-[9.5px]"
+                    title="Sinkronkan Data Cloud"
+                    aria-label="Sinkronkan Data Cloud"
+                  >
+                    <RefreshCw size={15} className={isSyncing ? 'animate-spin' : ''} />
+                    <span className="hidden sm:inline">Sync</span>
+                  </button>
+                )}
+
+                {/* Audio toggle button */}
                 <button
                   type="button"
-                  onClick={onOpenGmDrawer}
-                  className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
-                    !quickGmTabs.includes(gmMenu)
-                      ? 'bg-[var(--comic-gold)] text-[#09090f] font-bold'
-                      : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
-                  }`}
+                  onClick={onToggleSound}
+                  className="pixel-btn min-w-[36px] min-h-[36px] flex items-center justify-center bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer"
+                  title={soundEnabled ? 'Mute SFX' : 'Enable SFX'}
+                  aria-label="Toggle sound"
                 >
-                  <Grid size={19} />
-                  <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap">
-                    9 Menus
-                  </span>
+                  {soundEnabled ? (
+                    <Volume2 size={16} className="text-[var(--accent-success)]" />
+                  ) : (
+                    <VolumeX size={16} className="text-[var(--text-muted)]" />
+                  )}
+                </button>
+
+                {/* Exit/Logout Button (mobile <640px — sm uses outer bar, md+ uses sidebar) */}
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="sm:hidden pixel-btn min-w-[36px] min-h-[36px] px-2 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10px] flex items-center justify-center gap-1 cursor-pointer font-bold"
+                  title="Keluar / Logout"
+                  aria-label="Keluar / Logout"
+                >
+                  <LogOut size={14} />
+                  <span className="hidden min-[390px]:inline">Keluar</span>
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-4 h-full">
-                {HERO_NAV_ITEMS.map((item) => {
-                  const active = heroMenu === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => onSelectHeroMenu(item.id)}
-                      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-1 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
-                        active
-                          ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
-                      }`}
-                    >
-                      {getHeroMenuIcon(item.id, 19)}
-                      <span className="font-pixel-ui text-[9px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
-                        {item.shortLabel}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </nav>
+            </header>
+
+            {/* Main Scrollable Content Area */}
+            <main className="flex-1 min-h-0 overflow-y-auto pixel-scroll p-3.5 sm:p-5 pb-8 space-y-4">
+              {children}
+            </main>
+
+            {/* Mobile Bottom Tab Bar Navigation (hidden on md+ where Persistent Sidebar is active) */}
+            <nav
+              aria-label={isGm ? 'Game Master Navigation' : 'Hero Navigation'}
+              className="md:hidden z-30 h-[62px] shrink-0 bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)]"
+            >
+              {isGm ? (
+                <div className="grid grid-cols-5 h-full">
+                  {quickGmTabs.map((tabId) => {
+                    const item = GM_NAV_ITEMS.find((i) => i.id === tabId)!;
+                    const active = gmMenu === tabId;
+                    return (
+                      <button
+                        key={tabId}
+                        type="button"
+                        onClick={() => onSelectGmMenu(tabId)}
+                        className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
+                          active
+                            ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                        }`}
+                      >
+                        {getGmMenuIcon(tabId, 19)}
+                        <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
+                          {item.shortLabel}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={onOpenGmDrawer}
+                    className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
+                      !quickGmTabs.includes(gmMenu)
+                        ? 'bg-[var(--comic-gold)] text-[#09090f] font-bold'
+                        : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
+                    }`}
+                  >
+                    <Grid size={19} />
+                    <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap">
+                      9 Menus
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 h-full">
+                  {HERO_NAV_ITEMS.map((item) => {
+                    const active = heroMenu === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onSelectHeroMenu(item.id)}
+                        className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-1 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
+                          active
+                            ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                        }`}
+                      >
+                        {getHeroMenuIcon(item.id, 19)}
+                        <span className="font-pixel-ui text-[9px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
+                          {item.shortLabel}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </nav>
+          </div>
         </div>
 
         {/* Handheld Console Footer Trim (Desktop only — hidden in Clean Paper Studio) */}
