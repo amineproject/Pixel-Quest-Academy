@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BookOpen, CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { AcademyState, AncientTome } from '../../types/lms';
+import { BulkDeleteBar } from '../../components/BulkDeleteBar';
 import {
   PixelButton,
   PixelConfirmDialog,
@@ -28,18 +29,27 @@ interface GmScrollsProps {
   state: AcademyState;
   onSaveTome: (tome: AncientTome) => void;
   onDeleteTome: (id: string) => void;
+  onDeleteTomesBatch?: (ids: string[]) => void | Promise<void>;
 }
 
 export const GmScrolls: React.FC<GmScrollsProps> = ({
   state,
   onSaveTome,
   onDeleteTome,
+  onDeleteTomesBatch,
 }) => {
   const [realmFilter, setRealmFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [previewTome, setPreviewTome] = useState<AncientTome | null>(null);
   const [editing, setEditing] = useState<AncientTome | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AncientTome | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState<'selected' | 'all' | null>(null);
+
+  useEffect(() => {
+    const valid = new Set(state.tomes.map((t) => t.id));
+    setSelectedIds((prev) => prev.filter((id) => valid.has(id)));
+  }, [state.tomes]);
 
   const [realmId, setRealmId] = useState(state.realms[0]?.id || '');
   const [title, setTitle] = useState('');
@@ -59,6 +69,25 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
         sensitivity: 'base',
       })
     );
+  const visibleIds = filtered.map((t) => t.id);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    const selectedSet = new Set(selectedIds);
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+    if (allVisibleSelected) {
+      const visibleSet = new Set(visibleIds);
+      setSelectedIds((prev) => prev.filter((id) => !visibleSet.has(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -136,6 +165,17 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
         ))}
       </PixelSelect>
 
+      <BulkDeleteBar
+        totalCount={state.tomes.length}
+        visibleIds={visibleIds}
+        selectedIds={selectedIds}
+        itemLabel="materi"
+        onToggleSelectAllVisible={toggleSelectAllVisible}
+        onClearSelection={() => setSelectedIds([])}
+        onRequestDeleteSelected={() => setBulkDeleteMode('selected')}
+        onRequestDeleteAll={() => setBulkDeleteMode('all')}
+      />
+
       {filtered.length === 0 ? (
         <PixelEmptyChest
           title="No Scrolls Found in This Chest!"
@@ -151,16 +191,29 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
           {filtered.map((tome) => {
             const realm = state.realms.find((r) => r.id === tome.realmId);
             const sched = getScheduleStatusSummary(tome, state.dungeons);
+            const isSelected = selectedIds.includes(tome.id);
             return (
-              <ThemedPanelCard key={tome.id} className="space-y-2.5">
+              <ThemedPanelCard
+                key={tome.id}
+                className={`space-y-2.5 ${isSelected ? 'ring-2 ring-[var(--accent-danger)]' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2 min-w-0">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
-                      {formatChapterLabel(tome.chapter)} · {realm?.name || 'General'}
-                    </p>
-                    <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
-                      {tome.title}
-                    </h3>
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(tome.id)}
+                      aria-label={`Pilih materi ${tome.title}`}
+                      className="w-4 h-4 mt-1 accent-[var(--accent-danger)] shrink-0 cursor-pointer"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
+                        {formatChapterLabel(tome.chapter)} · {realm?.name || 'General'}
+                      </p>
+                      <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
+                        {tome.title}
+                      </h3>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -374,6 +427,37 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
             onDeleteTome(deleteTarget.id);
             setDeleteTarget(null);
           }
+        }}
+      />
+
+      <PixelConfirmDialog
+        open={Boolean(bulkDeleteMode)}
+        title={
+          bulkDeleteMode === 'all'
+            ? 'Hapus Semua Data Materi'
+            : 'Hapus Materi Terpilih'
+        }
+        message={
+          bulkDeleteMode === 'all'
+            ? `Yakin ingin menghapus SEMUA ${state.tomes.length} materi yang telah dientrykan? Tindakan ini tidak dapat dibatalkan.`
+            : `Yakin ingin menghapus ${selectedIds.length} materi yang dipilih?`
+        }
+        confirmLabel={bulkDeleteMode === 'all' ? 'Hapus Semua' : 'Hapus Terpilih'}
+        onCancel={() => setBulkDeleteMode(null)}
+        onConfirm={() => {
+          const idsToDelete =
+            bulkDeleteMode === 'all'
+              ? state.tomes.map((t) => t.id)
+              : [...selectedIds];
+          if (idsToDelete.length > 0) {
+            if (onDeleteTomesBatch) {
+              onDeleteTomesBatch(idsToDelete);
+            } else {
+              idsToDelete.forEach((id) => onDeleteTome(id));
+            }
+          }
+          setSelectedIds([]);
+          setBulkDeleteMode(null);
         }}
       />
     </div>

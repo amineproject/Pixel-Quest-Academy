@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react';
 import {
   AcademyState,
   ActiveQuest,
   QuestDifficulty,
 } from '../../types/lms';
+import { BulkDeleteBar } from '../../components/BulkDeleteBar';
 import {
   PixelButton,
   PixelConfirmDialog,
@@ -25,17 +26,26 @@ interface GmActiveQuestsProps {
   state: AcademyState;
   onSaveQuest: (quest: ActiveQuest) => void;
   onDeleteQuest: (id: string) => void;
+  onDeleteQuestsBatch?: (ids: string[]) => void | Promise<void>;
 }
 
 export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   state,
   onSaveQuest,
   onDeleteQuest,
+  onDeleteQuestsBatch,
 }) => {
   const [realmFilter, setRealmFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ActiveQuest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ActiveQuest | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState<'selected' | 'all' | null>(null);
+
+  useEffect(() => {
+    const valid = new Set(state.quests.map((q) => q.id));
+    setSelectedIds((prev) => prev.filter((id) => valid.has(id)));
+  }, [state.quests]);
 
   const [title, setTitle] = useState('');
   const [realmId, setRealmId] = useState(state.realms[0]?.id || '');
@@ -51,6 +61,25 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   const filtered = state.quests.filter(
     (q) => realmFilter === 'all' || q.realmId === realmFilter
   );
+  const visibleIds = filtered.map((q) => q.id);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    const selectedSet = new Set(selectedIds);
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+    if (allVisibleSelected) {
+      const visibleSet = new Set(visibleIds);
+      setSelectedIds((prev) => prev.filter((id) => !visibleSet.has(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -127,6 +156,17 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
         ))}
       </PixelSelect>
 
+      <BulkDeleteBar
+        totalCount={state.quests.length}
+        visibleIds={visibleIds}
+        selectedIds={selectedIds}
+        itemLabel="tugas"
+        onToggleSelectAllVisible={toggleSelectAllVisible}
+        onClearSelection={() => setSelectedIds([])}
+        onRequestDeleteSelected={() => setBulkDeleteMode('selected')}
+        onRequestDeleteAll={() => setBulkDeleteMode('all')}
+      />
+
       {filtered.length === 0 ? (
         <PixelEmptyChest
           title="No Active Quests Found!"
@@ -140,17 +180,30 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               (d) => d.id === quest.dungeonId
             );
             const sched = getScheduleStatusSummary(quest, state.dungeons);
+            const isSelected = selectedIds.includes(quest.id);
             return (
-              <QuestCard key={quest.id} className="space-y-2.5">
+              <QuestCard
+                key={quest.id}
+                className={`space-y-2.5 ${isSelected ? 'ring-2 ring-[var(--accent-danger)]' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2 min-w-0">
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
-                      [{quest.difficulty.toUpperCase()}] · +{quest.maxExp} EXP ·{' '}
-                      {realm?.code || 'REALM'}
-                    </p>
-                    <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
-                      {quest.title}
-                    </h3>
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(quest.id)}
+                      aria-label={`Pilih tugas ${quest.title}`}
+                      className="w-4 h-4 mt-1 accent-[var(--accent-danger)] shrink-0 cursor-pointer"
+                    />
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
+                        [{quest.difficulty.toUpperCase()}] · +{quest.maxExp} EXP ·{' '}
+                        {realm?.code || 'REALM'}
+                      </p>
+                      <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+                        {quest.title}
+                      </h3>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -334,6 +387,37 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
             onDeleteQuest(deleteTarget.id);
             setDeleteTarget(null);
           }
+        }}
+      />
+
+      <PixelConfirmDialog
+        open={Boolean(bulkDeleteMode)}
+        title={
+          bulkDeleteMode === 'all'
+            ? 'Hapus Semua Data Tugas'
+            : 'Hapus Tugas Terpilih'
+        }
+        message={
+          bulkDeleteMode === 'all'
+            ? `Yakin ingin menghapus SEMUA ${state.quests.length} data tugas beserta catatan nilai tugas tersebut? Tindakan ini tidak dapat dibatalkan.`
+            : `Yakin ingin menghapus ${selectedIds.length} tugas yang dipilih beserta nilai terkait?`
+        }
+        confirmLabel={bulkDeleteMode === 'all' ? 'Hapus Semua' : 'Hapus Terpilih'}
+        onCancel={() => setBulkDeleteMode(null)}
+        onConfirm={() => {
+          const idsToDelete =
+            bulkDeleteMode === 'all'
+              ? state.quests.map((q) => q.id)
+              : [...selectedIds];
+          if (idsToDelete.length > 0) {
+            if (onDeleteQuestsBatch) {
+              onDeleteQuestsBatch(idsToDelete);
+            } else {
+              idsToDelete.forEach((id) => onDeleteQuest(id));
+            }
+          }
+          setSelectedIds([]);
+          setBulkDeleteMode(null);
         }}
       />
     </div>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { AcademyState, Dungeon } from '../../types/lms';
+import { BulkDeleteBar } from '../../components/BulkDeleteBar';
 import {
   PixelButton,
   PixelConfirmDialog,
@@ -20,6 +21,7 @@ interface GmDungeonsProps {
   state: AcademyState;
   onSaveDungeon: (dungeon: Dungeon) => void;
   onDeleteDungeon: (id: string) => void;
+  onDeleteDungeonsBatch?: (ids: string[]) => void | Promise<void>;
 }
 
 const EMPTY_FORM: Omit<Dungeon, 'id'> = {
@@ -35,12 +37,20 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
   state,
   onSaveDungeon,
   onDeleteDungeon,
+  onDeleteDungeonsBatch,
 }) => {
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Dungeon, 'id'>>(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<Dungeon | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState<'selected' | 'all' | null>(null);
+
+  useEffect(() => {
+    const valid = new Set(state.dungeons.map((d) => d.id));
+    setSelectedIds((prev) => prev.filter((id) => valid.has(id)));
+  }, [state.dungeons]);
 
   const uniqueTiers = Array.from(
     new Set(state.dungeons.map((d) => d.tier).filter(Boolean))
@@ -51,6 +61,25 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
   const filtered = sortedDungeons.filter(
     (d) => tierFilter === 'all' || d.tier === tierFilter
   );
+  const visibleIds = filtered.map((d) => d.id);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    const selectedSet = new Set(selectedIds);
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+    if (allVisibleSelected) {
+      const visibleSet = new Set(visibleIds);
+      setSelectedIds((prev) => prev.filter((id) => !visibleSet.has(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
 
   const openCreate = () => {
     setEditingId(null);
@@ -120,6 +149,18 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
         ))}
       </div>
 
+      {/* Bulk Selection & Delete Bar */}
+      <BulkDeleteBar
+        totalCount={state.dungeons.length}
+        visibleIds={visibleIds}
+        selectedIds={selectedIds}
+        itemLabel="kelas"
+        onToggleSelectAllVisible={toggleSelectAllVisible}
+        onClearSelection={() => setSelectedIds([])}
+        onRequestDeleteSelected={() => setBulkDeleteMode('selected')}
+        onRequestDeleteAll={() => setBulkDeleteMode('all')}
+      />
+
       {/* Dungeon List */}
       {filtered.length === 0 ? (
         <PixelEmptyChest
@@ -138,16 +179,29 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
               (h) => h.dungeonId === dungeon.id
             ).length;
             const ratio = Math.round((memberCount / dungeon.capacity) * 100);
+            const isSelected = selectedIds.includes(dungeon.id);
             return (
-              <ThemedPanelCard key={dungeon.id} className="space-y-3">
+              <ThemedPanelCard
+                key={dungeon.id}
+                className={`space-y-3 ${isSelected ? 'ring-2 ring-[var(--accent-danger)]' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words [overflow-wrap:anywhere]">
-                      {dungeon.guildCode} · {dungeon.tier}
-                    </p>
-                    <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
-                      {dungeon.name}
-                    </h3>
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(dungeon.id)}
+                      aria-label={`Pilih kelas ${dungeon.name}`}
+                      className="w-4 h-4 mt-1 accent-[var(--accent-danger)] shrink-0 cursor-pointer"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words [overflow-wrap:anywhere]">
+                        {dungeon.guildCode} · {dungeon.tier}
+                      </p>
+                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
+                        {dungeon.name}
+                      </h3>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
@@ -423,6 +477,37 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
             onDeleteDungeon(deleteTarget.id);
             setDeleteTarget(null);
           }
+        }}
+      />
+
+      <PixelConfirmDialog
+        open={Boolean(bulkDeleteMode)}
+        title={
+          bulkDeleteMode === 'all'
+            ? 'Hapus Semua Data Kelas'
+            : 'Hapus Kelas Terpilih'
+        }
+        message={
+          bulkDeleteMode === 'all'
+            ? `Yakin ingin menghapus SEMUA ${state.dungeons.length} data kelas yang telah dientrykan? Siswa yang berada di kelas tersebut akan menjadi "Belum ada kelas".`
+            : `Yakin ingin menghapus ${selectedIds.length} data kelas yang dipilih?`
+        }
+        confirmLabel={bulkDeleteMode === 'all' ? 'Hapus Semua' : 'Hapus Terpilih'}
+        onCancel={() => setBulkDeleteMode(null)}
+        onConfirm={() => {
+          const idsToDelete =
+            bulkDeleteMode === 'all'
+              ? state.dungeons.map((d) => d.id)
+              : [...selectedIds];
+          if (idsToDelete.length > 0) {
+            if (onDeleteDungeonsBatch) {
+              onDeleteDungeonsBatch(idsToDelete);
+            } else {
+              idsToDelete.forEach((id) => onDeleteDungeon(id));
+            }
+          }
+          setSelectedIds([]);
+          setBulkDeleteMode(null);
         }}
       />
     </div>

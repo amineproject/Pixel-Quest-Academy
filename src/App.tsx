@@ -644,17 +644,59 @@ export default function App() {
     showToast(`Dungeon "${dungeon.name}" saved!`);
   };
 
+  const syncBatchCloudDelete = async (
+    promises: Promise<CloudSyncResult>[],
+    successMsg: string
+  ) => {
+    const results = await Promise.all(promises);
+    const firstErr = results.find((r) => !r.ok && r.error);
+    if (firstErr?.error) {
+      showToast(`Sebagian data gagal dihapus di Cloud: ${firstErr.error}`, 'danger');
+      if (isCredentialSyncError(firstErr.error)) {
+        openGmReauthModal();
+      }
+    } else {
+      showToast(successMsg, 'warning');
+    }
+  };
+
   const handleDeleteDungeon = (id: string) => {
     playRetroSound('confirm', stateRef.current.settings.soundEnabled);
     const next = {
       ...stateRef.current,
       dungeons: stateRef.current.dungeons.filter((d) => d.id !== id),
+      heroes: stateRef.current.heroes.map((h) =>
+        h.dungeonId === id ? { ...h, dungeonId: '' } : h
+      ),
     };
     stateRef.current = next;
     setState(next);
     reportCloudSync(cloudDeleteDungeon(id, getGmAuth()));
     fetch(`/api/dungeons/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Dungeon deleted.', 'warning');
+  };
+
+  const handleDeleteDungeonsBatch = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const idSet = new Set(ids);
+    const next = {
+      ...stateRef.current,
+      dungeons: stateRef.current.dungeons.filter((d) => !idSet.has(d.id)),
+      heroes: stateRef.current.heroes.map((h) =>
+        idSet.has(h.dungeonId) ? { ...h, dungeonId: '' } : h
+      ),
+    };
+    stateRef.current = next;
+    setState(next);
+    const gmAuth = getGmAuth();
+    ids.forEach((id) => {
+      fetch(`/api/dungeons/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    await syncBatchCloudDelete(
+      ids.map((id) => cloudDeleteDungeon(id, gmAuth)),
+      `Berhasil menghapus ${ids.length} data kelas!`
+    );
   };
 
   const handleSaveHero = (hero: HeroStudent) => {
@@ -893,6 +935,27 @@ export default function App() {
     showToast('Hero removed from roster.', 'warning');
   };
 
+  const handleDeleteHeroesBatch = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const idSet = new Set(ids);
+    const next = {
+      ...stateRef.current,
+      heroes: stateRef.current.heroes.filter((h) => !idSet.has(h.id)),
+      grades: stateRef.current.grades.filter((g) => !idSet.has(g.heroId)),
+    };
+    stateRef.current = next;
+    setState(next);
+    const gmAuth = getGmAuth();
+    ids.forEach((id) => {
+      fetch(`/api/heroes/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    await syncBatchCloudDelete(
+      ids.map((id) => cloudDeleteHero(id, gmAuth)),
+      `Berhasil menghapus ${ids.length} data siswa!`
+    );
+  };
+
   const handleSaveNotice = (notice: QuestNotice) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
     const next = { ...stateRef.current, notices: upsertItem(stateRef.current.notices, notice) };
@@ -939,12 +1002,59 @@ export default function App() {
     const next = {
       ...stateRef.current,
       realms: stateRef.current.realms.filter((r) => r.id !== id),
+      tomes: stateRef.current.tomes.filter((t) => t.realmId !== id),
+      quests: stateRef.current.quests.filter((q) => q.realmId !== id),
+      grades: stateRef.current.grades.filter((g) => g.realmId !== id),
+      dungeons: stateRef.current.dungeons.map((d) =>
+        d.realmIds ? { ...d, realmIds: d.realmIds.filter((rid) => rid !== id) } : d
+      ),
+      heroes: stateRef.current.heroes.map((h) =>
+        h.enrolledRealmIds
+          ? { ...h, enrolledRealmIds: h.enrolledRealmIds.filter((rid) => rid !== id) }
+          : h
+      ),
     };
     stateRef.current = next;
     setState(next);
     reportCloudSync(cloudDeleteRealm(id, getGmAuth()));
     fetch(`/api/realms/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Realm deleted.', 'warning');
+  };
+
+  const handleDeleteRealmsBatch = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const idSet = new Set(ids);
+    const next = {
+      ...stateRef.current,
+      realms: stateRef.current.realms.filter((r) => !idSet.has(r.id)),
+      tomes: stateRef.current.tomes.filter((t) => !idSet.has(t.realmId)),
+      quests: stateRef.current.quests.filter((q) => !idSet.has(q.realmId)),
+      grades: stateRef.current.grades.filter((g) => !idSet.has(g.realmId)),
+      dungeons: stateRef.current.dungeons.map((d) =>
+        d.realmIds
+          ? { ...d, realmIds: d.realmIds.filter((rid) => !idSet.has(rid)) }
+          : d
+      ),
+      heroes: stateRef.current.heroes.map((h) =>
+        h.enrolledRealmIds
+          ? {
+              ...h,
+              enrolledRealmIds: h.enrolledRealmIds.filter((rid) => !idSet.has(rid)),
+            }
+          : h
+      ),
+    };
+    stateRef.current = next;
+    setState(next);
+    const gmAuth = getGmAuth();
+    ids.forEach((id) => {
+      fetch(`/api/realms/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    await syncBatchCloudDelete(
+      ids.map((id) => cloudDeleteRealm(id, gmAuth)),
+      `Berhasil menghapus ${ids.length} mata pelajaran!`
+    );
   };
 
   const handleSaveTome = (tome: AncientTome) => {
@@ -974,6 +1084,26 @@ export default function App() {
     showToast('Tome deleted.', 'warning');
   };
 
+  const handleDeleteTomesBatch = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const idSet = new Set(ids);
+    const next = {
+      ...stateRef.current,
+      tomes: stateRef.current.tomes.filter((t) => !idSet.has(t.id)),
+    };
+    stateRef.current = next;
+    setState(next);
+    const gmAuth = getGmAuth();
+    ids.forEach((id) => {
+      fetch(`/api/tomes/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    await syncBatchCloudDelete(
+      ids.map((id) => cloudDeleteTome(id, gmAuth)),
+      `Berhasil menghapus ${ids.length} materi!`
+    );
+  };
+
   const handleSaveQuest = (quest: ActiveQuest) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
     const next = { ...stateRef.current, quests: upsertItem(stateRef.current.quests, quest) };
@@ -1000,6 +1130,27 @@ export default function App() {
     reportCloudSync(cloudDeleteQuest(id, getGmAuth()));
     fetch(`/api/quests/${id}`, { method: 'DELETE' }).catch(() => {});
     showToast('Quest deleted.', 'warning');
+  };
+
+  const handleDeleteQuestsBatch = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const idSet = new Set(ids);
+    const next = {
+      ...stateRef.current,
+      quests: stateRef.current.quests.filter((q) => !idSet.has(q.id)),
+      grades: stateRef.current.grades.filter((g) => !idSet.has(g.questId)),
+    };
+    stateRef.current = next;
+    setState(next);
+    const gmAuth = getGmAuth();
+    ids.forEach((id) => {
+      fetch(`/api/quests/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    await syncBatchCloudDelete(
+      ids.map((id) => cloudDeleteQuest(id, gmAuth)),
+      `Berhasil menghapus ${ids.length} tugas!`
+    );
   };
 
   const handleSaveGrade = (grade: ExpGrade) => {
@@ -1222,6 +1373,7 @@ export default function App() {
               state={state}
               onSaveDungeon={handleSaveDungeon}
               onDeleteDungeon={handleDeleteDungeon}
+              onDeleteDungeonsBatch={handleDeleteDungeonsBatch}
             />
           )}
           {gmMenu === 'heroes' && (
@@ -1230,6 +1382,7 @@ export default function App() {
               onSaveHero={handleSaveHero}
               onImportHeroes={handleImportHeroes}
               onDeleteHero={handleDeleteHero}
+              onDeleteHeroesBatch={handleDeleteHeroesBatch}
             />
           )}
           {gmMenu === 'quest_board' && (
@@ -1244,6 +1397,7 @@ export default function App() {
               state={state}
               onSaveRealm={handleSaveRealm}
               onDeleteRealm={handleDeleteRealm}
+              onDeleteRealmsBatch={handleDeleteRealmsBatch}
             />
           )}
           {gmMenu === 'scrolls' && (
@@ -1251,6 +1405,7 @@ export default function App() {
               state={state}
               onSaveTome={handleSaveTome}
               onDeleteTome={handleDeleteTome}
+              onDeleteTomesBatch={handleDeleteTomesBatch}
             />
           )}
           {gmMenu === 'active_quests' && (
@@ -1258,6 +1413,7 @@ export default function App() {
               state={state}
               onSaveQuest={handleSaveQuest}
               onDeleteQuest={handleDeleteQuest}
+              onDeleteQuestsBatch={handleDeleteQuestsBatch}
             />
           )}
           {gmMenu === 'exp_loot' && (

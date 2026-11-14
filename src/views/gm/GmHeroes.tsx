@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AcademyState, AvatarClass, HeroStudent } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
+import { BulkDeleteBar } from '../../components/BulkDeleteBar';
 import {
   DungeonOptGroupOptions,
   PixelButton,
@@ -47,6 +48,7 @@ interface GmHeroesProps {
   onSaveHero: (hero: HeroStudent) => void;
   onImportHeroes?: (heroes: HeroStudent[]) => void | Promise<void>;
   onDeleteHero: (id: string) => void;
+  onDeleteHeroesBatch?: (ids: string[]) => void | Promise<void>;
 }
 
 const AVATARS: { value: AvatarClass; label: string }[] = [
@@ -62,6 +64,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   onSaveHero,
   onImportHeroes,
   onDeleteHero,
+  onDeleteHeroesBatch,
 }) => {
   const [search, setSearch] = useState('');
   const [dungeonFilter, setDungeonFilter] = useState('all');
@@ -70,6 +73,13 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   const [editingHero, setEditingHero] = useState<HeroStudent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<HeroStudent | null>(null);
   const [clearUsernameTarget, setClearUsernameTarget] = useState<HeroStudent | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState<'selected' | 'all' | null>(null);
+
+  useEffect(() => {
+    const valid = new Set(state.heroes.map((h) => h.id));
+    setSelectedIds((prev) => prev.filter((id) => valid.has(id)));
+  }, [state.heroes]);
 
   const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
 
@@ -192,6 +202,26 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
       if (idxA !== idxB) return idxA - idxB;
       return a.name.localeCompare(b.name, 'id', { sensitivity: 'base' });
     });
+
+  const visibleIds = filtered.map((h) => h.id);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    const selectedSet = new Set(selectedIds);
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+    if (allVisibleSelected) {
+      const visibleSet = new Set(visibleIds);
+      setSelectedIds((prev) => prev.filter((id) => !visibleSet.has(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
 
   const getDungeonDefaultRealms = (dId: string): string[] => {
     const dng = state.dungeons.find((d) => d.id === dId);
@@ -422,6 +452,17 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
         )}
       </div>
 
+      <BulkDeleteBar
+        totalCount={state.heroes.length}
+        visibleIds={visibleIds}
+        selectedIds={selectedIds}
+        itemLabel="siswa"
+        onToggleSelectAllVisible={toggleSelectAllVisible}
+        onClearSelection={() => setSelectedIds([])}
+        onRequestDeleteSelected={() => setBulkDeleteMode('selected')}
+        onRequestDeleteAll={() => setBulkDeleteMode('all')}
+      />
+
       {filtered.length === 0 ? (
         <PixelEmptyChest
           title="No Heroes Found!"
@@ -434,11 +475,22 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
             const exp = getHeroTotalExp(hero.id, state.grades);
             const lvl = getHeroLevelProgress(exp);
             const heroRealmIds = getEffectiveRealmsForHero(hero);
+            const isSelected = selectedIds.includes(hero.id);
 
             return (
-              <ThemedPanelCard key={hero.id} className="p-3.5 space-y-2.5">
+              <ThemedPanelCard
+                key={hero.id}
+                className={`p-3.5 space-y-2.5 ${isSelected ? 'ring-2 ring-[var(--accent-danger)]' : ''}`}
+              >
                 <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(hero.id)}
+                      aria-label={`Pilih siswa ${hero.name}`}
+                      className="w-4 h-4 accent-[var(--accent-danger)] shrink-0 cursor-pointer"
+                    />
                     <PixelAvatar avatar={hero.avatar} size={44} className="shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -1103,6 +1155,37 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
           )}
         </div>
       </PixelModal>
+
+      <PixelConfirmDialog
+        open={Boolean(bulkDeleteMode)}
+        title={
+          bulkDeleteMode === 'all'
+            ? 'Hapus Semua Data Siswa'
+            : 'Hapus Siswa Terpilih'
+        }
+        message={
+          bulkDeleteMode === 'all'
+            ? `Yakin ingin menghapus SEMUA ${state.heroes.length} akun siswa beserta seluruh catatan nilainya? Tindakan ini tidak dapat dibatalkan.`
+            : `Yakin ingin menghapus ${selectedIds.length} akun siswa yang dipilih beserta catatan nilainya?`
+        }
+        confirmLabel={bulkDeleteMode === 'all' ? 'Hapus Semua' : 'Hapus Terpilih'}
+        onCancel={() => setBulkDeleteMode(null)}
+        onConfirm={() => {
+          const idsToDelete =
+            bulkDeleteMode === 'all'
+              ? state.heroes.map((h) => h.id)
+              : [...selectedIds];
+          if (idsToDelete.length > 0) {
+            if (onDeleteHeroesBatch) {
+              onDeleteHeroesBatch(idsToDelete);
+            } else {
+              idsToDelete.forEach((id) => onDeleteHero(id));
+            }
+          }
+          setSelectedIds([]);
+          setBulkDeleteMode(null);
+        }}
+      />
     </div>
   );
 };
