@@ -1,4 +1,11 @@
-import { Dungeon, ExpGrade, GradeStatus, HeroStudent } from '../types/lms';
+import {
+  ActiveQuest,
+  Dungeon,
+  ExpGrade,
+  GradeStatus,
+  HeroStudent,
+  Realm,
+} from '../types/lms';
 
 export type LetterRank = 'S' | 'A' | 'B' | 'C' | 'D';
 
@@ -85,6 +92,193 @@ export function formatRetroDate(isoDate: string): string {
     return isoDate;
   }
   return `${day} ${months[monthIndex]} ${year}`;
+}
+
+export interface DeadlineUrgency {
+  daysRemaining: number;
+  isOverdue: boolean;
+  isUrgent: boolean;
+  label: string;
+}
+
+export function getDeadlineUrgency(deadlineIso: string): DeadlineUrgency {
+  if (!deadlineIso || !/^\d{4}-\d{2}-\d{2}$/.test(deadlineIso)) {
+    return {
+      daysRemaining: 999,
+      isOverdue: false,
+      isUrgent: false,
+      label: '-',
+    };
+  }
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const [y, m, d] = deadlineIso.split('-').map((n) => parseInt(n, 10));
+  const targetUtc = Date.UTC(y, m - 1, d);
+  const diffDays = Math.round((targetUtc - todayUtc) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      daysRemaining: diffDays,
+      isOverdue: true,
+      isUrgent: true,
+      label: `Terlewat ${Math.abs(diffDays)} hari`,
+    };
+  }
+  if (diffDays === 0) {
+    return {
+      daysRemaining: 0,
+      isOverdue: false,
+      isUrgent: true,
+      label: 'Tenggat Hari Ini!',
+    };
+  }
+  if (diffDays === 1) {
+    return {
+      daysRemaining: 1,
+      isOverdue: false,
+      isUrgent: true,
+      label: 'Besok (1 hari lagi)',
+    };
+  }
+  if (diffDays === 2) {
+    return {
+      daysRemaining: 2,
+      isOverdue: false,
+      isUrgent: true,
+      label: '2 hari lagi',
+    };
+  }
+  return {
+    daysRemaining: diffDays,
+    isOverdue: false,
+    isUrgent: false,
+    label: `${diffDays} hari lagi`,
+  };
+}
+
+export interface HeroAchievementBadge {
+  id: string;
+  title: string;
+  description: string;
+  unlocked: boolean;
+  progressLabel: string;
+  tone: 'gold' | 'cyan' | 'emerald' | 'magenta';
+}
+
+export interface HeroAchievementSummary {
+  streakCount: number;
+  onTimeCount: number;
+  tuntasCount: number;
+  unlockedCount: number;
+  badges: HeroAchievementBadge[];
+}
+
+export function getHeroAchievements(
+  hero: HeroStudent,
+  quests: ActiveQuest[],
+  grades: ExpGrade[],
+  _realms: Realm[]
+): HeroAchievementSummary {
+  const heroGrades = grades.filter((g) => g.heroId === hero.id);
+  const questMap = new Map(quests.map((q) => [q.id, q]));
+
+  const tuntasGrades = heroGrades.filter(
+    (g) => getEffectiveGradeStatus(g) === 'tuntas'
+  );
+  const remidialCount = heroGrades.filter(
+    (g) => getEffectiveGradeStatus(g) === 'remidial'
+  ).length;
+
+  const isGradeOnTime = (g: ExpGrade): boolean => {
+    const q = questMap.get(g.questId);
+    if (!q?.deadline || !g.gradedDate) return true;
+    return g.gradedDate <= q.deadline;
+  };
+
+  const onTimeCount = tuntasGrades.filter(isGradeOnTime).length;
+
+  // Compute current uninterrupted streak across chronological graded tasks
+  const orderedQuests = [...quests]
+    .filter((q) => heroGrades.some((g) => g.questId === q.id))
+    .sort((a, b) => (a.deadline || '').localeCompare(b.deadline || ''));
+
+  let streakCount = 0;
+  for (let i = orderedQuests.length - 1; i >= 0; i--) {
+    const q = orderedQuests[i];
+    const g = heroGrades.find((gr) => gr.questId === q.id);
+    if (g && getEffectiveGradeStatus(g) === 'tuntas' && isGradeOnTime(g)) {
+      streakCount++;
+    } else if (g && getEffectiveGradeStatus(g) !== 'proses') {
+      break;
+    }
+  }
+  // Also allow streak from tuntas grades without matching quest entries if orderedQuests is empty
+  if (orderedQuests.length === 0 && onTimeCount > 0) {
+    streakCount = onTimeCount;
+  }
+
+  const completedRealms = new Set(tuntasGrades.map((g) => g.realmId)).size;
+  const hasSecuredAccount = Boolean(hero.username?.trim()) && Boolean(hero.hasPin);
+
+  const badges: HeroAchievementBadge[] = [
+    {
+      id: 'first_quest',
+      title: 'Langkah Pertama',
+      description: 'Menyelesaikan minimal 1 tugas hingga berstatus Tuntas.',
+      unlocked: tuntasGrades.length >= 1,
+      progressLabel: `${Math.min(1, tuntasGrades.length)}/1`,
+      tone: 'cyan',
+    },
+    {
+      id: 'ontime_streak',
+      title: 'Rajin Tepat Waktu',
+      description: 'Mencapai streak minimal 2 tugas Tuntas sebelum tenggat.',
+      unlocked: streakCount >= 2 || onTimeCount >= 2,
+      progressLabel: `${Math.min(2, Math.max(streakCount, onTimeCount))}/2`,
+      tone: 'gold',
+    },
+    {
+      id: 'no_remidial',
+      title: 'Bebas Remidial',
+      description: 'Minimal 2 tugas Tuntas dengan catatan 0 tugas Remidial.',
+      unlocked: tuntasGrades.length >= 2 && remidialCount === 0,
+      progressLabel:
+        remidialCount > 0 ? 'Ada Remidial' : `${Math.min(2, tuntasGrades.length)}/2`,
+      tone: 'emerald',
+    },
+    {
+      id: 'realm_explorer',
+      title: 'Penjelajah Mapel',
+      description: 'Menuntaskan tugas pada minimal 2 mata pelajaran berbeda.',
+      unlocked: completedRealms >= 2,
+      progressLabel: `${Math.min(2, completedRealms)}/2`,
+      tone: 'cyan',
+    },
+    {
+      id: 'mission_master',
+      title: 'Penakluk Misi',
+      description: 'Mengoleksi minimal 5 tugas dengan status Tuntas.',
+      unlocked: tuntasGrades.length >= 5,
+      progressLabel: `${Math.min(5, tuntasGrades.length)}/5`,
+      tone: 'gold',
+    },
+    {
+      id: 'pin_guardian',
+      title: 'Penjaga Akun',
+      description: 'Mengaktifkan Username unik dan PIN Rahasia siswa.',
+      unlocked: hasSecuredAccount,
+      progressLabel: hasSecuredAccount ? 'Aktif' : 'Belum',
+      tone: 'magenta',
+    },
+  ];
+
+  return {
+    streakCount: Math.max(streakCount, onTimeCount > 0 ? 1 : 0),
+    onTimeCount,
+    tuntasCount: tuntasGrades.length,
+    unlockedCount: badges.filter((b) => b.unlocked).length,
+    badges,
+  };
 }
 
 const ROMAN_MAP: Record<string, string> = {

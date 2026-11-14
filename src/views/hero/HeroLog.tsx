@@ -3,8 +3,16 @@ import {
   AlertCircle,
   AlertTriangle,
   AtSign,
+  Award,
   CheckCircle2,
+  Compass,
+  Flame,
+  Lock,
+  Palette,
   Pencil,
+  ShieldCheck,
+  Sparkles,
+  Trophy,
   XCircle,
 } from 'lucide-react';
 import {
@@ -12,7 +20,9 @@ import {
   AvatarClass,
   GradeStatus,
   HeroStudent,
+  PixelTheme,
 } from '../../types/lms';
+import { THEME_STYLES } from '../../utils/themes';
 import { PixelAvatar, PixelRealmGlyph } from '../../components/PixelArt';
 import {
   PixelButton,
@@ -23,14 +33,21 @@ import {
   PixelSectionTitle,
 } from '../../components/PixelUI';
 import {
+  ThemedAchievementCard,
+  ThemedPanelCard,
+} from '../../components/ThemePrimitives';
+import {
   formatRetroDate,
   getEffectiveGradeStatus,
+  getHeroAchievements,
   getHeroEffectiveRealmIds,
 } from '../../utils/exp';
 
 interface HeroLogProps {
   state: AcademyState;
   hero: HeroStudent;
+  currentTheme?: PixelTheme;
+  onUpdateTheme?: (theme: PixelTheme) => void;
   onUpdateAvatar?: (avatar: AvatarClass) => void;
   onUpdateUsername?: (
     username: string
@@ -86,6 +103,8 @@ function renderStatusSymbol(status: GradeStatus) {
 export const HeroLog: React.FC<HeroLogProps> = ({
   state,
   hero,
+  currentTheme,
+  onUpdateTheme,
   onUpdateAvatar,
   onUpdateUsername,
 }) => {
@@ -122,6 +141,69 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   const visibleRealms = state.realms.filter((realm) =>
     relevantQuests.some((q) => q.realmId === realm.id)
   );
+
+  const achievementSummary = getHeroAchievements(
+    hero,
+    relevantQuests,
+    heroGrades,
+    state.realms
+  );
+
+  const renderBadgeIcon = (badgeId: string) => {
+    switch (badgeId) {
+      case 'first_quest':
+        return <Sparkles size={18} />;
+      case 'ontime_streak':
+        return <Flame size={18} />;
+      case 'no_remidial':
+        return <ShieldCheck size={18} />;
+      case 'realm_explorer':
+        return <Compass size={18} />;
+      case 'mission_master':
+        return <Trophy size={18} />;
+      default:
+        return <Award size={18} />;
+    }
+  };
+
+  const badgeToneStyles = (
+    tone: 'gold' | 'cyan' | 'emerald' | 'magenta',
+    unlocked: boolean
+  ) => {
+    if (!unlocked) {
+      return {
+        card: 'bg-[var(--bg-inset)] border-[var(--border-pixel)]/40 opacity-75',
+        iconBox: 'bg-zinc-300 text-zinc-700 border-[var(--border-pixel)]/60',
+        pill: 'bg-zinc-200 text-zinc-700 border-zinc-400',
+      };
+    }
+    switch (tone) {
+      case 'gold':
+        return {
+          card: 'bg-[#fff9db] border-[#09090f]',
+          iconBox: 'bg-[#ffd000] text-[#09090f] border-[#09090f]',
+          pill: 'bg-[#ffd000] text-[#09090f] border-[#09090f]',
+        };
+      case 'cyan':
+        return {
+          card: 'bg-[#e6fbff] border-[#09090f]',
+          iconBox: 'bg-[#00d8ff] text-[#09090f] border-[#09090f]',
+          pill: 'bg-[#00d8ff] text-[#09090f] border-[#09090f]',
+        };
+      case 'emerald':
+        return {
+          card: 'bg-emerald-50 border-[#09090f]',
+          iconBox: 'bg-emerald-500 text-white border-[#09090f]',
+          pill: 'bg-emerald-200 text-emerald-950 border-emerald-800',
+        };
+      case 'magenta':
+        return {
+          card: 'bg-pink-50 border-[#09090f]',
+          iconBox: 'bg-[#e11d74] text-white border-[#09090f]',
+          pill: 'bg-pink-200 text-pink-950 border-pink-800',
+        };
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -166,7 +248,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
       />
 
       {/* Status Symbol Legend & Counters (NO numeric points) */}
-      <section className="pixel-box p-4 space-y-3 overflow-hidden">
+      <ThemedPanelCard className="space-y-3">
         <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-pixel)]/40">
           <PixelAvatar avatar={hero.avatar} size={42} className="shrink-0" />
           <div className="min-w-0 flex-1">
@@ -191,63 +273,168 @@ export const HeroLog: React.FC<HeroLogProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
+          <div className="pixel-box-inset p-2.5 flex items-center gap-2 min-w-0">
             <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-emerald-600 text-white flex items-center justify-center">
-              <CheckCircle2 size={18} strokeWidth={2.75} />
+              <CheckCircle2 size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-emerald-800 leading-tight">
+              <p className="text-[11.5px] sm:text-[12px] font-bold text-emerald-800 leading-tight break-words">
                 Tuntas ({counts.tuntas})
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
+              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
                 Centang Hijau
               </p>
             </div>
           </div>
 
-          <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
+          <div className="pixel-box-inset p-2.5 flex items-center gap-2 min-w-0">
             <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-rose-600 text-white flex items-center justify-center">
-              <XCircle size={18} strokeWidth={2.75} />
+              <XCircle size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-rose-800 leading-tight">
-                Belum Dikerjakan ({counts.belum})
+              <p className="text-[11.5px] sm:text-[12px] font-bold text-rose-800 leading-tight break-words">
+                Belum ({counts.belum})
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
+              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
                 Silang Merah
               </p>
             </div>
           </div>
 
-          <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
+          <div className="pixel-box-inset p-2.5 flex items-center gap-2 min-w-0">
             <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-teal-600 text-white flex items-center justify-center">
-              <AlertCircle size={18} strokeWidth={2.75} />
+              <AlertCircle size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-teal-800 leading-tight">
-                Proses Dinilai ({counts.proses})
+              <p className="text-[11.5px] sm:text-[12px] font-bold text-teal-800 leading-tight break-words">
+                Proses ({counts.proses})
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
-                Tanda Seru Hijau
+              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
+                Tanda Seru
               </p>
             </div>
           </div>
 
-          <div className="pixel-box-inset p-2.5 flex items-center gap-2.5">
+          <div className="pixel-box-inset p-2.5 flex items-center gap-2 min-w-0">
             <span className="w-8 h-8 rounded-md shrink-0 border-2 border-[var(--border-pixel)] bg-amber-400 text-[#18181b] flex items-center justify-center">
-              <AlertTriangle size={18} strokeWidth={2.75} />
+              <AlertTriangle size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[12px] font-bold text-amber-800 leading-tight">
+              <p className="text-[11.5px] sm:text-[12px] font-bold text-amber-800 leading-tight break-words">
                 Remidial ({counts.remidial})
               </p>
-              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
+              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
                 Perlu Perbaikan
               </p>
             </div>
           </div>
         </div>
-      </section>
+      </ThemedPanelCard>
+
+      {/* Streak & Achievement Badges (Private Progress — No Numeric Grades) */}
+      <ThemedPanelCard className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-8 h-8 rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)] bg-[var(--comic-gold)] text-[#09090f] flex items-center justify-center shrink-0">
+              <Flame size={17} strokeWidth={2.5} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-pixel-ui text-[11.5px] text-[var(--text-primary)] uppercase">
+                Streak &amp; Lencana Prestasi
+              </h3>
+              <p className="text-[11.5px] text-[var(--text-secondary)]">
+                Streak tepat waktu: <strong>{achievementSummary.streakCount}x</strong> · Tepat waktu: <strong>{achievementSummary.onTimeCount}</strong>
+              </p>
+            </div>
+          </div>
+          <span className="font-pixel-ui text-[11px] font-bold text-[var(--accent-warning)] shrink-0 tabular-nums">
+            {achievementSummary.unlockedCount}/{achievementSummary.badges.length} Lencana
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {achievementSummary.badges.map((badge) => {
+            const tone = badgeToneStyles(badge.tone, badge.unlocked);
+            return (
+              <ThemedAchievementCard
+                key={badge.id}
+                unlocked={badge.unlocked}
+                title={badge.title}
+                description={badge.description}
+                statusLabel={badge.unlocked ? 'Terbuka' : badge.progressLabel}
+                icon={badge.unlocked ? renderBadgeIcon(badge.id) : <Lock size={16} />}
+                fallbackToneClass={tone.card}
+                fallbackIconClass={tone.iconBox}
+              />
+            );
+          })}
+        </div>
+      </ThemedPanelCard>
+
+      {/* Personal Theme Style & Font Switcher (Client Preference Only) */}
+      {onUpdateTheme && (
+        <ThemedPanelCard className="space-y-3">
+          <div className="flex items-center gap-2.5 pb-2 border-b border-[var(--border-pixel)]/40">
+            <span className="w-8 h-8 rounded-md border-2 border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)] flex items-center justify-center shrink-0">
+              <Palette size={17} />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)] uppercase">
+                Gaya Tampilan &amp; Font Belajar
+              </h3>
+              <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
+                Pilih gaya visual, bentuk bingkai, dan jenis huruf yang paling nyaman di matamu.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {THEME_STYLES.map((style) => {
+              const active = (currentTheme ?? state.settings.theme) === style.id;
+              return (
+                <button
+                  key={style.id}
+                  type="button"
+                  onClick={() => onUpdateTheme(style.id)}
+                  className={`p-3 text-left transition-all cursor-pointer flex items-center justify-between gap-2.5 border-2 rounded-[var(--inset-radius)] ${
+                    active
+                      ? 'bg-[var(--surface-tint)] border-[var(--border-pixel)] shadow-[2px_2px_0_0_var(--shadow-ink)]'
+                      : 'bg-[var(--bg-inset)] border-[var(--border-pixel)]/45 hover:border-[var(--border-pixel)]'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-pixel-display text-[12px] text-[var(--text-primary)] truncate">
+                        {style.label}
+                      </span>
+                      {active && (
+                        <span className="font-pixel-ui text-[9.5px] px-1.5 py-0.5 rounded bg-[var(--accent-primary)] text-[var(--text-on-accent)] shrink-0">
+                          AKTIF
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-semibold text-[var(--accent-warning)] truncate">
+                      {style.fontLabel}
+                    </p>
+                    <p className="text-[11.5px] text-[var(--text-secondary)] leading-snug">
+                      {style.tagline}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    {style.previewColors.map((hex) => (
+                      <span
+                        key={hex}
+                        className="w-3.5 h-3.5 rounded-sm border border-[var(--border-pixel)]"
+                        style={{ backgroundColor: hex }}
+                      />
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </ThemedPanelCard>
+      )}
 
       {/* Status Breakdown Grouped By Realm (Symbols Only) */}
       <section className="space-y-3">
@@ -265,7 +452,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
             );
 
             return (
-              <article key={realm.id} className="pixel-box p-4 space-y-3 overflow-hidden">
+              <ThemedPanelCard key={realm.id} className="space-y-3">
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <PixelRealmGlyph
@@ -329,7 +516,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     );
                   })}
                 </div>
-              </article>
+              </ThemedPanelCard>
             );
           })
         )}

@@ -28,6 +28,8 @@ import {
   PixelModal,
   PixelToast,
 } from './components/PixelUI';
+import { OfflineIndicator } from './components/PWAInstallBanner';
+import { ThemeProvider } from './context/ThemeContext';
 import { playRetroSound } from './utils/sound';
 import {
   AcademyFetchContext,
@@ -79,6 +81,23 @@ import { HeroMyGuild } from './views/hero/HeroMyGuild';
 import { HeroLog } from './views/hero/HeroLog';
 
 const AUTH_KEY = 'pixel_quest_auth_session';
+const PERSONAL_THEME_KEY = 'pixel_quest_personal_theme';
+const VALID_THEMES: PixelTheme[] = [
+  'sunny_quest',
+  'daylight_rpg',
+  'nes_classic',
+  'gameboy_green',
+  'cyber_retro',
+];
+
+function loadPersonalTheme(): PixelTheme | null {
+  try {
+    const val = localStorage.getItem(PERSONAL_THEME_KEY) as PixelTheme | null;
+    return val && VALID_THEMES.includes(val) ? val : null;
+  } catch {
+    return null;
+  }
+}
 
 function loadInitialAuth(): AuthSession {
   try {
@@ -102,26 +121,39 @@ function loadInitialAuth(): AuthSession {
 }
 
 function loadInitialState(): AcademyState {
+  const personalTheme = loadPersonalTheme();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return isSupabaseConfigured()
+      const base = isSupabaseConfigured()
         ? {
             ...INITIAL_ACADEMY_STATE,
             grades: [],
             gmProfile: { ...INITIAL_ACADEMY_STATE.gmProfile, password: '' },
           }
         : INITIAL_ACADEMY_STATE;
+      return personalTheme
+        ? { ...base, settings: { ...base.settings, theme: personalTheme } }
+        : base;
     }
     const parsed = JSON.parse(raw) as Partial<AcademyState>;
     if (!parsed || !Array.isArray(parsed.dungeons) || !Array.isArray(parsed.heroes)) {
-      return INITIAL_ACADEMY_STATE;
+      return personalTheme
+        ? {
+            ...INITIAL_ACADEMY_STATE,
+            settings: { ...INITIAL_ACADEMY_STATE.settings, theme: personalTheme },
+          }
+        : INITIAL_ACADEMY_STATE;
     }
     const baseState: AcademyState = {
       ...INITIAL_ACADEMY_STATE,
       ...parsed,
       gmProfile: { ...INITIAL_ACADEMY_STATE.gmProfile, ...parsed.gmProfile },
-      settings: { ...INITIAL_ACADEMY_STATE.settings, ...parsed.settings },
+      settings: {
+        ...INITIAL_ACADEMY_STATE.settings,
+        ...parsed.settings,
+        ...(personalTheme ? { theme: personalTheme } : {}),
+      },
     };
     if (isSupabaseConfigured()) {
       return {
@@ -286,10 +318,15 @@ export default function App() {
     async (overrideAuth?: AuthSession): Promise<AcademyState | null> => {
       const mergeRemote = (remote: Partial<AcademyState>): AcademyState => {
         const prev = stateRef.current;
+        const personalTheme = loadPersonalTheme();
         const next: AcademyState = {
           ...prev,
           ...remote,
-          settings: { ...prev.settings, ...(remote.settings || {}) },
+          settings: {
+            ...prev.settings,
+            ...(remote.settings || {}),
+            ...(personalTheme ? { theme: personalTheme } : {}),
+          },
           gmProfile: { ...prev.gmProfile, ...(remote.gmProfile || {}) },
         };
         stateRef.current = next;
@@ -424,6 +461,11 @@ export default function App() {
   };
 
   const handleUpdateTheme = (theme: PixelTheme) => {
+    try {
+      localStorage.setItem(PERSONAL_THEME_KEY, theme);
+    } catch {
+      // Ignore storage error
+    }
     setState((prev) => ({
       ...prev,
       settings: { ...prev.settings, theme },
@@ -483,11 +525,20 @@ export default function App() {
     setIsSyncing(false);
     if (updated) {
       playRetroSound('save', stateRef.current.settings.soundEnabled);
-      showToast('✓ Data terbaru disinkronkan dari Cloud!', 'success');
+      showToast(
+        `Data Cloud disinkronkan (${updated.dungeons.length} kelas, ${updated.heroes.length} siswa).`,
+        'success'
+      );
     } else if (!isSupabaseConfigured()) {
-      showToast('Hubungkan Supabase Cloud di System Settings agar lintas perangkat aktif.', 'warning');
+      showToast(
+        'Cloud belum dihubungkan. Buka System Settings untuk menghubungkan Supabase.',
+        'warning'
+      );
     } else {
-      showToast('Cloud terhubung (belum ada perubahan baru).', 'warning');
+      showToast(
+        `Data sudah mutakhir (${stateRef.current.dungeons.length} kelas, ${stateRef.current.heroes.length} siswa).`,
+        'success'
+      );
     }
   }, [syncFromRemote, showToast]);
 
@@ -556,6 +607,47 @@ export default function App() {
       body: JSON.stringify(hero),
     }).catch(() => {});
     showToast(`Hero "${hero.name}" updated!`);
+  };
+
+  const handleImportHeroes = async (newHeroes: HeroStudent[]) => {
+    if (newHeroes.length === 0) return;
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const sanitizedList: HeroStudent[] = newHeroes.map((hero) => ({
+      ...hero,
+      hasPin:
+        typeof hero.pin === 'string'
+          ? hero.pin.trim().length > 0
+          : Boolean(hero.hasPin),
+      ...(isSupabaseConfigured() ? { pin: undefined } : {}),
+    }));
+
+    const existingIds = new Set(stateRef.current.heroes.map((h) => h.id));
+    const uniqueToAdd = sanitizedList.filter((h) => !existingIds.has(h.id));
+    const next = {
+      ...stateRef.current,
+      heroes: [...uniqueToAdd, ...stateRef.current.heroes],
+    };
+    stateRef.current = next;
+    setState(next);
+
+    const gmAuth = getGmAuth();
+    const results = await Promise.all(
+      newHeroes.map((hero) => cloudSyncHero(hero, gmAuth))
+    );
+    const firstErr = results.find((r) => !r.ok && r.error);
+    if (firstErr?.error) {
+      showToast(`Sebagian data gagal sync ke Cloud: ${firstErr.error}`, 'danger');
+    } else {
+      showToast(`Berhasil mengimpor ${newHeroes.length} siswa!`);
+    }
+
+    newHeroes.forEach((hero) => {
+      fetch('/api/heroes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hero),
+      }).catch(() => {});
+    });
   };
 
   const handleUpdateHeroAvatar = (avatar: AvatarClass) => {
@@ -892,6 +984,11 @@ export default function App() {
 
   const handleUpdateSettings = (settings: SystemSettings) => {
     playRetroSound('blip', settings.soundEnabled);
+    try {
+      localStorage.setItem(PERSONAL_THEME_KEY, settings.theme);
+    } catch {
+      // Ignore storage error
+    }
     const next = { ...stateRef.current, settings };
     stateRef.current = next;
     setState(next);
@@ -918,8 +1015,9 @@ export default function App() {
   // If user is not logged in (or Hero session lost/deleted), render the Retro Title & Login Screen!
   if (!authSession.isLoggedIn || (role === UserRole.HERO && !activeHero)) {
     return (
-      <>
+      <ThemeProvider theme={state.settings.theme} onChangeTheme={handleUpdateTheme}>
         <PixelToast message={toast?.message || null} tone={toast?.tone} />
+        <OfflineIndicator />
         <LoginView
           state={state}
           onLoginAsHero={handleLoginAsHero}
@@ -928,13 +1026,14 @@ export default function App() {
           onToggleSound={handleToggleSound}
           onSyncData={syncFromRemote}
         />
-      </>
+      </ThemeProvider>
     );
   }
 
   // Once authenticated, render the Handheld Retro Arcade LMS
   return (
-    <ArcadeShell
+    <ThemeProvider theme={state.settings.theme} onChangeTheme={handleUpdateTheme}>
+      <ArcadeShell
       theme={state.settings.theme}
       crtScanlines={state.settings.crtScanlines}
       soundEnabled={state.settings.soundEnabled}
@@ -957,6 +1056,7 @@ export default function App() {
       }}
     >
       <PixelToast message={toast?.message || null} tone={toast?.tone} />
+      <OfflineIndicator />
 
       {role === UserRole.GAME_MASTER ? (
         <>
@@ -977,6 +1077,7 @@ export default function App() {
             <GmHeroes
               state={state}
               onSaveHero={handleSaveHero}
+              onImportHeroes={handleImportHeroes}
               onDeleteHero={handleDeleteHero}
             />
           )}
@@ -1048,6 +1149,8 @@ export default function App() {
               <HeroLog
                 state={state}
                 hero={activeHero}
+                currentTheme={state.settings.theme}
+                onUpdateTheme={handleUpdateTheme}
                 onUpdateAvatar={handleUpdateHeroAvatar}
                 onUpdateUsername={handleUpdateHeroUsername}
               />
@@ -1077,12 +1180,12 @@ export default function App() {
                 }`}
               >
                 <span className={active ? 'text-[var(--text-on-accent)]' : 'text-[var(--accent-warning)]'}>
-                  {getGmMenuIcon(item.id, 20)}
+                  {getGmMenuIcon(item.id, 22)}
                 </span>
-                <span className="font-pixel-ui text-[10px] leading-tight">
+                <span className="font-pixel-ui text-[9.5px] sm:text-[10px] leading-tight">
                   {item.shortLabel}
                 </span>
-                <span className="font-pixel-body text-[13px] opacity-80 leading-none">
+                <span className="text-[11px] sm:text-[11.5px] font-medium opacity-85 leading-none">
                   {item.standardName}
                 </span>
               </button>
@@ -1097,6 +1200,7 @@ export default function App() {
         attemptedRoute={deniedRoute}
         onReturnToHub={handleReturnFromDenied}
       />
-    </ArcadeShell>
+      </ArcadeShell>
+    </ThemeProvider>
   );
 }

@@ -13,6 +13,7 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import { compareClassText, sortDungeonsAlphabetically } from '../../utils/exp';
 
 interface GmDungeonsProps {
@@ -138,7 +139,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
             ).length;
             const ratio = Math.round((memberCount / dungeon.capacity) * 100);
             return (
-              <article key={dungeon.id} className="pixel-box p-4 space-y-3 overflow-hidden">
+              <ThemedPanelCard key={dungeon.id} className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words [overflow-wrap:anywhere]">
@@ -209,7 +210,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                     </span>
                   )}
                 </div>
-              </article>
+              </ThemedPanelCard>
             );
           })}
         </div>
@@ -232,7 +233,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <PixelFieldLabel htmlFor="dng-code">Kode Guild</PixelFieldLabel>
               <PixelInput
@@ -282,7 +283,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
               </datalist>
 
               {/* Quick preset chips */}
-              <div className="flex flex-wrap gap-1 mt-1.5">
+              <div className="flex flex-wrap gap-1.5 mt-2">
                 {[
                   'Kelas 1-6 SD',
                   'Kelas VII SMP',
@@ -300,7 +301,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                       const actual = preset === 'Kelas 1-6 SD' ? 'Kelas 5 SD' : preset;
                       setForm({ ...form, tier: actual });
                     }}
-                    className="text-[9.5px] px-1.5 py-0.5 border border-[var(--border-pixel)]/50 bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-warning)] cursor-pointer"
+                    className="text-[10.5px] font-medium px-2 py-1 border border-[var(--border-pixel)]/50 bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-warning)] cursor-pointer"
                   >
                     +{preset}
                   </button>
@@ -335,7 +336,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
 
           {/* Hubungkan dengan Mata Pelajaran (Realms) */}
           <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <PixelFieldLabel>Mata Pelajaran di Kelas Ini (Realms)</PixelFieldLabel>
               <div className="flex items-center gap-2">
                 <button

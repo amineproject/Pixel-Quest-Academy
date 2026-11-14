@@ -31,6 +31,19 @@ import {
   PixelInput,
   PixelModal,
 } from '../../components/PixelUI';
+import { PWAInstallButton } from '../../components/PWAInstallBanner';
+import {
+  ThemeBackdropIllustration,
+  ThemeMascotIllustration,
+} from '../../components/ThemeArtwork';
+import {
+  ChibiWelcomeCard,
+  ComicPanel,
+  EditorialCard,
+  KingdomQuestBoard,
+  RPGDialogueCard,
+} from '../../components/ThemePrimitives';
+import { THEME_STYLES } from '../../utils/themes';
 import { playRetroSound } from '../../utils/sound';
 import {
   isSupabaseConfigured,
@@ -109,7 +122,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         if (!cloudRes.ok) {
           const errMap: Record<string, string> = {
             not_found:
-              'Akun Hero tidak ditemukan! Pastikan NIS/Username benar dan perangkat terhubung ke Cloud.',
+              'Akun Hero tidak ditemukan! Pastikan NIS atau Username akunmu sudah benar.',
             inactive:
               'Akun Hero ini sedang dinonaktifkan oleh Guru (Game Master).',
             pin_required:
@@ -175,7 +188,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsCheckingHero(false);
 
     if (!matched) {
-      setHeroError('Akun Hero tidak ditemukan! Pastikan NIS/Username benar dan perangkat terhubung ke Cloud.');
+      setHeroError('Akun Hero tidak ditemukan! Pastikan NIS atau Username akunmu sudah benar.');
       playRetroSound('error', latestState.settings.soundEnabled);
       return;
     }
@@ -324,47 +337,78 @@ export const LoginView: React.FC<LoginViewProps> = ({
     if (test.ok) setCloudModalOpen(false);
   };
 
+  const activeTheme = state.settings.theme;
+  const isMinimalPaper = activeTheme === 'gameboy_green';
+
   return (
     <div
-      data-theme={state.settings.theme}
-      className="min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-6 sm:px-4"
+      data-theme={activeTheme}
+      className="relative min-h-screen w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-6 sm:px-4"
     >
-      {/* Desktop Arcade / Retro OS Cabinet Exterior Trim */}
-      <div className="w-full max-w-[560px] sm:max-w-[620px] md:max-w-[680px] sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)] transition-all">
-        {/* Hardware Trim Top */}
-        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
-          <span>★ ARCADE ADVENTURE CONSOLE ★</span>
-          <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
-              −
-            </span>
-            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[8px] flex items-center justify-center leading-none font-bold">
-              □
-            </span>
-            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
-              ×
-            </span>
-          </div>
-        </div>
+      <ThemeBackdropIllustration theme={activeTheme} />
 
-        {/* Arcade Screen Viewport */}
+      {/* Theme-Adaptive Exterior Cabinet / Frame */}
+      <div
+        className={`relative z-10 w-full max-w-[560px] sm:max-w-[640px] md:max-w-[700px] console-bezel transition-all ${
+          isMinimalPaper
+            ? 'sm:p-0 sm:rounded-xl sm:border sm:border-[#d6d1c7] sm:bg-white'
+            : 'sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]'
+        }`}
+      >
+        {/* Hardware Trim Top (Hidden in Clean Paper Studio) */}
+        {!isMinimalPaper && (
+          <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
+            <span>
+              {activeTheme === 'sunny_quest'
+                ? '★ COZY PIXEL QUEST · PARCHMENT RPG ★'
+                : activeTheme === 'daylight_rpg'
+                  ? '★ SOFT CHIBI CLASSROOM · PASTEL ★'
+                  : activeTheme === 'nes_classic'
+                    ? '★ 16-BIT ROYAL CHRONICLE ★'
+                    : '★ COMIC-POP ARCADE CONSOLE ★'}
+            </span>
+            <div className="flex items-center gap-1.5" aria-hidden="true">
+              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+                −
+              </span>
+              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[8px] flex items-center justify-center leading-none font-bold">
+                □
+              </span>
+              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+                ×
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Screen Viewport */}
         <div
-          className={`relative w-full min-h-screen sm:min-h-[780px] flex flex-col bg-[var(--bg-canvas)] sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)] overflow-y-auto pixel-scroll ${
-            state.settings.crtScanlines ? 'crt-scanlines' : ''
-          }`}
+          className={`relative w-full min-h-screen sm:min-h-[780px] flex flex-col bg-[var(--bg-canvas)] overflow-y-auto pixel-scroll ${
+            isMinimalPaper
+              ? 'sm:rounded-xl'
+              : activeTheme === 'daylight_rpg'
+                ? 'sm:rounded-[20px] sm:border-2 sm:border-[var(--border-pixel)]'
+                : 'sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)]'
+          } ${state.settings.crtScanlines && !isMinimalPaper ? 'crt-scanlines' : ''}`}
         >
-          {/* Top Audio & Quick Theme Bar */}
-          <div className="flex items-center justify-between px-3 py-2 bg-[var(--surface-tint)] border-b-2 border-[var(--border-pixel)] shrink-0">
-            <div className="flex items-center gap-1.5">
-              <PixelStar size={16} className="animate-pixel-float" />
-              <span className="font-pixel-ui text-[10px] font-bold text-[var(--text-primary)]">
+          {/* Top Audio & Brand Bar */}
+          <div
+            className={`flex items-center justify-between px-3 py-2 bg-[var(--surface-tint)] comic-halftone shrink-0 ${
+              isMinimalPaper
+                ? 'border-b border-[#d6d1c7] bg-white'
+                : 'border-b-2 border-[var(--border-pixel)]'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              {!isMinimalPaper && <PixelStar size={16} className="animate-pixel-float shrink-0" />}
+              <span className="font-pixel-ui text-[10.5px] font-bold text-[var(--text-primary)] truncate">
                 PIXEL QUEST ACADEMY
               </span>
             </div>
             <button
               type="button"
               onClick={onToggleSound}
-              className="pixel-btn min-h-[32px] px-2 py-1 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer"
+              className="pixel-btn min-h-[32px] px-2 py-1 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[10px] flex items-center gap-1 cursor-pointer shrink-0"
               title={state.settings.soundEnabled ? 'Mute Audio SFX' : 'Enable Audio SFX'}
             >
               {state.settings.soundEnabled ? (
@@ -382,35 +426,103 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
 
           <div className="p-4 space-y-4 flex-1 flex flex-col justify-between">
-            {/* Cheerful Title & Mascot Hero Header */}
-            <div className="text-center space-y-2 pt-1">
-              <div className="flex items-center justify-center gap-2">
-                <PixelStar size={20} className="animate-pixel-float" />
-                <div className="animate-pixel-bounce">
-                  <PixelMascotSlime size={56} />
+            {/* 5 Distinct Theme-Specific Title Cards */}
+            {activeTheme === 'cyber_retro' ? (
+              <ComicPanel halftone className="!bg-[#1b0d42] text-white text-center space-y-2.5">
+                <div className="flex items-center justify-center gap-2.5">
+                  <PixelStar size={20} className="animate-pixel-float" />
+                  <div className="animate-pixel-bounce">
+                    <ThemeMascotIllustration theme="cyber_retro" size={50} />
+                  </div>
+                  <PixelCoin size={22} className="animate-coin-shine" />
                 </div>
-                <PixelCoin size={22} className="animate-coin-shine" />
-              </div>
-
-              <div>
-                <h1 className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--accent-primary)] tracking-wide">
-                  PIXEL QUEST
+                <div className="space-y-1">
+                  <div className="inline-block comic-slant bg-[#00d8ff] text-[#09090f] border-2 border-[#09090f] shadow-[3px_3px_0_0_#09090f] px-3.5 py-1">
+                    <h1 className="comic-unslant font-pixel-display text-[17px] sm:text-[19px] tracking-wide">
+                      PIXEL QUEST
+                    </h1>
+                  </div>
+                  <p className="font-pixel-display text-[12px] text-white tracking-wider pt-0.5">
+                    ACADEMY LMS
+                  </p>
+                  <p className="text-[12.5px] font-semibold text-[#00d8ff]">
+                    ✦ Select Your Adventure Role ✦
+                  </p>
+                </div>
+                <div className="pt-0.5">
+                  <span className="comic-slant font-pixel-ui text-[11px] font-bold text-[#09090f] animate-press-start bg-[#ffd000] px-3.5 py-1 rounded-md border-2 border-[#09090f] shadow-[2px_2px_0_#09090f] inline-block">
+                    <span className="comic-unslant inline-block">▶ PRESS START TO BEGIN</span>
+                  </span>
+                </div>
+              </ComicPanel>
+            ) : activeTheme === 'sunny_quest' ? (
+              <RPGDialogueCard
+                speaker="Guild Guide"
+                metaRight="Parchment RPG"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl border-2 border-[#4a3525] bg-gradient-to-b from-[#74ccf0] via-[#bae6fd] to-[#48bb78] flex items-center justify-center shrink-0">
+                    <div className="animate-pixel-bounce">
+                      <ThemeMascotIllustration theme="sunny_quest" size={44} />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="font-pixel-display text-[20px] sm:text-[22px] text-[#2b1d12] leading-tight">
+                      Pixel Quest Academy
+                    </h1>
+                    <p className="font-pixel-ui text-[14.5px] text-[#543c29] leading-snug mt-0.5">
+                      &ldquo;Selamat datang, Petualang! Pilih peranmu untuk mulai belajar.&rdquo;
+                    </p>
+                  </div>
+                </div>
+              </RPGDialogueCard>
+            ) : activeTheme === 'daylight_rpg' ? (
+              <ChibiWelcomeCard className="text-center space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-14 h-14 rounded-full bg-[#e0f4fc] border-2 border-[#a7f3d0] flex items-center justify-center animate-pixel-bounce">
+                    <ThemeMascotIllustration theme="daylight_rpg" size={44} />
+                  </div>
+                </div>
+                <h1 className="font-pixel-display text-[21px] text-[#133142]">
+                  Pixel Quest Academy
                 </h1>
-                <p className="font-pixel-display text-[12px] text-[var(--text-primary)] mt-0.5">
-                  ACADEMY LMS
+                <p className="text-[13.5px] font-semibold text-[#2d5368]">
+                  Selamat datang di kelas ceria! Masuk untuk membaca materi &amp; cek tugasmu.
                 </p>
-                <p className="font-pixel-body text-[16px] text-[var(--text-secondary)] mt-0.5">
-                  ✦ Select Your Adventure Role ✦
-                </p>
-              </div>
-
-              {/* Press Start Flashing Banner */}
-              <div className="py-1">
-                <span className="font-pixel-ui text-[11px] font-bold text-[var(--accent-success)] animate-press-start bg-[var(--surface-tint)] px-3 py-1 rounded-md border-2 border-[var(--border-pixel)] shadow-[2px_2px_0_var(--shadow-ink)] inline-block">
-                  ▶ PRESS START TO BEGIN
-                </span>
-              </div>
-            </div>
+              </ChibiWelcomeCard>
+            ) : activeTheme === 'nes_classic' ? (
+              <KingdomQuestBoard headerTitle="Royal Academy Gate">
+                <div className="flex items-center gap-3">
+                  <div className="w-13 h-13 border-2 border-[#311b63] bg-[#3b1d72] flex items-center justify-center shrink-0">
+                    <ThemeMascotIllustration theme="nes_classic" size={40} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="font-pixel-display text-[19px] sm:text-[21px] text-[#1e113a] leading-tight">
+                      Pixel Quest Academy
+                    </h1>
+                    <p className="text-[12.5px] font-semibold text-[#442b78] mt-0.5">
+                      Gerbang Kerajaan 16-Bit · Pilih Peran Petualanganmu
+                    </p>
+                  </div>
+                </div>
+              </KingdomQuestBoard>
+            ) : (
+              <EditorialCard className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-lg border border-[#d6d1c7] bg-[#faf8f4] flex items-center justify-center shrink-0">
+                    <ThemeMascotIllustration theme="gameboy_green" size={26} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="font-pixel-display text-[19px] text-[#18181b] leading-tight">
+                      Pixel Quest Academy
+                    </h1>
+                    <p className="text-[13px] text-[#52525b] mt-0.5">
+                      Ruang Belajar Terfokus · Pilih akun siswa atau pengajar untuk melanjutkan.
+                    </p>
+                  </div>
+                </div>
+              </EditorialCard>
+            )}
 
             {/* Role Tabs: Hero (Siswa) vs Game Master (Guru) */}
             <div className="grid grid-cols-2 gap-2.5">
@@ -438,7 +550,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 }}
                 className={`pixel-btn min-h-[46px] p-2 flex items-center justify-center gap-2 font-pixel-ui text-[11px] cursor-pointer ${
                   selectedRoleTab === UserRole.GAME_MASTER
-                    ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
+                    ? 'bg-[var(--comic-gold)] text-[#09090f] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
                 }`}
               >
@@ -460,7 +572,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       Mode Read-Only
                     </span>
                   </div>
-                  <p className="font-pixel-body text-[16px] text-[var(--text-secondary)] leading-snug">
+                  <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                     Masukkan NIS atau Username akun Hero milikmu untuk melihat pengumuman guild, materi, dan status tugas.
                   </p>
                 </div>
@@ -474,7 +586,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       id="hero-id-input"
                       name="hero-login-id"
                       autoComplete="off"
-                      placeholder="Masukkan NIS atau Username akunmu..."
+                      placeholder="Masukkan NIS atau Username..."
                       value={heroIdentifier}
                       onChange={(e) => {
                         setHeroIdentifier(e.target.value);
@@ -486,7 +598,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <div>
                     <PixelFieldLabel htmlFor="hero-pin-input">
                       <span className="inline-flex items-center gap-1">
-                        <KeyRound size={11} className="text-[var(--accent-warning)]" />
+                        <KeyRound size={12} className="text-[var(--accent-warning)]" />
                         PIN Rahasia Siswa
                       </span>
                     </PixelFieldLabel>
@@ -497,7 +609,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         type={showHeroPin ? 'text' : 'password'}
                         inputMode="numeric"
                         autoComplete="new-password"
-                        placeholder="Masukkan PIN (kosongkan jika belum ada PIN)"
+                        placeholder="PIN akun (kosongkan jika tidak ada)"
                         value={heroPin}
                         onChange={(e) => {
                           setHeroPin(e.target.value);
@@ -640,57 +752,56 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
             )}
 
-            {/* Cross-Device Cloud Sync Helper Bar */}
-            <div className="pixel-box-inset p-2.5 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[11.5px] text-[var(--text-secondary)] flex items-center gap-1.5">
-                  <Cloud size={14} className={isSupabaseConfigured() ? 'text-[var(--accent-success)]' : 'text-[var(--accent-warning)]'} />
-                  {isSupabaseConfigured()
-                    ? 'Cloud Terhubung (Siap Lintas Perangkat)'
-                    : 'Buka dari perangkat lain? Hubungkan Cloud'}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={isCloudBusy}
-                    onClick={handleManualSyncClick}
-                    className="pixel-btn min-h-[30px] px-2 py-1 text-[10px] font-pixel-ui bg-[var(--bg-surface)] text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
-                  >
-                    <RefreshCw size={11} className={isCloudBusy ? 'animate-spin' : ''} />
-                    Sync
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCloudStatus(null);
-                      setCloudModalOpen(true);
-                    }}
-                    className="pixel-btn min-h-[30px] px-2 py-1 text-[10px] font-pixel-ui bg-[var(--bg-surface-alt)] text-[var(--accent-warning)] cursor-pointer"
-                  >
-                    Hubungkan Cloud
-                  </button>
+            {/* Cross-Device Cloud Sync Helper Bar (Admin / Game Master Only) */}
+            {selectedRoleTab === UserRole.GAME_MASTER && (
+              <div className="pixel-box-inset p-2.5 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11.5px] text-[var(--text-secondary)] flex items-center gap-1.5">
+                    <Cloud size={14} className={isSupabaseConfigured() ? 'text-[var(--accent-success)]' : 'text-[var(--accent-warning)]'} />
+                    {isSupabaseConfigured()
+                      ? 'Cloud Terhubung (Siap Lintas Perangkat)'
+                      : 'Buka dari perangkat lain? Hubungkan Cloud'}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={isCloudBusy}
+                      onClick={handleManualSyncClick}
+                      className="pixel-btn min-h-[30px] px-2 py-1 text-[10px] font-pixel-ui bg-[var(--bg-surface)] text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw size={11} className={isCloudBusy ? 'animate-spin' : ''} />
+                      Sync
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCloudStatus(null);
+                        setCloudModalOpen(true);
+                      }}
+                      className="pixel-btn min-h-[30px] px-2 py-1 text-[10px] font-pixel-ui bg-[var(--bg-surface-alt)] text-[var(--accent-warning)] cursor-pointer"
+                    >
+                      Hubungkan Cloud
+                    </button>
+                  </div>
                 </div>
+                {cloudStatus && (
+                  <p className="text-[11.5px] text-[var(--accent-warning)] leading-snug">
+                    {cloudStatus}
+                  </p>
+                )}
               </div>
-              {cloudStatus && (
-                <p className="text-[11.5px] text-[var(--accent-warning)] leading-snug">
-                  {cloudStatus}
-                </p>
-              )}
-            </div>
+            )}
 
-            {/* Cheerful Theme Bar at Bottom of Title Screen */}
+            {/* PWA Install Action (Install to Mobile Home Screen) */}
+            <PWAInstallButton showGuideFallback />
+
+            {/* Multi-Style Theme Switcher at Bottom of Title Screen */}
             <div className="pt-2 border-t-2 border-[var(--border-pixel)]/20 space-y-2">
-              <span className="font-pixel-ui text-[9px] text-[var(--text-secondary)] block text-center">
-                CHOOSE RETRO THEME
+              <span className="font-pixel-ui text-[11px] text-[var(--text-secondary)] block text-center">
+                PILIH GAYA TAMPILAN &amp; FONT SESUAI SELERAMU
               </span>
-              <div className="grid grid-cols-5 gap-1.5">
-                {[
-                  { id: 'sunny_quest' as PixelTheme, label: 'Cream', color: '#fcd34d' },
-                  { id: 'daylight_rpg' as PixelTheme, label: 'MintSky', color: '#86efac' },
-                  { id: 'nes_classic' as PixelTheme, label: 'RetroOS', color: '#b79ced' },
-                  { id: 'cyber_retro' as PixelTheme, label: 'Arcade', color: '#fde047' },
-                  { id: 'gameboy_green' as PixelTheme, label: 'Mono', color: '#beb8ad' },
-                ].map((th) => (
+              <div className="grid grid-cols-5 gap-1 sm:gap-1.5">
+                {THEME_STYLES.map((th) => (
                   <button
                     key={th.id}
                     type="button"
@@ -698,17 +809,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       onUpdateTheme(th.id);
                       playRetroSound('blip', state.settings.soundEnabled);
                     }}
-                    className={`p-1.5 rounded-md text-center font-pixel-ui text-[8px] cursor-pointer border-2 transition-all ${
+                    title={th.label}
+                    className={`px-1 py-1.5 rounded-md text-center font-pixel-ui text-[9.5px] sm:text-[10.5px] leading-tight cursor-pointer border-2 transition-all overflow-hidden ${
                       state.settings.theme === th.id
-                        ? 'border-[var(--border-pixel)] bg-[var(--surface-tint)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]'
-                        : 'border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] opacity-80 hover:opacity-100'
+                        ? 'border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]'
+                        : 'border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] text-[var(--text-primary)] opacity-85 hover:opacity-100'
                     }`}
                   >
                     <span
                       className="w-3.5 h-3.5 rounded-full mx-auto block mb-1 border-2 border-[var(--border-pixel)]"
-                      style={{ backgroundColor: th.color }}
+                      style={{ backgroundColor: th.previewColors[0] }}
                     />
-                    {th.label}
+                    <span className="block truncate">{th.shortLabel}</span>
                   </button>
                 ))}
               </div>
@@ -716,16 +828,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
         </div>
 
-        {/* Hardware Trim Bottom */}
-        <div className="hidden sm:flex items-center justify-between px-2 pt-2 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
-          <span>© 2026 PIXEL QUEST ACADEMY</span>
-          <span>SELECT / START</span>
-        </div>
+        {/* Hardware Trim Bottom (Hidden in Clean Paper Studio) */}
+        {!isMinimalPaper && (
+          <div className="hidden sm:flex items-center justify-between px-2 pt-2 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
+            <span>© 2026 PIXEL QUEST ACADEMY</span>
+            <span>SELECT / START</span>
+          </div>
+        )}
       </div>
 
-      {/* Modal Connect New Device to Cloud */}
+      {/* Modal Connect New Device to Cloud (Game Master / Admin Only) */}
       <PixelModal
-        open={cloudModalOpen}
+        open={selectedRoleTab === UserRole.GAME_MASTER && cloudModalOpen}
         title="Hubungkan Perangkat ke Cloud"
         onClose={() => setCloudModalOpen(false)}
       >

@@ -13,6 +13,11 @@ import {
   PixelModal,
   PixelSectionTitle,
 } from '../../components/PixelUI';
+import {
+  QuestCard,
+  ThemedPanelCard,
+  ThemedReadingSurface,
+} from '../../components/ThemePrimitives';
 import { formatRetroDate, getHeroEffectiveRealmIds } from '../../utils/exp';
 
 interface HeroScrollLibraryProps {
@@ -57,35 +62,35 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
         <button
           type="button"
           onClick={() => setTab('tomes')}
-          className={`pixel-btn min-h-[44px] px-3 font-pixel-ui text-[11px] flex items-center justify-center gap-2 cursor-pointer ${
+          className={`pixel-btn min-h-[42px] px-2 sm:px-3 font-pixel-ui text-[9.5px] sm:text-[11px] flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
             tab === 'tomes'
               ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
               : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
           }`}
         >
-          <BookOpen size={16} />
-          Ancient Tomes
+          <BookOpen size={15} className="shrink-0" />
+          <span className="truncate">Ancient Tomes</span>
         </button>
         <button
           type="button"
           onClick={() => setTab('quests')}
-          className={`pixel-btn min-h-[44px] px-3 font-pixel-ui text-[11px] flex items-center justify-center gap-2 cursor-pointer ${
+          className={`pixel-btn min-h-[42px] px-2 sm:px-3 font-pixel-ui text-[9.5px] sm:text-[11px] flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
             tab === 'quests'
               ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
               : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
           }`}
         >
-          <Sword size={16} />
-          Quest Guides
+          <Sword size={15} className="shrink-0" />
+          <span className="truncate">Quest Guides</span>
         </button>
       </div>
 
       {/* Realm Horizontal Selector */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         <button
           type="button"
           onClick={() => setSelectedRealmId('all')}
-          className={`pixel-btn min-h-[40px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+          className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
             selectedRealmId === 'all'
               ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
               : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -98,7 +103,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
             key={realm.id}
             type="button"
             onClick={() => setSelectedRealmId(realm.id)}
-            className={`pixel-btn min-h-[40px] px-3 font-pixel-ui text-[10px] flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               selectedRealmId === realm.id
                 ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
                 : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -138,7 +143,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
             {filteredTomes.map((tome) => {
               const realm = state.realms.find((r) => r.id === tome.realmId);
               return (
-                <article key={tome.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+                <ThemedPanelCard key={tome.id} className="space-y-2.5">
                   <div className="flex items-start gap-3">
                     {realm && (
                       <div className="w-10 h-10 shrink-0 pixel-box-inset flex items-center justify-center">
@@ -153,7 +158,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                       <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
                         Bab {tome.chapter} · {realm?.name} · {tome.readMinutes} min read
                       </p>
-                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
+                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
                         {tome.title}
                       </h3>
                     </div>
@@ -181,7 +186,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                       Read Tome
                     </PixelButton>
                   </div>
-                </article>
+                </ThemedPanelCard>
               );
             })}
           </div>
@@ -196,7 +201,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
           {filteredQuests.map((quest) => {
             const realm = state.realms.find((r) => r.id === quest.realmId);
             return (
-              <article key={quest.id} className="pixel-box p-4 space-y-2 overflow-hidden">
+              <QuestCard key={quest.id}>
                 <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
                   {realm?.name} · [{quest.difficulty.toUpperCase()}]
                 </p>
@@ -216,7 +221,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                 <p className="text-[12px] text-[var(--text-muted)] pt-1.5 border-t border-[var(--border-pixel)]/40 tabular-nums">
                   Batas Waktu: {formatRetroDate(quest.deadline)} · Read-Only Briefing
                 </p>
-              </article>
+              </QuestCard>
             );
           })}
         </div>
@@ -234,9 +239,9 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
               {state.realms.find((r) => r.id === readingTome.realmId)?.name} ·{' '}
               {readingTome.readMinutes} min read
             </p>
-            <div className="pixel-box-inset p-4 text-[13.5px] sm:text-[14px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed font-normal break-words [overflow-wrap:anywhere]">
+            <ThemedReadingSurface>
               {readingTome.content}
-            </div>
+            </ThemedReadingSurface>
             {readingTome.linkUrl && (
               <PixelLinkButton
                 url={readingTome.linkUrl}

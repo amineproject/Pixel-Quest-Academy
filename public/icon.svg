@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E1042" />
+      <stop offset="55%" stop-color="#4C1D95" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#09090F" />
+  <rect x="20" y="20" width="472" height="472" rx="80" fill="url(#bgGrad)" stroke="#00D8FF" stroke-width="12" />
+  <!-- Comic diagonal slash -->
+  <polygon points="20,340 492,160 492,280 20,460" fill="#FF2E93" opacity="0.28" />
+  <!-- Gold comic emblem badge -->
+  <polygon
+    points="256,88 308,194 426,210 340,292 362,408 256,352 150,408 172,292 86,210 204,194"
+    fill="#FFD000"
+    stroke="#09090F"
+    stroke-width="20"
+    stroke-linejoin="round"
+  />
+  <!-- Inner cyan highlight -->
+  <polygon
+    points="256,136 290,208 370,218 312,272 326,350 256,312 186,350 200,272 142,218 222,208"
+    fill="#FFF59D"
+  />
+  <polygon
+    points="266,174 222,254 258,254 242,324 298,238 260,238"
+    fill="#09090F"
+  />
+</svg>

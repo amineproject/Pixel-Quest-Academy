@@ -5,6 +5,7 @@ import {
   PixelEmptyChest,
   PixelSectionTitle,
 } from '../../components/PixelUI';
+import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import { getHeroEffectiveRealmIds } from '../../utils/exp';
 
 interface HeroMyGuildProps {
@@ -35,7 +36,7 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
           description="Akun Hero Anda belum terhubung dengan Dungeon manapun."
         />
       ) : (
-        <section className="pixel-box p-4 space-y-2.5 overflow-hidden">
+        <ThemedPanelCard className="space-y-2.5">
           <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)] break-words">
             {dungeon.guildCode} · {dungeon.tier}
           </p>
@@ -73,13 +74,13 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
           <p className="text-[12px] text-[var(--text-muted)] pt-2 border-t border-[var(--border-pixel)]/40 tabular-nums">
             Kapasitas Guild: {partyMembers.length}/{dungeon.capacity} Heroes Aktif
           </p>
-        </section>
+        </ThemedPanelCard>
       )}
 
       {/* Game Master Card */}
       <section className="space-y-2">
         <PixelSectionTitle title="Guild Master Pengampu" />
-        <div className="pixel-box p-3.5 flex items-center gap-3 overflow-hidden">
+        <ThemedPanelCard className="p-3.5 flex items-center gap-3">
           <PixelAvatar avatar={state.gmProfile.avatar} size={48} className="shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)]">
@@ -92,7 +93,7 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
               {state.gmProfile.title} · {state.gmProfile.specialty}
             </p>
           </div>
-        </div>
+        </ThemedPanelCard>
       </section>
 
       {/* Party Roster (No points/EXP displayed) */}
@@ -105,10 +106,10 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
           {partyMembers.map((member, index) => {
             const isMe = member.id === hero.id;
             return (
-              <div
+              <ThemedPanelCard
                 key={member.id}
-                className={`pixel-box p-3 flex items-center justify-between gap-2.5 overflow-hidden ${
-                  isMe ? 'border-[var(--accent-warning)]' : ''
+                className={`p-3 flex items-center justify-between gap-2.5 ${
+                  isMe ? 'ring-2 ring-[var(--accent-warning)]' : ''
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -128,7 +129,7 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
                 <span className="font-pixel-ui text-[9px] text-[var(--accent-success)] px-2 py-0.5 border border-[var(--accent-success)]/50 shrink-0">
                   AKTIF
                 </span>
-              </div>
+              </ThemedPanelCard>
             );
           })}
         </div>

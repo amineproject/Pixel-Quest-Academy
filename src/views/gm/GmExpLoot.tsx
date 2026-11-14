@@ -21,6 +21,7 @@ import {
   PixelSectionTitle,
   PixelSelect,
 } from '../../components/PixelUI';
+import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
   calculateExpEarned,
   getEffectiveGradeStatus,
@@ -211,7 +212,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
         }
       />
 
-      <div className="pixel-box p-3.5 space-y-3">
+      <ThemedPanelCard className="p-3.5 space-y-3">
         <div>
           <PixelFieldLabel htmlFor="grd-realm">1. Pilih Realm (Mapel)</PixelFieldLabel>
           <PixelSelect
@@ -260,7 +261,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
             <DungeonOptGroupOptions dungeons={sortedDungeons} />
           </PixelSelect>
         </div>
-      </div>
+      </ThemedPanelCard>
 
       {!activeQuest ? (
         <PixelEmptyChest
@@ -288,7 +289,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
             const savedStatus = getEffectiveGradeStatus(existingGrade);
 
             return (
-              <article key={hero.id} className="pixel-box p-3.5 space-y-3 overflow-hidden">
+              <ThemedPanelCard key={hero.id} className="p-3.5 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <PixelAvatar avatar={hero.avatar} size={40} className="shrink-0" />
@@ -348,7 +349,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
                 </div>
 
                 {/* Score slider & numeric input */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <input
                     type="range"
                     min={0}
@@ -366,7 +367,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
                         [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
                       });
                     }}
-                    className="flex-1 accent-[var(--accent-warning)] min-h-[36px] cursor-pointer"
+                    className="min-w-0 flex-1 accent-[var(--accent-warning)] min-h-[36px] cursor-pointer"
                   />
                   <PixelInput
                     type="number"
@@ -388,11 +389,11 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
                         [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
                       });
                     }}
-                    className="!w-20 text-center tabular-nums"
+                    className="!w-16 sm:!w-20 shrink-0 text-center tabular-nums"
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <PixelInput
                     placeholder="Catatan Loot / feedback guru..."
                     value={draftNotes[hero.id] ?? ''}
@@ -409,12 +410,13 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({ state, onSaveGrade }) => {
                     size="sm"
                     variant="success"
                     onClick={() => handleSaveHeroGrade(hero.id)}
+                    className="shrink-0"
                   >
                     <Save size={14} />
                     Save
                   </PixelButton>
                 </div>
-              </article>
+              </ThemedPanelCard>
             );
           })}
         </div>

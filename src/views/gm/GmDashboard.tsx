@@ -2,7 +2,6 @@ import React from 'react';
 import {
   AcademyState,
   GmMenuId,
-  UserRole,
 } from '../../types/lms';
 import {
   GM_NAV_ITEMS,
@@ -14,6 +13,10 @@ import {
   PixelLinkButton,
   PixelSectionTitle,
 } from '../../components/PixelUI';
+import {
+  ThemedNoticeCard,
+  ThemedPanelCard,
+} from '../../components/ThemePrimitives';
 import { formatRetroDate, getHeroTotalExp } from '../../utils/exp';
 
 interface GmDashboardProps {
@@ -35,7 +38,7 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
   return (
     <div className="space-y-5">
       {/* GM Identity Banner */}
-      <section className="pixel-box p-4 space-y-3">
+      <ThemedPanelCard className="space-y-3 comic-halftone">
         <div className="flex items-center gap-3">
           <PixelAvatar avatar={state.gmProfile.avatar} size={52} className="animate-pixel-bounce" />
           <div className="min-w-0 flex-1">
@@ -54,44 +57,44 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
 
         {/* 4 Core KPI Counters */}
         <div className="grid grid-cols-2 gap-2.5 pt-1">
-          <div className="pixel-box-inset p-2.5">
-            <p className="font-pixel-ui text-[10px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>ACTIVE HEROES</span>
-              <PixelStar size={12} className="text-[var(--accent-success)]" />
+          <div className="pixel-box-inset p-3">
+            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1">
+              <span className="truncate">ACTIVE HEROES</span>
+              <PixelStar size={14} className="shrink-0 text-[var(--accent-success)]" />
             </p>
-            <p className="font-pixel-display text-[16px] text-[var(--accent-success)] tabular-nums mt-1">
+            <p className="font-pixel-display text-[14px] sm:text-[16px] text-[var(--accent-success)] tabular-nums mt-1.5">
               {activeHeroes}/{state.heroes.length}
             </p>
           </div>
-          <div className="pixel-box-inset p-2.5">
-            <p className="font-pixel-ui text-[10px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>DUNGEONS</span>
-              <span>🏰</span>
+          <div className="pixel-box-inset p-3">
+            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1">
+              <span className="truncate">DUNGEONS</span>
+              <span className="shrink-0 text-[13px]" aria-hidden="true">🏰</span>
             </p>
-            <p className="font-pixel-display text-[16px] text-[var(--text-primary)] tabular-nums mt-1">
+            <p className="font-pixel-display text-[14px] sm:text-[16px] text-[var(--text-primary)] tabular-nums mt-1.5">
               {state.dungeons.length}
             </p>
           </div>
-          <div className="pixel-box-inset p-2.5">
-            <p className="font-pixel-ui text-[10px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>ACTIVE QUESTS</span>
-              <span>⚔️</span>
+          <div className="pixel-box-inset p-3">
+            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1">
+              <span className="truncate">ACTIVE QUESTS</span>
+              <span className="shrink-0 text-[13px]" aria-hidden="true">⚔️</span>
             </p>
-            <p className="font-pixel-display text-[16px] text-[var(--accent-warning)] tabular-nums mt-1">
+            <p className="font-pixel-display text-[14px] sm:text-[16px] text-[var(--accent-warning)] tabular-nums mt-1.5">
               {state.quests.length}
             </p>
           </div>
-          <div className="pixel-box-inset p-2.5">
-            <p className="font-pixel-ui text-[10px] text-[var(--text-muted)] flex items-center justify-between">
-              <span>TOTAL EXP LOOT</span>
-              <PixelCoin size={14} className="animate-coin-shine" />
+          <div className="pixel-box-inset p-3">
+            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1">
+              <span className="truncate">TOTAL EXP LOOT</span>
+              <PixelCoin size={14} className="shrink-0 animate-coin-shine" />
             </p>
-            <p className="font-pixel-display text-[16px] text-[var(--accent-primary-hover)] tabular-nums mt-1 flex items-center gap-1">
+            <p className="font-pixel-display text-[14px] sm:text-[16px] text-[#0369a1] tabular-nums mt-1.5 flex items-center gap-1">
               +{totalExpAwarded}
             </p>
           </div>
         </div>
-      </section>
+      </ThemedPanelCard>
 
       {/* 9-Menu Command Center */}
       <section>
@@ -105,15 +108,15 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
               key={item.id}
               type="button"
               onClick={() => onNavigate(item.id)}
-              className="pixel-btn min-h-[74px] p-2 bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-alt)] flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer"
+              className="pixel-btn min-h-[80px] p-2 bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-alt)] flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer"
             >
               <span className="text-[var(--accent-warning)]">
-                {getGmMenuIcon(item.id, 20)}
+                {getGmMenuIcon(item.id, 22)}
               </span>
-              <span className="font-pixel-ui text-[10px] text-[var(--text-primary)] leading-tight">
+              <span className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-primary)] leading-tight">
                 {item.shortLabel}
               </span>
-              <span className="font-pixel-body text-[13px] text-[var(--text-muted)] leading-none">
+              <span className="text-[11px] sm:text-[11.5px] font-medium text-[var(--text-muted)] leading-none">
                 {item.standardName}
               </span>
             </button>
@@ -126,7 +129,7 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
         <PixelSectionTitle title="Tavern Highlights" />
 
         {topHero && (
-          <div className="pixel-box p-3.5 flex items-center justify-between gap-3 overflow-hidden">
+          <ThemedPanelCard className="p-3.5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <PixelAvatar avatar={topHero.avatar} size={40} />
               <div className="min-w-0 flex-1">
@@ -153,31 +156,32 @@ export const GmDashboard: React.FC<GmDashboardProps> = ({
             >
               Grade
             </PixelButton>
-          </div>
+          </ThemedPanelCard>
         )}
 
         {state.notices[0] && (
-          <div className="pixel-box p-3.5 space-y-2 overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] font-semibold text-[var(--text-secondary)]">
-              <span>Latest Notice · {state.notices[0].priority}</span>
-              <span className="tabular-nums text-[var(--text-muted)]">
-                {formatRetroDate(state.notices[0].releaseDate)}
-              </span>
-            </div>
+          <ThemedNoticeCard
+            speaker={`Latest Notice · ${state.notices[0].priority}`}
+            metaRight={formatRetroDate(state.notices[0].releaseDate)}
+            footer={
+              state.notices[0].linkUrl ? (
+                <div className="pt-1 border-t border-[var(--border-pixel)]/30">
+                  <PixelLinkButton
+                    url={state.notices[0].linkUrl}
+                    label="Buka Tautan"
+                    compact
+                  />
+                </div>
+              ) : undefined
+            }
+          >
             <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
               {state.notices[0].title}
             </h3>
             <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
               {state.notices[0].description}
             </p>
-            {state.notices[0].linkUrl && (
-              <PixelLinkButton
-                url={state.notices[0].linkUrl}
-                label="Buka Tautan"
-                compact
-              />
-            )}
-          </div>
+          </ThemedNoticeCard>
         )}
       </section>
     </div>

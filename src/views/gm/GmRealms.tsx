@@ -12,6 +12,7 @@ import {
   PixelSectionTitle,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { ThemedPanelCard } from '../../components/ThemePrimitives';
 
 interface GmRealmsProps {
   state: AcademyState;
@@ -107,7 +108,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
             ).length;
 
             return (
-              <article key={realm.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+              <ThemedPanelCard key={realm.id} className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2.5">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-11 h-11 shrink-0 pixel-box-inset flex items-center justify-center">
@@ -152,7 +153,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                     {realm.description}
                   </p>
                 )}
-              </article>
+              </ThemedPanelCard>
             );
           })}
         </div>
@@ -186,13 +187,13 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
           </div>
           <div>
             <PixelFieldLabel>Realm Emblem</PixelFieldLabel>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {ICONS.map((item) => (
                 <button
                   key={item.value}
                   type="button"
                   onClick={() => setIcon(item.value)}
-                  className={`p-2 flex flex-col items-center gap-1 border-2 cursor-pointer ${
+                  className={`p-2 flex flex-col items-center gap-1 border-2 cursor-pointer min-w-0 ${
                     icon === item.value
                       ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)]'
                       : 'border-[var(--border-pixel)] bg-[var(--bg-inset)]'
@@ -203,7 +204,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                     color={accentColor}
                     size={24}
                   />
-                  <span className="font-pixel-ui text-[9px] text-[var(--text-secondary)]">
+                  <span className="font-pixel-ui text-[9px] text-[var(--text-secondary)] truncate max-w-full">
                     {item.label}
                   </span>
                 </button>

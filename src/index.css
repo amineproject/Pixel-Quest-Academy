@@ -3,148 +3,228 @@
 @layer base {
   :root,
   [data-theme="sunny_quest"] {
-    /* Theme 1: Retro Cream Studio (Ref Images #1, #6, #7) */
-    --bg-outer: #f3e7d3;
-    --bg-canvas: #fbf7ee;
-    --bg-surface: #ffffff;
-    --bg-surface-alt: #f4ece0;
-    --bg-inset: #f2e8d6;
-    --surface-tint: #fef3c7;
-    --border-pixel: #18181b;
-    --border-highlight: #18181b;
-    --shadow-ink: #18181b;
-    --text-primary: #18181b;
-    --text-secondary: #475569;
-    --text-muted: #64748b;
-    --accent-primary: #2563eb;
-    --accent-primary-hover: #1d4ed8;
+    /* Theme 1 (Default): Cozy Pixel Quest — Parchment 16-Bit RPG */
+    --bg-outer: #6ec6ea;
+    --bg-canvas: #faf1da;
+    --bg-surface: #fffdf7;
+    --bg-surface-alt: #f7e8c8;
+    --bg-inset: #f4e4bf;
+    --surface-tint: #f2d590;
+    --border-pixel: #4a3525;
+    --border-highlight: #4a3525;
+    --shadow-ink: #4a3525;
+    --text-primary: #2b1d12;
+    --text-secondary: #543c29;
+    --text-muted: #6e533d;
+    --accent-primary: #2f855a;
+    --accent-primary-hover: #276749;
     --accent-success: #15803d;
     --accent-warning: #b45309;
-    --accent-danger: #be123c;
+    --accent-danger: #c53030;
+    --comic-gold: #f6c445;
     --text-on-accent: #ffffff;
     --text-on-success: #ffffff;
     --text-on-warning: #ffffff;
     --text-on-danger: #ffffff;
-    --bezel-body: #fcd34d;
-    --bezel-trim: #18181b;
-    --text-on-bezel: #18181b;
-    --grid-line: rgba(24, 24, 27, 0.07);
+    --bezel-body: #5c3d2e;
+    --bezel-trim: #eab308;
+    --text-on-bezel: #fef3c7;
+    --outer-title: #2b1d12;
+    --outer-sub: #1e4620;
+    --grid-line: rgba(255, 255, 255, 0.25);
+    --comic-glow: linear-gradient(180deg, #74ccf0 0%, #bae6fd 50%, #86efac 68%, #48bb78 100%);
+    --font-display: "Pixelify Sans", "Chakra Petch", sans-serif;
+    --font-ui: "Patrick Hand", "Nunito", sans-serif;
+    --font-body: "Nunito", "Plus Jakarta Sans", sans-serif;
+    --card-radius: 12px;
+    --inset-radius: 10px;
+    --btn-radius: 10px;
+    --box-border-w: 2.5px;
+    --box-shadow-style: 0 4px 0 0 var(--shadow-ink);
+    --btn-shadow-style: 0 3px 0 0 var(--shadow-ink);
+    --header-pattern: repeating-linear-gradient(
+      90deg,
+      rgba(74, 53, 37, 0.04) 0px,
+      rgba(74, 53, 37, 0.04) 2px,
+      transparent 2px,
+      transparent 12px
+    );
   }
 
   [data-theme="daylight_rpg"] {
-    /* Theme 2: Mint & Sky Pixel (Ref Images #2, #4) */
-    --bg-outer: #cdece3;
-    --bg-canvas: #f4f9fc;
+    /* Theme 2: Soft Chibi Classroom — Rounded Pastel Kawaii */
+    --bg-outer: #cdeee4;
+    --bg-canvas: #f3fbff;
     --bg-surface: #ffffff;
-    --bg-surface-alt: #e6f2fa;
-    --bg-inset: #edf5fa;
-    --surface-tint: #dcf2ea;
-    --border-pixel: #1b365d;
-    --border-highlight: #1b365d;
-    --shadow-ink: #1b365d;
-    --text-primary: #1b365d;
-    --text-secondary: #3b5578;
-    --text-muted: #5a7496;
-    --accent-primary: #1d4ed8;
-    --accent-primary-hover: #1e40af;
-    --accent-success: #15803d;
+    --bg-surface-alt: #e0f4fc;
+    --bg-inset: #edf7fa;
+    --surface-tint: #a7f3d0;
+    --border-pixel: #1e4e68;
+    --border-highlight: #1e4e68;
+    --shadow-ink: rgba(30, 78, 104, 0.24);
+    --text-primary: #133142;
+    --text-secondary: #2d5368;
+    --text-muted: #4a6f85;
+    --accent-primary: #0284c7;
+    --accent-primary-hover: #0369a1;
+    --accent-success: #0d9488;
     --accent-warning: #b45309;
-    --accent-danger: #be123c;
+    --accent-danger: #e11d48;
+    --comic-gold: #fde047;
     --text-on-accent: #ffffff;
     --text-on-success: #ffffff;
     --text-on-warning: #ffffff;
     --text-on-danger: #ffffff;
-    --bezel-body: #cfe3f5;
-    --bezel-trim: #1b365d;
-    --text-on-bezel: #1b365d;
-    --grid-line: rgba(27, 54, 93, 0.08);
+    --bezel-body: #256e8d;
+    --bezel-trim: #a7f3d0;
+    --text-on-bezel: #ffffff;
+    --outer-title: #133142;
+    --outer-sub: #0f766e;
+    --grid-line: rgba(255, 255, 255, 0.5);
+    --comic-glow: linear-gradient(135deg, #c7f2e3 0%, #e0f2fe 55%, #fef9c3 100%);
+    --font-display: "Fredoka", "Nunito", sans-serif;
+    --font-ui: "Fredoka", "Nunito", sans-serif;
+    --font-body: "Nunito", system-ui, sans-serif;
+    --card-radius: 20px;
+    --inset-radius: 16px;
+    --btn-radius: 16px;
+    --box-border-w: 2px;
+    --box-shadow-style: 0 5px 0 0 var(--shadow-ink);
+    --btn-shadow-style: 0 3px 0 0 var(--shadow-ink);
+    --header-pattern: radial-gradient(rgba(19, 49, 66, 0.06) 2px, transparent 2px);
   }
 
   [data-theme="nes_classic"] {
-    /* Theme 3: Retro OS Pastel (Ref Image #5) */
-    --bg-outer: #e9dff7;
-    --bg-canvas: #fff6dc;
-    --bg-surface: #fffdf5;
-    --bg-surface-alt: #fde8b2;
-    --bg-inset: #f9ecc7;
-    --surface-tint: #ffb3d4;
-    --border-pixel: #18181b;
-    --border-highlight: #18181b;
-    --shadow-ink: #18181b;
-    --text-primary: #18181b;
-    --text-secondary: #44403c;
-    --text-muted: #6b645c;
-    --accent-primary: #6d28d9;
-    --accent-primary-hover: #5b21b6;
-    --accent-success: #3f6212;
-    --accent-warning: #a16207;
-    --accent-danger: #be185d;
+    /* Theme 3: 16-Bit Royal Chronicle — Crisp Fantasy Kingdom */
+    --bg-outer: #1e103d;
+    --bg-canvas: #fdf8ed;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #fef3c7;
+    --bg-inset: #f5eedc;
+    --surface-tint: #ddd6fe;
+    --border-pixel: #311b63;
+    --border-highlight: #311b63;
+    --shadow-ink: #311b63;
+    --text-primary: #1e113a;
+    --text-secondary: #442b78;
+    --text-muted: #634a94;
+    --accent-primary: #5b21b6;
+    --accent-primary-hover: #4c1d95;
+    --accent-success: #0f766e;
+    --accent-warning: #b45309;
+    --accent-danger: #be123c;
+    --comic-gold: #fbbf24;
     --text-on-accent: #ffffff;
     --text-on-success: #ffffff;
     --text-on-warning: #ffffff;
     --text-on-danger: #ffffff;
-    --bezel-body: #b79ced;
-    --bezel-trim: #18181b;
-    --text-on-bezel: #18181b;
-    --grid-line: rgba(24, 24, 27, 0.06);
+    --bezel-body: #3b1d72;
+    --bezel-trim: #fbbf24;
+    --text-on-bezel: #fef08a;
+    --outer-title: #ffffff;
+    --outer-sub: #fde047;
+    --grid-line: rgba(251, 191, 36, 0.12);
+    --comic-glow: linear-gradient(180deg, #160b30 0%, #311b63 58%, #1d3557 100%);
+    --font-display: "Pixelify Sans", "Chakra Petch", sans-serif;
+    --font-ui: "Chakra Petch", "Plus Jakarta Sans", sans-serif;
+    --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+    --card-radius: 3px;
+    --inset-radius: 2px;
+    --btn-radius: 3px;
+    --box-border-w: 2.5px;
+    --box-shadow-style: 3px 3px 0 0 var(--shadow-ink);
+    --btn-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.35), 2px 2px 0 0 var(--shadow-ink);
+    --header-pattern: linear-gradient(
+      90deg,
+      rgba(251, 191, 36, 0.14) 50%,
+      transparent 50%
+    );
   }
 
   [data-theme="cyber_retro"] {
-    /* Theme 4: Arcade Pop Grid (Ref Image #8) */
-    --bg-outer: #fde047;
-    --bg-canvas: #faf5ff;
+    /* Theme 4: Comic-Pop Arcade — Persona Halftone Ink */
+    --bg-outer: #09090f;
+    --bg-canvas: #f3f1ff;
     --bg-surface: #ffffff;
-    --bg-surface-alt: #f3e8ff;
-    --bg-inset: #ede9fe;
-    --surface-tint: #e9d5ff;
-    --border-pixel: #1e1b4b;
-    --border-highlight: #1e1b4b;
-    --shadow-ink: #1e1b4b;
-    --text-primary: #1e1b4b;
-    --text-secondary: #4c1d95;
-    --text-muted: #6b21a8;
-    --accent-primary: #5b21b6;
-    --accent-primary-hover: #4c1d95;
-    --accent-success: #3f6212;
-    --accent-warning: #a16207;
-    --accent-danger: #be185d;
+    --bg-surface-alt: #e8faff;
+    --bg-inset: #f0edff;
+    --surface-tint: #00d8ff;
+    --border-pixel: #09090f;
+    --border-highlight: #09090f;
+    --shadow-ink: #09090f;
+    --text-primary: #09090f;
+    --text-secondary: #2e294e;
+    --text-muted: #524b7a;
+    --accent-primary: #00d8ff;
+    --accent-primary-hover: #00bfea;
+    --accent-success: #5b21b6;
+    --accent-warning: #b45309;
+    --accent-danger: #e11d74;
+    --comic-gold: #ffd000;
+    --text-on-accent: #09090f;
+    --text-on-success: #ffffff;
+    --text-on-warning: #ffffff;
+    --text-on-danger: #ffffff;
+    --bezel-body: #2e1065;
+    --bezel-trim: #00d8ff;
+    --text-on-bezel: #ffd000;
+    --outer-title: #ffffff;
+    --outer-sub: #00d8ff;
+    --grid-line: rgba(0, 216, 255, 0.16);
+    --comic-glow: linear-gradient(135deg, #1b0d42 0%, #3b1785 48%, #074f6e 100%);
+    --font-display: "Bungee", "Chakra Petch", sans-serif;
+    --font-ui: "Chakra Petch", "Plus Jakarta Sans", sans-serif;
+    --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+    --card-radius: 5px;
+    --inset-radius: 4px;
+    --btn-radius: 4px;
+    --box-border-w: 2.5px;
+    --box-shadow-style: 5px 5px 0 0 var(--shadow-ink);
+    --btn-shadow-style: 3px 3px 0 0 var(--shadow-ink);
+    --header-pattern: radial-gradient(rgba(9, 9, 15, 0.16) 1.6px, transparent 1.6px);
+  }
+
+  [data-theme="gameboy_green"] {
+    /* Theme 5: Clean Paper Studio — Minimalis Editorial Fokus Baca */
+    --bg-outer: #eae5da;
+    --bg-canvas: #faf8f4;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #f4f1ea;
+    --bg-inset: #f2eee6;
+    --surface-tint: #f4f1ea;
+    --border-pixel: #27272a;
+    --border-highlight: #d4cfc3;
+    --shadow-ink: rgba(24, 24, 27, 0.08);
+    --text-primary: #18181b;
+    --text-secondary: #3f3f46;
+    --text-muted: #52525b;
+    --accent-primary: #18181b;
+    --accent-primary-hover: #27272a;
+    --accent-success: #15803d;
+    --accent-warning: #92400e;
+    --accent-danger: #b91c1c;
+    --comic-gold: #fde68a;
     --text-on-accent: #ffffff;
     --text-on-success: #ffffff;
     --text-on-warning: #ffffff;
     --text-on-danger: #ffffff;
-    --bezel-body: #4c1d95;
-    --bezel-trim: #1e1b4b;
-    --text-on-bezel: #fde047;
-    --grid-line: rgba(76, 29, 149, 0.11);
-  }
-
-  [data-theme="gameboy_green"] {
-    /* Theme 5: Paper Mono Retro (Ref Image #3) */
-    --bg-outer: #e6e1d7;
-    --bg-canvas: #f6f4ee;
-    --bg-surface: #ffffff;
-    --bg-surface-alt: #efece4;
-    --bg-inset: #e9e4d9;
-    --surface-tint: #e6e1d7;
-    --border-pixel: #111111;
-    --border-highlight: #111111;
-    --shadow-ink: #111111;
-    --text-primary: #111111;
-    --text-secondary: #333333;
-    --text-muted: #57534e;
-    --accent-primary: #27272a;
-    --accent-primary-hover: #18181b;
-    --accent-success: #365314;
-    --accent-warning: #92400e;
-    --accent-danger: #991b1b;
-    --text-on-accent: #f6f4ee;
-    --text-on-success: #ffffff;
-    --text-on-warning: #ffffff;
-    --text-on-danger: #ffffff;
-    --bezel-body: #beb8ad;
-    --bezel-trim: #111111;
-    --text-on-bezel: #111111;
-    --grid-line: rgba(17, 17, 17, 0.06);
+    --bezel-body: #ffffff;
+    --bezel-trim: #d4cfc3;
+    --text-on-bezel: #3f3f46;
+    --outer-title: #18181b;
+    --outer-sub: #52525b;
+    --grid-line: rgba(39, 39, 42, 0.06);
+    --comic-glow: linear-gradient(180deg, #ede9df 0%, #e5e0d5 100%);
+    --font-display: "Chakra Petch", "Plus Jakarta Sans", sans-serif;
+    --font-ui: "Plus Jakarta Sans", system-ui, sans-serif;
+    --font-body: "Nunito", "Plus Jakarta Sans", sans-serif;
+    --card-radius: 8px;
+    --inset-radius: 6px;
+    --btn-radius: 6px;
+    --box-border-w: 1px;
+    --box-shadow-style: 0 1px 2px 0 var(--shadow-ink);
+    --btn-shadow-style: 0 1px 2px 0 var(--shadow-ink);
+    --header-pattern: none;
   }
 
   html,
@@ -153,96 +233,188 @@
     padding: 0;
     background-color: var(--bg-outer);
     color: var(--text-primary);
-    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 }
 
-.font-pixel-display {
-  font-family: "Press Start 2P", monospace;
-  line-height: 1.5;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-  overflow-wrap: anywhere;
-}
+@layer components {
+  .font-pixel-display {
+    font-family: var(--font-display);
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
 
-.font-pixel-ui {
-  font-family: "Silkscreen", monospace;
-  line-height: 1.35;
-  letter-spacing: 0.02em;
-  overflow-wrap: anywhere;
-}
+  .font-pixel-ui {
+    font-family: var(--font-ui);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+    overflow-wrap: anywhere;
+  }
 
-.font-pixel-body {
-  font-family: "VT323", monospace;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
+  .font-pixel-body {
+    font-family: var(--font-body);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
 
-.pixel-box {
-  background-color: var(--bg-surface);
-  border: 2px solid var(--border-pixel);
-  border-radius: 8px;
-  max-width: 100%;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  box-shadow: 3px 3px 0 0 var(--shadow-ink);
-}
+  .pixel-box {
+    background-color: var(--bg-surface);
+    border: var(--box-border-w) solid var(--border-pixel);
+    border-radius: var(--card-radius);
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    box-shadow: var(--box-shadow-style);
+    transition: border-radius 150ms ease, box-shadow 150ms ease;
+  }
 
-.pixel-box-inset {
-  background-color: var(--bg-inset);
-  border: 2px solid var(--border-pixel);
-  border-radius: 6px;
-  max-width: 100%;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  box-shadow: inset 2px 2px 0 0 rgba(24, 24, 27, 0.08);
-}
+  [data-theme="gameboy_green"] .pixel-box {
+    border-color: #d6d1c7;
+    box-shadow: 0 1px 2px rgba(24, 24, 27, 0.05);
+  }
 
-.pixel-btn {
-  border: 2px solid var(--border-highlight);
-  border-radius: 6px;
-  box-shadow: 2px 2px 0 0 var(--shadow-ink);
-  transition: transform 80ms ease, box-shadow 80ms ease, filter 120ms ease;
-}
+  .pixel-box-inset {
+    background-color: var(--bg-inset);
+    border: var(--box-border-w) solid var(--border-pixel);
+    border-radius: var(--inset-radius);
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.05);
+  }
 
-.pixel-btn:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 0 var(--shadow-ink);
-}
+  [data-theme="gameboy_green"] .pixel-box-inset {
+    border-color: #e2ddd3;
+    box-shadow: none;
+  }
 
-.pixel-btn:focus-visible,
-.pixel-focus:focus-visible {
-  outline: 3px solid var(--accent-primary);
-  outline-offset: 2px;
-}
+  .pixel-btn {
+    border: var(--box-border-w) solid var(--border-highlight);
+    border-radius: var(--btn-radius);
+    box-shadow: var(--btn-shadow-style);
+    transition: transform 90ms ease, box-shadow 90ms ease, filter 120ms ease;
+  }
 
-.pixel-grid-bg {
-  background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
+  .pixel-btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 0 var(--shadow-ink);
+  }
 
-.crt-scanlines::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 60;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0px,
-    rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0.045) 3px,
-    rgba(0, 0, 0, 0.045) 4px
-  );
-}
+  [data-theme="gameboy_green"] .pixel-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: none;
+  }
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
+  .pixel-btn:focus-visible,
+  .pixel-focus:focus-visible {
+    outline: 3px solid var(--comic-gold);
+    outline-offset: 2px;
+  }
+
+  /* Theme-Driven Outer Backdrop */
+  .pixel-grid-bg {
+    background-color: var(--bg-outer);
+    background-image:
+      radial-gradient(var(--grid-line) 1.5px, transparent 1.5px),
+      var(--comic-glow);
+    background-size: 16px 16px, 100% 100%;
+  }
+
+  .comic-halftone {
+    background-image: var(--header-pattern);
+    background-size: 9px 9px;
+  }
+
+  /* Theme-Specific Console Bezel Textures */
+  [data-theme="sunny_quest"] .console-bezel {
+    background-image: repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04) 0px,
+      rgba(255, 255, 255, 0.04) 3px,
+      rgba(0, 0, 0, 0.08) 3px,
+      rgba(0, 0, 0, 0.08) 7px
+    );
+  }
+
+  [data-theme="nes_classic"] .console-bezel {
+    box-shadow:
+      inset 0 0 0 2px rgba(251, 191, 36, 0.45),
+      6px 6px 0 0 #14092b;
+  }
+
+  [data-theme="daylight_rpg"] .console-bezel {
+    border-radius: 28px;
+    box-shadow: 0 10px 0 0 rgba(30, 78, 104, 0.22);
+  }
+
+  [data-theme="gameboy_green"] .console-bezel {
+    border-radius: 14px;
+    box-shadow: 0 8px 28px rgba(24, 24, 27, 0.08);
+  }
+
+  /* Cozy RPG Parchment Dialogue Box (Theme-responsive) */
+  .rpg-dialogue-card {
+    background-color: #fbf0d3;
+    border: 2.5px solid #4a3525;
+    border-radius: 12px;
+    box-shadow:
+      inset 0 0 0 2px #f6c445,
+      0 4px 0 0 #4a3525;
+  }
+
+  /* Candy-striped progress fill for Soft Chibi theme */
+  [data-theme="daylight_rpg"] .candy-progress-fill {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.28),
+      rgba(255, 255, 255, 0.28) 6px,
+      transparent 6px,
+      transparent 12px
+    );
+  }
+
+  /* Slant triggers exclusively in Comic-Pop theme */
+  [data-theme="cyber_retro"] .comic-slant {
+    transform: skewX(-6deg);
+  }
+
+  [data-theme="cyber_retro"] .comic-unslant {
+    transform: skewX(6deg);
+  }
+
+  /* Clean distraction-free paper for reading long lesson materials */
+  .tome-reading-paper {
+    background-color: #fffef9;
+    border: 1.5px solid rgba(74, 53, 37, 0.3);
+    border-radius: var(--inset-radius);
+    font-family: var(--font-body);
+    color: #1f1a16;
+  }
+
+  .crt-scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 60;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(9, 9, 15, 0.04) 3px,
+      rgba(9, 9, 15, 0.04) 4px
+    );
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 /* Cheerful Pixel Animations */
@@ -269,7 +441,7 @@
     filter: brightness(1);
   }
   50% {
-    filter: brightness(1.4) drop-shadow(0 0 6px #ffd13b);
+    filter: brightness(1.35) drop-shadow(0 0 6px #ffd13b);
   }
 }
 
@@ -278,7 +450,7 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.45;
   }
 }
 
@@ -295,10 +467,16 @@
 }
 
 .animate-press-start {
-  animation: pixel-pulse-text 1.1s steps(2, start) infinite;
+  animation: pixel-pulse-text 1.2s ease-in-out infinite;
 }
 
-/* Custom pixel scrollbar inside mobile frame */
+/* Calm motion in Clean Paper Studio */
+[data-theme="gameboy_green"] .animate-pixel-bounce,
+[data-theme="gameboy_green"] .animate-pixel-float {
+  animation: none;
+}
+
+/* Custom scrollbar inside console frame */
 .pixel-scroll::-webkit-scrollbar {
   width: 6px;
 }
@@ -309,10 +487,12 @@
 
 .pixel-scroll::-webkit-scrollbar-thumb {
   background: var(--border-pixel);
+  border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pixel-btn {
+  .pixel-btn,
+  .pixel-box {
     transition: none;
   }
   .pixel-btn:active:not(:disabled) {

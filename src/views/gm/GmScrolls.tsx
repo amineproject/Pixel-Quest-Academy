@@ -13,6 +13,10 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import {
+  ThemedPanelCard,
+  ThemedReadingSurface,
+} from '../../components/ThemePrimitives';
 import { formatRetroDate } from '../../utils/exp';
 
 interface GmScrollsProps {
@@ -129,7 +133,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
           {filtered.map((tome) => {
             const realm = state.realms.find((r) => r.id === tome.realmId);
             return (
-              <article key={tome.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+              <ThemedPanelCard key={tome.id} className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2 min-w-0">
                   <div className="min-w-0 flex-1">
                     <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
@@ -185,7 +189,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                     Read Preview
                   </PixelButton>
                 </div>
-              </article>
+              </ThemedPanelCard>
             );
           })}
         </div>
@@ -211,9 +215,9 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                 />
               </div>
             )}
-            <div className="pixel-box-inset p-4 text-[14px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">
+            <ThemedReadingSurface>
               {previewTome.content}
-            </div>
+            </ThemedReadingSurface>
             <PixelButton
               type="button"
               variant="neutral"
@@ -257,7 +261,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <PixelFieldLabel htmlFor="tm-chap">Bab / Chapter</PixelFieldLabel>
               <PixelInput

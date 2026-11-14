@@ -18,6 +18,7 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { QuestCard } from '../../components/ThemePrimitives';
 import { formatRetroDate } from '../../utils/exp';
 
 interface GmActiveQuestsProps {
@@ -131,7 +132,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               (d) => d.id === quest.dungeonId
             );
             return (
-              <article key={quest.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+              <QuestCard key={quest.id} className="space-y-2.5">
                 <div className="flex items-start justify-between gap-2 min-w-0">
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
@@ -179,7 +180,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                   </span>
                   <span>Due: {formatRetroDate(quest.deadline)}</span>
                 </div>
-              </article>
+              </QuestCard>
             );
           })}
         </div>
@@ -201,7 +202,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <PixelFieldLabel htmlFor="qst-realm">Realm / Mapel</PixelFieldLabel>
               <PixelSelect
@@ -228,7 +229,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               </PixelSelect>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <div>
               <PixelFieldLabel htmlFor="qst-exp">Max EXP</PixelFieldLabel>
               <PixelInput
@@ -255,7 +256,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                 <option value="Boss">Boss</option>
               </PixelSelect>
             </div>
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               <PixelFieldLabel htmlFor="qst-due">Deadline</PixelFieldLabel>
               <PixelInput
                 id="qst-due"

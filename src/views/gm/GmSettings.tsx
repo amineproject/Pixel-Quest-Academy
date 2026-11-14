@@ -3,9 +3,7 @@ import { RotateCcw, ShieldAlert } from 'lucide-react';
 import {
   AcademyState,
   GameMasterProfile,
-  PixelTheme,
   SystemSettings,
-  UserRole,
 } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
@@ -15,6 +13,9 @@ import {
   PixelInput,
   PixelSectionTitle,
 } from '../../components/PixelUI';
+import { ThemedPanelCard } from '../../components/ThemePrimitives';
+import { PWAInstallButton } from '../../components/PWAInstallBanner';
+import { THEME_STYLES } from '../../utils/themes';
 
 import {
   checkHardenedSecurityStatus,
@@ -39,34 +40,6 @@ interface GmSettingsProps {
   onPullCloudData: () => Promise<AcademyState | null>;
   onTestAccessDenied: () => void;
 }
-
-const THEMES: { id: PixelTheme; label: string; previewColors: string[] }[] = [
-  {
-    id: 'sunny_quest',
-    label: 'Retro Cream Studio',
-    previewColors: ['#FBF7EE', '#FCD34D', '#2563EB', '#18181B'],
-  },
-  {
-    id: 'daylight_rpg',
-    label: 'Mint & Sky Pixel',
-    previewColors: ['#CDECE3', '#F4F9FC', '#1D4ED8', '#1B365D'],
-  },
-  {
-    id: 'nes_classic',
-    label: 'Retro OS Pastel',
-    previewColors: ['#FFF6DC', '#B79CED', '#FFB3D4', '#A3E635'],
-  },
-  {
-    id: 'cyber_retro',
-    label: 'Arcade Pop Grid',
-    previewColors: ['#FDE047', '#4C1D95', '#84CC16', '#EC4899'],
-  },
-  {
-    id: 'gameboy_green',
-    label: 'Paper Mono Retro',
-    previewColors: ['#F6F4EE', '#E6E1D7', '#BEB8AD', '#111111'],
-  },
-];
 
 export const GmSettings: React.FC<GmSettingsProps> = ({
   state,
@@ -233,16 +206,21 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     <div className="space-y-5">
       <PixelSectionTitle
         title="System Settings"
-        subtitle="Tema 8-bit, profil Guild Master, dan kontrol simulasi"
+        subtitle="Pilih gaya visual & font aplikasi, profil Guild Master, PWA, dan Cloud"
       />
 
-      {/* 8-Bit Theme Selector */}
-      <section className="pixel-box p-4 space-y-3">
-        <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
-          RETRO COLOR PALETTE
-        </h3>
+      {/* Full Style & Typography Theme Selector */}
+      <ThemedPanelCard className="space-y-3">
+        <div>
+          <h3 className="font-pixel-ui text-[12px] text-[var(--accent-warning)]">
+            GAYA VISUAL &amp; KOMBINASI FONT APLIKASI
+          </h3>
+          <p className="text-[12px] text-[var(--text-secondary)] mt-0.5">
+            Setiap tema mengubah bentuk kartu, gaya huruf, latar, dan nuansa belajar—bukan hanya warna.
+          </p>
+        </div>
         <div className="space-y-2">
-          {THEMES.map((themeItem) => {
+          {THEME_STYLES.map((themeItem) => {
             const selected = state.settings.theme === themeItem.id;
             return (
               <button
@@ -251,21 +229,26 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                 onClick={() =>
                   onUpdateSettings({ ...state.settings, theme: themeItem.id })
                 }
-                className={`w-full min-h-[48px] px-3 py-2 rounded-md flex items-center justify-between border-2 cursor-pointer transition-all ${
+                className={`w-full min-h-[56px] px-3 py-2.5 rounded-md flex items-center justify-between gap-2.5 border-2 cursor-pointer transition-all text-left ${
                   selected
-                    ? 'border-[var(--border-pixel)] bg-[var(--surface-tint)] shadow-[2px_2px_0_var(--shadow-ink)] font-bold'
-                    : 'border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-alt)]'
+                    ? 'border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)] shadow-[2px_2px_0_var(--shadow-ink)] font-bold'
+                    : 'border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                 }`}
               >
-                <span className="font-pixel-ui text-[11px] text-[var(--text-primary)]">
-                  {selected ? '▶ ' : ''}
-                  {themeItem.label}
-                </span>
-                <div className="flex items-center gap-1" aria-hidden="true">
+                <div className="min-w-0 flex-1">
+                  <p className="font-pixel-ui text-[11px] sm:text-[12px] truncate">
+                    {selected ? '▶ ' : ''}
+                    {themeItem.label}
+                  </p>
+                  <p className="text-[11.5px] font-normal opacity-85 leading-snug mt-0.5">
+                    {themeItem.tagline} · <span className="font-semibold">{themeItem.fontLabel}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0" aria-hidden="true">
                   {themeItem.previewColors.map((hex) => (
                     <span
                       key={hex}
-                      className="w-4 h-4 border border-black/50"
+                      className="w-4 h-4 rounded-sm border border-black/40"
                       style={{ backgroundColor: hex }}
                     />
                   ))}
@@ -275,9 +258,9 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           })}
         </div>
 
-        <div className="pt-2 space-y-2 border-t border-[var(--border-pixel)]/40">
-          <label className="flex items-center justify-between min-h-[44px] cursor-pointer">
-            <span className="font-pixel-body text-[19px] text-[var(--text-primary)]">
+        <div className="pt-2 space-y-1.5 border-t border-[var(--border-pixel)]/40">
+          <label className="flex items-center justify-between gap-3 min-h-[44px] cursor-pointer">
+            <span className="text-[13.5px] font-semibold text-[var(--text-primary)]">
               CRT Scanline Effect
             </span>
             <input
@@ -289,11 +272,11 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                   crtScanlines: e.target.checked,
                 })
               }
-              className="w-5 h-5 accent-[var(--accent-success)]"
+              className="w-5 h-5 accent-[var(--accent-success)] shrink-0"
             />
           </label>
-          <label className="flex items-center justify-between min-h-[44px] cursor-pointer">
-            <span className="font-pixel-body text-[19px] text-[var(--text-primary)]">
+          <label className="flex items-center justify-between gap-3 min-h-[44px] cursor-pointer">
+            <span className="text-[13.5px] font-semibold text-[var(--text-primary)]">
               8-Bit Chiptune SFX
             </span>
             <input
@@ -305,21 +288,33 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                   soundEnabled: e.target.checked,
                 })
               }
-              className="w-5 h-5 accent-[var(--accent-success)]"
+              className="w-5 h-5 accent-[var(--accent-success)] shrink-0"
             />
           </label>
         </div>
-      </section>
+      </ThemedPanelCard>
+
+      {/* PWA Mobile Installation Card */}
+      <ThemedPanelCard className="space-y-2.5">
+        <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
+          INSTALASI APLIKASI HP (PWA)
+        </h3>
+        <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+          Pasang Pixel Quest Academy langsung ke layar utama HP Android/iPhone agar terbuka layar penuh seperti aplikasi native dan tetap dapat diakses saat offline.
+        </p>
+        <PWAInstallButton showGuideFallback />
+      </ThemedPanelCard>
 
       {/* GM Profile & Security Editor */}
-      <form onSubmit={handleSaveProfile} className="pixel-box p-4 space-y-3.5">
+      <ThemedPanelCard>
+      <form onSubmit={handleSaveProfile} className="space-y-3.5">
         <div className="flex items-center gap-3">
-          <PixelAvatar avatar={avatar} size={48} />
-          <div>
-            <h3 className="font-pixel-ui text-[12px] text-[var(--accent-warning)]">
+          <PixelAvatar avatar={avatar} size={46} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-pixel-ui text-[11px] sm:text-[12px] text-[var(--accent-warning)] leading-snug">
               GAME MASTER PROFILE & SECURITY
             </h3>
-            <p className="font-pixel-body text-[15px] text-[var(--text-secondary)]">
+            <p className="text-[12.5px] text-[var(--text-secondary)] leading-snug mt-0.5">
               Kustomisasi identitas guru dan keamanan akun admin
             </p>
           </div>
@@ -403,11 +398,11 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
 
         {/* Security & Credentials */}
         <div className="pt-2 border-t border-[var(--border-pixel)]/40 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-1.5">
             <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase">
               🔐 Akun & Password Guru
             </span>
-            <span className="font-pixel-body text-[14px] text-[var(--text-muted)]">
+            <span className="text-[11.5px] font-medium text-[var(--text-muted)]">
               Proteksi Akses Siswa
             </span>
           </div>
@@ -454,7 +449,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         </div>
 
         {saveSuccess && (
-          <p className="font-pixel-body text-[16px] text-[var(--accent-success)]">
+          <p className="text-[13px] font-semibold text-[var(--accent-success)]">
             ✓ Profil & pengaturan keamanan Game Master berhasil disimpan!
           </p>
         )}
@@ -463,18 +458,19 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           Simpan Profil & Pengaturan Keamanan
         </PixelButton>
       </form>
+      </ThemedPanelCard>
 
       {/* Interactive Supabase Cloud Sync Manager */}
-      <section className="pixel-box p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Cloud size={18} className="text-[var(--accent-warning)]" />
-            <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
-              SUPABASE CLOUD SYNC (SINKRONISASI SEMUA PERANGKAT)
+      <ThemedPanelCard className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Cloud size={17} className="text-[var(--accent-warning)] shrink-0" />
+            <h3 className="font-pixel-ui text-[10.5px] sm:text-[11px] text-[var(--accent-warning)] leading-snug">
+              SUPABASE CLOUD SYNC
             </h3>
           </div>
           <span
-            className={`font-pixel-ui text-[9px] px-2 py-0.5 rounded border-2 font-bold ${
+            className={`font-pixel-ui text-[9px] px-2 py-0.5 rounded border-2 font-bold shrink-0 ${
               isCloudConfigured
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-700'
                 : 'bg-amber-100 text-amber-800 border-amber-700'
@@ -579,7 +575,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
             <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
               Bagikan link ini ke HP siswa atau buka di laptop lain agar perangkat tersebut <strong>otomatis terhubung</strong> ke database Cloud yang sama tanpa perlu input ulang API Key:
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <PixelInput
                 readOnly
                 value={shareLink}
@@ -591,6 +587,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                 size="sm"
                 variant="success"
                 onClick={handleCopyShareLink}
+                className="shrink-0"
               >
                 <Copy size={14} />
                 {linkCopied ? 'Tersalin!' : 'Salin Link'}
@@ -622,10 +619,10 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
             </button>
           )}
         </div>
-      </section>
+      </ThemedPanelCard>
 
       {/* Security & RBAC Guard Testing */}
-      <section className="pixel-box p-4 space-y-2.5">
+      <ThemedPanelCard className="space-y-2.5">
         <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
           PENGUJIAN KEAMANAN & RESET
         </h3>
@@ -647,7 +644,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           <RotateCcw size={15} />
           Reset Demo Data
         </PixelButton>
-      </section>
+      </ThemedPanelCard>
 
       <PixelConfirmDialog
         open={confirmReset}

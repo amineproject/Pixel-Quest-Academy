@@ -18,6 +18,7 @@ import {
   PixelSelect,
   PixelTextarea,
 } from '../../components/PixelUI';
+import { ThemedNoticeCard } from '../../components/ThemePrimitives';
 import { formatRetroDate } from '../../utils/exp';
 
 interface GmQuestBoardProps {
@@ -118,7 +119,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
             key={p}
             type="button"
             onClick={() => setPriorityFilter(p)}
-            className={`pixel-btn min-h-[40px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
               priorityFilter === p
                 ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                 : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -141,22 +142,29 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
               (d) => d.id === notice.targetDungeonId
             );
             return (
-              <article key={notice.id} className="pixel-box p-4 space-y-2.5 overflow-hidden">
+              <ThemedNoticeCard
+                key={notice.id}
+                speaker={`${priorityPrefix(notice.priority)} · ${
+                  targetDungeon ? targetDungeon.guildCode : 'All Guilds'
+                }`}
+                metaRight={formatRetroDate(notice.releaseDate)}
+                footer={
+                  notice.linkUrl ? (
+                    <div className="pt-1 border-t border-[var(--border-pixel)]/30">
+                      <PixelLinkButton
+                        url={notice.linkUrl}
+                        label="Buka Tautan Pengumuman"
+                        compact
+                      />
+                    </div>
+                  ) : undefined
+                }
+              >
                 <div className="flex items-start justify-between gap-2 min-w-0">
                   <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
-                      <span className={priorityTextColor(notice.priority)}>
-                        {priorityPrefix(notice.priority)}
-                      </span>
-                      <span className="text-[var(--text-muted)]">·</span>
-                      <span className="text-[var(--text-secondary)]">
-                        {targetDungeon ? targetDungeon.guildCode : 'All Guilds'}
-                      </span>
-                      <span className="text-[var(--text-muted)]">·</span>
-                      <span className="text-[var(--text-muted)] tabular-nums">
-                        {formatRetroDate(notice.releaseDate)}
-                      </span>
-                    </div>
+                    <span className={`text-[10.5px] font-bold ${priorityTextColor(notice.priority)}`}>
+                      {notice.priority}
+                    </span>
                     <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
                       {notice.title}
                     </h3>
@@ -184,15 +192,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                 <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
                   {notice.description}
                 </p>
-                {notice.linkUrl && (
-                  <div className="pt-1">
-                    <PixelLinkButton
-                      url={notice.linkUrl}
-                      label="Buka Tautan Pengumuman"
-                    />
-                  </div>
-                )}
-              </article>
+              </ThemedNoticeCard>
             );
           })}
         </div>
@@ -214,7 +214,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <PixelFieldLabel htmlFor="ntc-prio">Prioritas</PixelFieldLabel>
               <PixelSelect

@@ -1,5 +1,16 @@
-import React, { useState } from 'react';
-import { Dices, Eraser, KeyRound, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  Dices,
+  Download,
+  Eraser,
+  FileSpreadsheet,
+  KeyRound,
+  Lock,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { AcademyState, AvatarClass, HeroStudent } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
@@ -12,17 +23,27 @@ import {
   PixelModal,
   PixelSectionTitle,
   PixelSelect,
+  PixelTextarea,
 } from '../../components/PixelUI';
+import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
   getHeroEffectiveRealmIds,
   getHeroLevelProgress,
   getHeroTotalExp,
   sortDungeonsAlphabetically,
 } from '../../utils/exp';
+import {
+  buildHeroesFromImportRows,
+  downloadImportedCredentialsCsv,
+  downloadStudentImportTemplate,
+  ParsedStudentImportRow,
+  parseStudentImportText,
+} from '../../utils/studentImport';
 
 interface GmHeroesProps {
   state: AcademyState;
   onSaveHero: (hero: HeroStudent) => void;
+  onImportHeroes?: (heroes: HeroStudent[]) => void | Promise<void>;
   onDeleteHero: (id: string) => void;
 }
 
@@ -37,6 +58,7 @@ const AVATARS: { value: AvatarClass; label: string }[] = [
 export const GmHeroes: React.FC<GmHeroesProps> = ({
   state,
   onSaveHero,
+  onImportHeroes,
   onDeleteHero,
 }) => {
   const [search, setSearch] = useState('');
@@ -48,6 +70,42 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   const [clearUsernameTarget, setClearUsernameTarget] = useState<HeroStudent | null>(null);
 
   const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+
+  // Bulk CSV / Excel Import state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importRawText, setImportRawText] = useState('');
+  const [importDefaultDungeonId, setImportDefaultDungeonId] = useState(
+    () => sortedDungeons[0]?.id || ''
+  );
+  const [importAutoPin, setImportAutoPin] = useState(true);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importedSnapshot, setImportedSnapshot] = useState<
+    ParsedStudentImportRow[] | null
+  >(null);
+  const csvFileRef = useRef<HTMLInputElement | null>(null);
+
+  const parsedImportRows = useMemo(() => {
+    if (!importModalOpen || !importRawText.trim()) return [];
+    return parseStudentImportText(importRawText, {
+      dungeons: state.dungeons,
+      existingHeroes: state.heroes,
+      defaultDungeonId: importDefaultDungeonId || sortedDungeons[0]?.id || '',
+      autoGeneratePin: importAutoPin,
+    });
+  }, [
+    importModalOpen,
+    importRawText,
+    state.dungeons,
+    state.heroes,
+    importDefaultDungeonId,
+    sortedDungeons,
+    importAutoPin,
+  ]);
+
+  const validImportRows = useMemo(
+    () => parsedImportRows.filter((r) => !r.error && r.matchedDungeonId),
+    [parsedImportRows]
+  );
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -172,16 +230,57 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
   const selectedDungeon = state.dungeons.find((d) => d.id === dungeonId);
 
+  const openImportModal = () => {
+    setImportDefaultDungeonId(sortedDungeons[0]?.id || '');
+    setImportRawText('');
+    setImportedSnapshot(null);
+    setImportModalOpen(true);
+  };
+
+  const handleCsvFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    setImportRawText(text);
+    setImportedSnapshot(null);
+    e.target.value = '';
+  };
+
+  const handleConfirmImport = async () => {
+    if (validImportRows.length === 0) return;
+    setIsImporting(true);
+    const heroesToCreate = buildHeroesFromImportRows(validImportRows, state.dungeons);
+    if (onImportHeroes) {
+      await onImportHeroes(heroesToCreate);
+    } else {
+      heroesToCreate.forEach((h) => onSaveHero(h));
+    }
+    setIsImporting(false);
+    setImportedSnapshot(validImportRows);
+    setImportRawText('');
+  };
+
   return (
     <div className="space-y-4">
       <PixelSectionTitle
         title="Adventurers / Heroes"
         subtitle="Manajemen siswa, kelas, dan pengelompokan mapel"
         action={
-          <PixelButton type="button" size="sm" variant="success" onClick={openCreate}>
-            <Plus size={15} />
-            Add Hero
-          </PixelButton>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="primary"
+              onClick={openImportModal}
+            >
+              <FileSpreadsheet size={15} />
+              Import CSV
+            </PixelButton>
+            <PixelButton type="button" size="sm" variant="success" onClick={openCreate}>
+              <Plus size={15} />
+              Add Hero
+            </PixelButton>
+          </div>
         }
       />
 
@@ -278,7 +377,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
             const heroRealmIds = getEffectiveRealmsForHero(hero);
 
             return (
-              <article key={hero.id} className="pixel-box p-3.5 space-y-2.5 overflow-hidden">
+              <ThemedPanelCard key={hero.id} className="p-3.5 space-y-2.5">
                 <div className="flex items-start justify-between gap-2.5">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <PixelAvatar avatar={hero.avatar} size={44} className="shrink-0" />
@@ -396,7 +495,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                     </button>
                   </div>
                 </div>
-              </article>
+              </ThemedPanelCard>
             );
           })}
         </div>
@@ -418,7 +517,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <PixelFieldLabel htmlFor="hr-user">
                 Username {editingHero ? '(Kosongkan utk hapus)' : ''}
@@ -551,7 +650,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
           <div>
             <PixelFieldLabel>Sprite Class</PixelFieldLabel>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {AVATARS.map((item) => (
                 <button
                   key={item.value}
@@ -560,14 +659,14 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                     setAvatar(item.value);
                     setHeroClass(item.label);
                   }}
-                  className={`p-1.5 flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all ${
+                  className={`p-2 flex flex-col items-center justify-center gap-1.5 border-2 cursor-pointer transition-all min-w-0 ${
                     avatar === item.value
                       ? 'border-[var(--accent-warning)] bg-[var(--bg-surface-alt)] shadow-sm'
                       : 'border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] opacity-75 hover:opacity-100'
                   }`}
                 >
-                  <PixelAvatar avatar={item.value} size={32} />
-                  <span className="font-pixel-ui text-[8.5px] text-[var(--text-primary)] capitalize">
+                  <PixelAvatar avatar={item.value} size={34} />
+                  <span className="font-pixel-ui text-[8.5px] text-[var(--text-primary)] capitalize truncate max-w-full">
                     {item.value}
                   </span>
                 </button>
@@ -603,14 +702,14 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <PixelInput
                 id="hr-pin"
                 maxLength={12}
                 placeholder={
                   editingHero?.hasPin && !clearPin
-                    ? 'Isi PIN baru jika ingin reset PIN...'
-                    : 'Contoh: 482910 (kosongkan jika tanpa PIN)'
+                    ? 'Isi PIN baru jika ingin reset...'
+                    : 'Contoh: 482910 (opsional)'
                 }
                 value={pin}
                 onChange={(e) => {
@@ -619,31 +718,33 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                 }}
                 className="flex-1"
               />
-              <PixelButton
-                type="button"
-                size="sm"
-                variant="warning"
-                onClick={() => {
-                  setPin(String(Math.floor(100000 + Math.random() * 900000)));
-                  setClearPin(false);
-                }}
-              >
-                <Dices size={13} />
-                Acak
-              </PixelButton>
-              {editingHero?.hasPin && (
+              <div className="flex items-center gap-2 shrink-0">
                 <PixelButton
                   type="button"
                   size="sm"
-                  variant="danger"
+                  variant="warning"
                   onClick={() => {
-                    setPin('');
-                    setClearPin((prev) => !prev);
+                    setPin(String(Math.floor(100000 + Math.random() * 900000)));
+                    setClearPin(false);
                   }}
                 >
-                  {clearPin ? 'Batal Hapus' : 'Hapus PIN'}
+                  <Dices size={14} />
+                  Acak
                 </PixelButton>
-              )}
+                {editingHero?.hasPin && (
+                  <PixelButton
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => {
+                      setPin('');
+                      setClearPin((prev) => !prev);
+                    }}
+                  >
+                    {clearPin ? 'Batal Hapus' : 'Hapus PIN'}
+                  </PixelButton>
+                )}
+              </div>
             </div>
             <p className="text-[11.5px] text-[var(--text-secondary)] leading-snug">
               Melindungi akun siswa agar teman sekelas yang tahu NIS-nya tidak bisa login tanpa PIN. Siswa juga bisa mengubah PIN sendiri setelah login.
@@ -655,9 +756,9 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
               type="checkbox"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
-              className="w-5 h-5 accent-[var(--accent-success)]"
+              className="w-5 h-5 accent-[var(--accent-success)] shrink-0"
             />
-            <span className="font-pixel-body text-[18px] text-[var(--text-primary)]">
+            <span className="text-[13.5px] font-semibold text-[var(--text-primary)]">
               Akun Hero Aktif
             </span>
           </label>
@@ -702,6 +803,201 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
           }
         }}
       />
+
+      {/* Bulk Import Students (CSV / Excel Paste) Modal */}
+      <PixelModal
+        open={importModalOpen}
+        title="Import Siswa (Excel / CSV)"
+        onClose={() => setImportModalOpen(false)}
+      >
+        <div className="space-y-3.5">
+          {importedSnapshot ? (
+            <div className="space-y-3">
+              <div className="pixel-box-inset p-3.5 border-2 border-emerald-700 bg-emerald-50 space-y-1.5">
+                <p className="font-pixel-ui text-[11px] text-emerald-900">
+                  ✓ {importedSnapshot.length} SISWA BERHASIL DIIMPOR!
+                </p>
+                <p className="text-[12.5px] text-emerald-900 leading-relaxed">
+                  Unduh daftar akun &amp; PIN awal sekarang agar guru memiliki salinan untuk dibagikan kepada siswa.
+                </p>
+              </div>
+              <PixelButton
+                type="button"
+                variant="warning"
+                fullWidth
+                onClick={() => downloadImportedCredentialsCsv(importedSnapshot)}
+              >
+                <Download size={15} />
+                Unduh Daftar Akun &amp; PIN (.csv)
+              </PixelButton>
+              <div className="grid grid-cols-2 gap-2.5">
+                <PixelButton
+                  type="button"
+                  variant="neutral"
+                  onClick={() => setImportedSnapshot(null)}
+                >
+                  Import Lagi
+                </PixelButton>
+                <PixelButton
+                  type="button"
+                  variant="primary"
+                  onClick={() => setImportModalOpen(false)}
+                >
+                  Selesai
+                </PixelButton>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+                Unggah file <strong>.csv</strong> atau salin-tempel (copy-paste) langsung baris tabel dari <strong>Excel / Google Sheets</strong> dengan urutan kolom: <em>Nama Lengkap, Kelas, NIS, Username, PIN</em>.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="neutral"
+                  onClick={() => downloadStudentImportTemplate(state.dungeons)}
+                >
+                  <Download size={14} />
+                  Unduh Template (.csv)
+                </PixelButton>
+
+                <input
+                  ref={csvFileRef}
+                  type="file"
+                  accept=".csv,.txt,.tsv"
+                  onChange={handleCsvFileUpload}
+                  className="hidden"
+                />
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => csvFileRef.current?.click()}
+                >
+                  <Upload size={14} />
+                  Pilih File CSV/TSV
+                </PixelButton>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <PixelFieldLabel htmlFor="imp-default-class">
+                    Kelas Default (jika kolom Kelas kosong)
+                  </PixelFieldLabel>
+                  <PixelSelect
+                    id="imp-default-class"
+                    value={importDefaultDungeonId}
+                    onChange={(e) => setImportDefaultDungeonId(e.target.value)}
+                  >
+                    {sortedDungeons.length === 0 ? (
+                      <option value="">-- Buat kelas dulu di Dungeons --</option>
+                    ) : (
+                      <DungeonOptGroupOptions dungeons={sortedDungeons} />
+                    )}
+                  </PixelSelect>
+                </div>
+
+                <label className="pixel-box-inset p-2.5 flex items-center gap-2.5 min-h-[44px] cursor-pointer self-end">
+                  <input
+                    type="checkbox"
+                    checked={importAutoPin}
+                    onChange={(e) => setImportAutoPin(e.target.checked)}
+                    className="w-4 h-4 accent-[var(--accent-success)] shrink-0"
+                  />
+                  <span className="text-[12.5px] font-semibold text-[var(--text-primary)] leading-tight">
+                    Buat PIN Acak 6-digit otomatis jika kosong
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <PixelFieldLabel htmlFor="imp-raw-text">
+                  Data CSV / Tempel Baris dari Excel
+                </PixelFieldLabel>
+                <PixelTextarea
+                  id="imp-raw-text"
+                  rows={5}
+                  placeholder={`Contoh (pisahkan koma, titik koma, atau paste dari Excel):\nNama Lengkap,Kelas,NIS,Username,PIN\nRian Pratama,X-IPA-1,261101,rian5,482910\nSiti Aminah,X-IPA-1,,,`}
+                  value={importRawText}
+                  onChange={(e) => setImportRawText(e.target.value)}
+                />
+              </div>
+
+              {parsedImportRows.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-pixel-ui text-[10px] text-[var(--text-primary)]">
+                      PRATINJAU ({validImportRows.length} SIAP IMPOR
+                      {parsedImportRows.length - validImportRows.length > 0
+                        ? ` · ${parsedImportRows.length - validImportRows.length} ERROR`
+                        : ''}
+                      )
+                    </span>
+                    {validImportRows.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => downloadImportedCredentialsCsv(validImportRows)}
+                        className="text-[11px] font-bold text-[var(--accent-success)] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Download size={12} />
+                        Unduh CSV Akun &amp; PIN
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pixel-box-inset max-h-48 overflow-y-auto pixel-scroll divide-y divide-[var(--border-pixel)]/30">
+                    {parsedImportRows.map((row) => (
+                      <div
+                        key={row.rowNumber}
+                        className="p-2 text-[12px] flex flex-wrap items-center justify-between gap-1.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-[var(--text-primary)] truncate">
+                            {row.name}
+                          </p>
+                          <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                            {row.matchedDungeonLabel} · NIS {row.studentCode}
+                            {row.username ? ` · @${row.username}` : ''}
+                            {row.pin ? ` · PIN ${row.pin}` : ' · Tanpa PIN'}
+                          </p>
+                          {row.error && (
+                            <p className="text-[11px] font-bold text-rose-700">
+                              {row.error}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <PixelButton
+                  type="button"
+                  variant="neutral"
+                  onClick={() => setImportModalOpen(false)}
+                >
+                  Batal
+                </PixelButton>
+                <PixelButton
+                  type="button"
+                  variant="success"
+                  disabled={validImportRows.length === 0 || isImporting}
+                  onClick={handleConfirmImport}
+                >
+                  {isImporting
+                    ? 'Mengimpor...'
+                    : `Import ${validImportRows.length} Siswa`}
+                </PixelButton>
+              </div>
+            </>
+          )}
+        </div>
+      </PixelModal>
     </div>
   );
 };

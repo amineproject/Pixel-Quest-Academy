@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   BookOpen,
   CheckCircle2,
+  Clock,
+  Flame,
   KeyRound,
   Lock,
   Pencil,
@@ -22,6 +24,7 @@ import { PixelAvatar, PixelStar } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyChest,
+  PixelExpBar,
   PixelFieldLabel,
   PixelInput,
   PixelLinkButton,
@@ -29,7 +32,13 @@ import {
   PixelSectionTitle,
 } from '../../components/PixelUI';
 import {
+  QuestCard,
+  ThemedNoticeCard,
+  ThemedPanelCard,
+} from '../../components/ThemePrimitives';
+import {
   formatRetroDate,
+  getDeadlineUrgency,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
 } from '../../utils/exp';
@@ -63,6 +72,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   onChangePin,
 }) => {
   const [filter, setFilter] = useState<'all' | NoticePriority>('all');
+  const [questFilter, setQuestFilter] = useState<'priority' | 'belum' | 'remidial' | 'all'>('priority');
   const [selectedNotice, setSelectedNotice] = useState<QuestNotice | null>(
     null
   );
@@ -87,22 +97,39 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
     .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
 
   const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
-  const assignedQuests = state.quests.filter(
-    (q) =>
-      (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId) &&
-      (!allowedRealmIds || allowedRealmIds.includes(q.realmId))
+  const heroGrades = state.grades.filter((g) => g.heroId === hero.id);
+
+  const assignedQuests = state.quests
+    .filter(
+      (q) =>
+        (q.dungeonId === 'all' || q.dungeonId === hero.dungeonId) &&
+        (!allowedRealmIds || allowedRealmIds.includes(q.realmId))
+    )
+    .map((q) => {
+      const grade = heroGrades.find((g) => g.questId === q.id);
+      const status = getEffectiveGradeStatus(grade);
+      const urgency = getDeadlineUrgency(q.deadline);
+      return { quest: q, grade, status, urgency };
+    })
+    .sort((a, b) => (a.quest.deadline || '9999-99-99').localeCompare(b.quest.deadline || '9999-99-99'));
+
+  const urgentPendingQuests = assignedQuests.filter(
+    (item) => (item.status === 'belum' || item.status === 'remidial') && item.urgency.isUrgent
   );
-  const upcomingQuests = assignedQuests.slice(0, 2);
+
+  const filteredQuests = assignedQuests.filter((item) => {
+    if (questFilter === 'belum') return item.status === 'belum';
+    if (questFilter === 'remidial') return item.status === 'remidial';
+    if (questFilter === 'priority') return item.status === 'belum' || item.status === 'remidial';
+    return true;
+  });
 
   // Symbol status counts across assigned quests (no points/scores shown)
-  const heroGrades = state.grades.filter((g) => g.heroId === hero.id);
   const statusCounts = { tuntas: 0, proses: 0, remidial: 0, belum: 0 };
   const questIdsSeen = new Set<string>();
-  assignedQuests.forEach((q) => {
-    questIdsSeen.add(q.id);
-    const grade = heroGrades.find((g) => g.questId === q.id);
-    const st = getEffectiveGradeStatus(grade);
-    statusCounts[st] += 1;
+  assignedQuests.forEach(({ quest, status }) => {
+    questIdsSeen.add(quest.id);
+    statusCounts[status] += 1;
   });
   heroGrades.forEach((g) => {
     if (!questIdsSeen.has(g.questId)) {
@@ -111,17 +138,11 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
     }
   });
 
-  const priorityColor = (p: NoticePriority) => {
-    if (p === 'Critical') return 'text-[var(--accent-danger)]';
-    if (p === 'Medium') return 'text-[var(--accent-warning)]';
-    return 'text-[var(--accent-success)]';
-  };
-
   return (
     <div className="space-y-5">
-      {/* Hero Status Header Card (with Avatar Editor) */}
-      <section className="pixel-box p-4 space-y-3 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Hero Status Header Card (Theme-Adaptive Container) */}
+      <ThemedPanelCard className="p-3.5 sm:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <PixelAvatar avatar={hero.avatar} size={52} className="animate-pixel-bounce shrink-0" />
             <div className="min-w-0 flex-1">
@@ -178,6 +199,16 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
           </div>
         </div>
 
+        {/* RPG Quest Completion Bar (Progress Tuntas only — no numeric scores) */}
+        {assignedQuests.length > 0 && (
+          <PixelExpBar
+            percent={Math.round((statusCounts.tuntas / assignedQuests.length) * 100)}
+            labelLeft="Progres Misi"
+            labelRight={`${statusCounts.tuntas} / ${assignedQuests.length} Tuntas`}
+            color="var(--accent-success)"
+          />
+        )}
+
         {/* Quest Status Symbols Summary (No Points) */}
         <button
           type="button"
@@ -185,24 +216,64 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
           className="w-full text-left pixel-box-inset p-2.5 grid grid-cols-4 gap-1.5 hover:border-[var(--accent-warning)] transition-colors cursor-pointer"
           title="Lihat Detail Status Tugas"
         >
-          <div className="flex items-center justify-center gap-1 text-emerald-700 font-bold">
-            <CheckCircle2 size={15} />
-            <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.tuntas}</span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-emerald-700 font-bold">
+            <div className="flex items-center gap-1">
+              <CheckCircle2 size={15} />
+              <span className="font-pixel-ui text-[10.5px] tabular-nums">{statusCounts.tuntas}</span>
+            </div>
+            <span className="text-[9.5px] font-semibold">Tuntas</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-teal-700 font-bold">
-            <AlertCircle size={15} />
-            <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.proses}</span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-teal-700 font-bold">
+            <div className="flex items-center gap-1">
+              <AlertCircle size={15} />
+              <span className="font-pixel-ui text-[10.5px] tabular-nums">{statusCounts.proses}</span>
+            </div>
+            <span className="text-[9.5px] font-semibold">Proses</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-amber-700 font-bold">
-            <AlertTriangle size={15} className="text-amber-700" />
-            <span className="font-pixel-ui text-[10px] text-amber-800 tabular-nums">{statusCounts.remidial}</span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-amber-800 font-bold">
+            <div className="flex items-center gap-1">
+              <AlertTriangle size={15} className="text-amber-700" />
+              <span className="font-pixel-ui text-[10.5px] tabular-nums">{statusCounts.remidial}</span>
+            </div>
+            <span className="text-[9.5px] font-semibold">Remidi</span>
           </div>
-          <div className="flex items-center justify-center gap-1 text-rose-700 font-bold">
-            <XCircle size={15} />
-            <span className="font-pixel-ui text-[10px] tabular-nums">{statusCounts.belum}</span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-rose-700 font-bold">
+            <div className="flex items-center gap-1">
+              <XCircle size={15} />
+              <span className="font-pixel-ui text-[10.5px] tabular-nums">{statusCounts.belum}</span>
+            </div>
+            <span className="text-[9.5px] font-semibold">Belum</span>
           </div>
         </button>
-      </section>
+      </ThemedPanelCard>
+
+      {/* Deadline Urgency & Pending Task Reminder Banner */}
+      {(urgentPendingQuests.length > 0 || statusCounts.remidial > 0) && (
+        <section className="pixel-box p-3.5 bg-[var(--comic-gold)] text-[#09090f] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 overflow-hidden">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <span className="w-8 h-8 rounded-md border-2 border-[#09090f] bg-[#e11d74] text-white flex items-center justify-center shrink-0">
+              <Flame size={17} strokeWidth={2.5} />
+            </span>
+            <div className="min-w-0">
+              <p className="font-pixel-ui text-[10.5px] font-bold uppercase tracking-wide">
+                Pengingat Tenggat Tugas!
+              </p>
+              <p className="text-[12.5px] font-semibold leading-snug break-words">
+                {urgentPendingQuests.length > 0
+                  ? `${urgentPendingQuests.length} tugas belum selesai dengan tenggat mendesak (≤ 2 hari / terlewat).`
+                  : `Ada ${statusCounts.remidial} tugas berstatus Remidial yang perlu diperbaiki.`}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setQuestFilter(statusCounts.belum > 0 ? 'belum' : 'remidial')}
+            className="pixel-btn min-h-[36px] px-3 bg-white text-[#09090f] font-pixel-ui text-[10px] font-bold shrink-0 cursor-pointer"
+          >
+            Lihat Prioritas
+          </button>
+        </section>
+      )}
 
       {/* Guild Notice Feed (Read-Only) */}
       <section className="space-y-3">
@@ -217,7 +288,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
               key={item}
               type="button"
               onClick={() => setFilter(item)}
-              className={`pixel-btn min-h-[40px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
                 filter === item
                   ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                   : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -234,55 +305,56 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
             description="Belum ada pengumuman dari Game Master untuk kategori ini."
           />
         ) : (
-          <div className="space-y-2.5">
-            {visibleNotices.map((notice) => (
-              <article
-                key={notice.id}
-                className="pixel-box p-4 space-y-2 overflow-hidden"
-              >
-                <button
-                  type="button"
-                  onClick={() => setSelectedNotice(notice)}
-                  className="w-full text-left space-y-1.5 hover:opacity-90 transition-opacity cursor-pointer block"
+          <div className="space-y-3">
+            {visibleNotices.map((notice) => {
+              const priorityLabel =
+                notice.priority === 'Critical'
+                  ? '[!] PENTING'
+                  : notice.priority === 'Medium'
+                    ? '[•] INFO'
+                    : '[-] CATATAN';
+
+              return (
+                <ThemedNoticeCard
+                  key={notice.id}
+                  speaker={`${priorityLabel} · ${notice.author}`}
+                  metaRight={formatRetroDate(notice.releaseDate)}
+                  footer={
+                    notice.linkUrl ? (
+                      <div className="pt-1 border-t border-[var(--border-pixel)]/30">
+                        <PixelLinkButton
+                          url={notice.linkUrl}
+                          label="Buka Tautan"
+                          compact
+                        />
+                      </div>
+                    ) : undefined
+                  }
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[10px]">
-                    <span className={priorityColor(notice.priority)}>
-                      {notice.priority === 'Critical'
-                        ? '[!] CRITICAL'
-                        : notice.priority === 'Medium'
-                          ? '[•] MEDIUM'
-                          : '[-] LOW'}
-                    </span>
-                    <span className="text-[var(--text-muted)] tabular-nums">
-                      {formatRetroDate(notice.releaseDate)}
-                    </span>
-                  </div>
-                  <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
-                    {notice.title}
-                  </h3>
-                  <p className="text-[13px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed break-words [overflow-wrap:anywhere]">
-                    {notice.description}
-                  </p>
-                </button>
-                {notice.linkUrl && (
-                  <div className="pt-1 border-t border-[var(--border-pixel)]/30">
-                    <PixelLinkButton
-                      url={notice.linkUrl}
-                      label="Buka Tautan"
-                      compact
-                    />
-                  </div>
-                )}
-              </article>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNotice(notice)}
+                    className="w-full text-left space-y-1.5 hover:opacity-90 transition-opacity cursor-pointer block"
+                  >
+                    <h3 className="font-pixel-display text-[14.5px] sm:text-[15.5px] leading-snug break-words [overflow-wrap:anywhere] text-[var(--text-primary)]">
+                      {notice.title}
+                    </h3>
+                    <p className="text-[13.5px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed break-words [overflow-wrap:anywhere]">
+                      {notice.description}
+                    </p>
+                  </button>
+                </ThemedNoticeCard>
+              );
+            })}
           </div>
         )}
       </section>
 
-      {/* Upcoming Quests Briefing Preview */}
+      {/* Active Quests With Urgency & Unfinished Task Filters */}
       <section className="space-y-2.5">
         <PixelSectionTitle
           title="Active Quests"
+          subtitle="Filter tugas belum dikerjakan, remidial, dan pengingat tenggat"
           action={
             <PixelButton
               type="button"
@@ -296,20 +368,83 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
           }
         />
 
-        {upcomingQuests.length === 0 ? (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll">
+          {[
+            { id: 'priority' as const, label: `Perlu Dikerjakan (${statusCounts.belum + statusCounts.remidial})` },
+            { id: 'belum' as const, label: `Belum (${statusCounts.belum})` },
+            { id: 'remidial' as const, label: `Remidial (${statusCounts.remidial})` },
+            { id: 'all' as const, label: `Semua (${assignedQuests.length})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setQuestFilter(tab.id)}
+              className={`pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                questFilter === tab.id
+                  ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {filteredQuests.length === 0 ? (
           <PixelEmptyChest
-            title="No Active Quests!"
-            description="Belum ada tugas baru untuk guild Anda."
+            title={
+              questFilter === 'all'
+                ? 'No Active Quests!'
+                : 'Semua Tugas Kategori Ini Beres!'
+            }
+            description={
+              questFilter === 'all'
+                ? 'Belum ada tugas baru untuk guild Anda.'
+                : 'Tidak ada tugas yang tertunda pada filter ini. Cek tab "Semua" untuk melihat riwayat lengkap.'
+            }
           />
         ) : (
-          upcomingQuests.map((q) => {
+          filteredQuests.map(({ quest: q, status, urgency }) => {
             const realm = state.realms.find((r) => r.id === q.realmId);
+            const showUrgency = (status === 'belum' || status === 'remidial') && urgency.isUrgent;
+            const statusLabel =
+              status === 'tuntas'
+                ? 'Tuntas'
+                : status === 'proses'
+                  ? 'Proses Dinilai'
+                  : status === 'remidial'
+                    ? 'Remidial'
+                    : 'Belum Dikerjakan';
+            const statusClass =
+              status === 'tuntas'
+                ? 'bg-emerald-100 text-emerald-900 border-emerald-700'
+                : status === 'proses'
+                  ? 'bg-teal-100 text-teal-900 border-teal-700'
+                  : status === 'remidial'
+                    ? 'bg-amber-100 text-amber-900 border-amber-700'
+                    : 'bg-rose-100 text-rose-900 border-rose-700';
+
             return (
-              <article key={q.id} className="pixel-box p-4 space-y-2 overflow-hidden">
-                <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
-                  {realm?.name} · Due {formatRetroDate(q.deadline)}
-                </p>
-                <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+              <QuestCard key={q.id} urgent={showUrgency}>
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <p className="text-[11.5px] font-semibold text-[var(--accent-success)] tabular-nums break-words">
+                    {realm?.name} · Due {formatRetroDate(q.deadline)}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {showUrgency && (
+                      <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded border border-[#09090f] bg-[var(--comic-gold)] text-[#09090f]">
+                        <Clock size={11} />
+                        {urgency.label}
+                      </span>
+                    )}
+                    <span
+                      className={`text-[10.5px] font-bold px-2 py-0.5 rounded border ${statusClass}`}
+                    >
+                      {statusLabel}
+                    </span>
+                  </div>
+                </div>
+                <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
                   {q.title}
                 </h3>
                 <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
@@ -324,7 +459,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
                     />
                   </div>
                 )}
-              </article>
+              </QuestCard>
             );
           })
         )}
