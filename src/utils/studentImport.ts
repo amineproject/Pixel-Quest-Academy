@@ -218,10 +218,20 @@ export function downloadStudentImportTemplate(
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  // Ensure NIS/NIM (col C / index 2) and PIN (col H / index 7) stay Text in Excel
+  for (let r = 1; r < sheetData.length; r++) {
+    [2, 7].forEach((c) => {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if (ws[ref]) {
+        ws[ref].t = 's';
+        ws[ref].z = '@';
+      }
+    });
+  }
   ws['!cols'] = [
     { wch: 24 },
     { wch: 14 },
-    { wch: 14 },
+    { wch: 16 },
     { wch: 16 },
     { wch: 26 },
     { wch: 14 },
@@ -303,10 +313,19 @@ export function downloadStudentsExcel(
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  for (let r = 1; r <= rows.length; r++) {
+    [2, 7].forEach((c) => {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if (ws[ref]) {
+        ws[ref].t = 's';
+        ws[ref].z = '@';
+      }
+    });
+  }
   ws['!cols'] = [
     { wch: 24 },
     { wch: 14 },
-    { wch: 14 },
+    { wch: 16 },
     { wch: 16 },
     { wch: 26 },
     { wch: 14 },
@@ -351,6 +370,15 @@ export function downloadImportedCredentialsExcel(
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([header, ...body]);
+  for (let r = 1; r <= body.length; r++) {
+    [3, 8].forEach((c) => {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      if (ws[ref]) {
+        ws[ref].t = 's';
+        ws[ref].z = '@';
+      }
+    });
+  }
   ws['!cols'] = [
     { wch: 6 },
     { wch: 24 },
@@ -367,6 +395,73 @@ export function downloadImportedCredentialsExcel(
   XLSX.writeFile(wb, `daftar_akun_siswa_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
+export function readSheetMatrixClean(ws: XLSX.WorkSheet): string[][] {
+  const ref = ws['!ref'];
+  if (!ref) return [];
+  const range = XLSX.utils.decode_range(ref);
+  const matrix: string[][] = [];
+
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const row: string[] = [];
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = ws[addr] as XLSX.CellObject | undefined;
+      if (!cell || cell.v === undefined || cell.v === null) {
+        row.push('');
+        continue;
+      }
+
+      if (cell.t === 'n' && typeof cell.v === 'number') {
+        if (cell.z && XLSX.SSF.is_date(cell.z)) {
+          row.push(String(cell.w ?? cell.v).trim());
+        } else if (
+          typeof cell.w === 'string' &&
+          /^\d+$/.test(cell.w.trim()) &&
+          Number(cell.w.trim()) === cell.v
+        ) {
+          // Preserves leading-zero custom number formats such as 001234
+          row.push(cell.w.trim());
+        } else if (Number.isInteger(cell.v)) {
+          // Prevents scientific notation (e.g. 2.024E+11) and grouping commas (e.g. 261,101)
+          row.push(cell.v.toFixed(0));
+        } else {
+          row.push(String(cell.v).trim());
+        }
+      } else if (cell.t === 'b') {
+        row.push(cell.v ? 'Aktif' : 'Nonaktif');
+      } else {
+        row.push(String(cell.v).trim());
+      }
+    }
+    matrix.push(row);
+  }
+
+  return matrix;
+}
+
+const HEADER_KEYWORDS = [
+  'nama',
+  'nama lengkap',
+  'nama siswa',
+  'nama mahasiswa',
+  'name',
+  'nis',
+  'nim',
+  'nisn',
+  'npm',
+  'no induk',
+  'nomor induk',
+  'kode siswa',
+  'kelas',
+  'guild',
+  'username',
+  'pin',
+  'mapel',
+  'avatar',
+  'julukan',
+  'status',
+];
+
 export function parseStudentRowsMatrix(
   matrix: string[][],
   options: {
@@ -382,26 +477,27 @@ export function parseStudentRowsMatrix(
     .filter((row) => row.some((c) => c.length > 0));
   if (nonEmptyRows.length === 0) return [];
 
-  const firstCells = nonEmptyRows[0].map((c) => c.toLowerCase().trim());
-
-  const looksLikeHeader = firstCells.some((c) =>
-    [
-      'nama',
-      'nama lengkap',
-      'nama siswa',
-      'name',
-      'nis',
-      'kode',
-      'kelas',
-      'guild',
-      'username',
-      'pin',
-      'mapel',
-      'avatar',
-      'julukan',
-      'status',
-    ].some((kw) => c === kw || c.includes(kw))
-  );
+  // Search top 8 rows for an actual table header row (handles title banners above table headers)
+  let headerRowIdx = -1;
+  let bestScore = 0;
+  for (let r = 0; r < Math.min(8, nonEmptyRows.length); r++) {
+    const cells = nonEmptyRows[r].map((c) => c.toLowerCase().trim());
+    const score = cells.filter((c) =>
+      HEADER_KEYWORDS.some((kw) => c === kw || c.includes(kw))
+    ).length;
+    if (score >= 2 && score > bestScore) {
+      bestScore = score;
+      headerRowIdx = r;
+    }
+  }
+  // Single-column fallback on row 0 if only 1 keyword matched cleanly
+  if (headerRowIdx < 0) {
+    const firstCells = nonEmptyRows[0].map((c) => c.toLowerCase().trim());
+    const looksLikeHeader = firstCells.some((c) =>
+      HEADER_KEYWORDS.some((kw) => c === kw || c.includes(kw))
+    );
+    if (looksLikeHeader) headerRowIdx = 0;
+  }
 
   let colMap = {
     name: 0,
@@ -416,19 +512,71 @@ export function parseStudentRowsMatrix(
   };
 
   let dataStartIndex = 0;
-  if (looksLikeHeader) {
-    dataStartIndex = 1;
-    const findIdx = (patterns: string[]) =>
-      firstCells.findIndex((c) => patterns.some((p) => c === p || c.includes(p)));
+  if (headerRowIdx >= 0) {
+    dataStartIndex = headerRowIdx + 1;
+    const headerCells = nonEmptyRows[headerRowIdx].map((c) =>
+      c.toLowerCase().replace(/\s+/g, ' ').trim()
+    );
 
-    const nameIdx = findIdx(['nama lengkap', 'nama siswa', 'nama', 'name']);
-    const userIdx = findIdx(['username', 'user']);
-    const nisIdx = findIdx(['nis', 'student_code', 'kode siswa', 'no induk']);
-    const kelasIdx = findIdx(['kelas', 'guild', 'rombel', 'dungeon', 'class']);
-    const mapelIdx = findIdx(['mapel', 'mata pelajaran', 'realm', 'pelajaran']);
+    const findIdx = (
+      exactPatterns: string[],
+      partialPatterns: string[] = exactPatterns,
+      excludePatterns: string[] = []
+    ) => {
+      const exactHit = headerCells.findIndex(
+        (c) =>
+          exactPatterns.includes(c) &&
+          !excludePatterns.some((ex) => c.includes(ex))
+      );
+      if (exactHit >= 0) return exactHit;
+      return headerCells.findIndex(
+        (c) =>
+          partialPatterns.some((p) => c.includes(p)) &&
+          !excludePatterns.some((ex) => c.includes(ex))
+      );
+    };
+
+    const nameIdx = findIdx(
+      ['nama lengkap', 'nama siswa', 'nama mahasiswa', 'nama', 'name', 'full name'],
+      ['nama lengkap', 'nama siswa', 'nama mahasiswa', 'nama', 'name'],
+      ['username', 'pengguna', 'kelas', 'mapel']
+    );
+    const userIdx = findIdx(
+      ['username', 'user', 'nama pengguna'],
+      ['username', 'user', 'nama pengguna']
+    );
+    const nisIdx = findIdx(
+      [
+        'nis',
+        'nim',
+        'n.i.s',
+        'n.i.m',
+        'nisn',
+        'npm',
+        'nis/nim',
+        'nim/nis',
+        'nis / nim',
+        'nim / nis',
+        'student_code',
+        'kode siswa',
+        'id siswa',
+        'no induk',
+        'no. induk',
+        'nomor induk',
+      ],
+      ['nim', 'nisn', 'nis', 'n.i.m', 'n.i.s', 'npm', 'student_code', 'kode siswa', 'id siswa', 'no induk', 'nomor induk']
+    );
+    const kelasIdx = findIdx(
+      ['kelas', 'guild', 'rombel', 'dungeon', 'class', 'kode kelas'],
+      ['kelas', 'guild', 'rombel', 'dungeon', 'class']
+    );
+    const mapelIdx = findIdx(
+      ['mapel', 'mata pelajaran', 'mata kuliah', 'realm', 'pelajaran'],
+      ['mapel', 'mata pelajaran', 'mata kuliah', 'realm', 'pelajaran']
+    );
     const avatarIdx = findIdx(['avatar', 'sprite', 'karakter sprite']);
-    const heroClassIdx = findIdx(['julukan', 'hero_class', 'gelar']);
-    const pinIdx = findIdx(['pin', 'sandi', 'password']);
+    const heroClassIdx = findIdx(['julukan karakter', 'julukan', 'hero_class', 'gelar']);
+    const pinIdx = findIdx(['pin', 'pin rahasia', 'sandi', 'password']);
     const statusIdx = findIdx(['status aktif', 'status', 'aktif', 'active']);
 
     colMap = {
@@ -445,9 +593,10 @@ export function parseStudentRowsMatrix(
   }
 
   const realms = options.realms || [];
-  const usedStudentCodes = new Set(
-    options.existingHeroes.map((h) => h.studentCode.toLowerCase())
+  const existingCodesSet = new Set(
+    options.existingHeroes.map((h) => h.studentCode.trim().toLowerCase()).filter(Boolean)
   );
+  const seenCodesInImport = new Set<string>();
   const usedUsernames = new Set(
     options.existingHeroes
       .map((h) => h.username.trim().toLowerCase())
@@ -455,17 +604,15 @@ export function parseStudentRowsMatrix(
   );
 
   let nextNisCounter = 261001 + options.existingHeroes.length;
-  const allocateNis = (preferred: string): string => {
-    const cleanPref = preferred.trim();
-    if (cleanPref && !usedStudentCodes.has(cleanPref.toLowerCase())) {
-      usedStudentCodes.add(cleanPref.toLowerCase());
-      return cleanPref;
-    }
-    while (usedStudentCodes.has(String(nextNisCounter).toLowerCase())) {
+  const generateFreshNis = (): string => {
+    while (
+      existingCodesSet.has(String(nextNisCounter).toLowerCase()) ||
+      seenCodesInImport.has(String(nextNisCounter).toLowerCase())
+    ) {
       nextNisCounter++;
     }
     const assigned = String(nextNisCounter);
-    usedStudentCodes.add(assigned.toLowerCase());
+    seenCodesInImport.add(assigned.toLowerCase());
     nextNisCounter++;
     return assigned;
   };
@@ -515,7 +662,23 @@ export function parseStudentRowsMatrix(
       colMap.active >= 0 ? (cells[colMap.active] || '').trim() : '';
 
     const matchedDng = matchDungeon(rawClass);
-    const studentCode = allocateNis(rawNis);
+
+    // NEVER overwrite a user-supplied NIM/NIS! Only auto-generate when column is blank.
+    let studentCode = '';
+    let nisDuplicateError: string | undefined;
+    if (rawNis) {
+      studentCode = rawNis;
+      const key = rawNis.toLowerCase();
+      if (existingCodesSet.has(key)) {
+        nisDuplicateError = `NIS/NIM "${rawNis}" sudah terdaftar di data siswa`;
+      } else if (seenCodesInImport.has(key)) {
+        nisDuplicateError = `NIS/NIM "${rawNis}" duplikat dengan baris lain di file ini`;
+      } else {
+        seenCodesInImport.add(key);
+      }
+    } else {
+      studentCode = generateFreshNis();
+    }
 
     let username = sanitizeUsername(rawUsername);
     if (username && usedUsernames.has(username)) {
@@ -557,7 +720,9 @@ export function parseStudentRowsMatrix(
       heroClass,
       pin,
       active,
-      error: !matchedDng ? 'Kelas belum dipilih / tidak ditemukan' : undefined,
+      error:
+        nisDuplicateError ||
+        (!matchedDng ? 'Kelas belum dipilih / tidak ditemukan' : undefined),
     });
   }
 
@@ -608,11 +773,7 @@ export async function parseStudentImportFile(
   const firstSheetName = wb.SheetNames[0];
   if (!firstSheetName) return [];
   const ws = wb.Sheets[firstSheetName];
-  const matrix = XLSX.utils.sheet_to_json<any[]>(ws, {
-    header: 1,
-    defval: '',
-    raw: false,
-  }) as string[][];
+  const matrix = readSheetMatrixClean(ws);
   return parseStudentRowsMatrix(matrix, options);
 }
 

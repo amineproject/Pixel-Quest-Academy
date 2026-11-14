@@ -14,6 +14,7 @@ import {
   getRankFromScore,
   sortDungeonsAlphabetically,
 } from './exp';
+import { readSheetMatrixClean } from './studentImport';
 
 export interface RecapQuestCell {
   questId: string;
@@ -439,17 +440,19 @@ export async function parseAssessmentExcelFile(
   }
 
   const ws = wb.Sheets[sheetName];
-  const matrix = XLSX.utils.sheet_to_json<any[]>(ws, {
-    header: 1,
-    defval: '',
-    raw: false,
-  }) as string[][];
+  const matrix = readSheetMatrixClean(ws);
 
   // Find header row (supports both clean table row 0 or metadata-prefixed sheet)
   const headerIdx = matrix.findIndex((row) =>
     row.some((cell) => {
       const c = String(cell ?? '').trim().toLowerCase();
-      return c === 'nis' || c === 'nama siswa' || c === 'nama lengkap';
+      return (
+        c === 'nis' ||
+        c === 'nim' ||
+        c === 'nisn' ||
+        c === 'nama siswa' ||
+        c === 'nama lengkap'
+      );
     })
   );
 
@@ -458,14 +461,21 @@ export async function parseAssessmentExcelFile(
       matchedQuestColumns: [],
       entries: [],
       warnings: [
-        'Header tabel ("NIS" / "Nama Siswa") tidak ditemukan. Gunakan file format dari menu Unduh Excel Penilaian.',
+        'Header tabel ("NIS/NIM" / "Nama Siswa") tidak ditemukan. Gunakan file format dari menu Unduh Excel Penilaian.',
       ],
     };
   }
 
   const headers = matrix[headerIdx].map((h) => String(h ?? '').trim());
   const lowerHeaders = headers.map((h) => h.toLowerCase());
-  const nisCol = lowerHeaders.findIndex((h) => h === 'nis' || h.includes('no induk'));
+  const nisCol = lowerHeaders.findIndex(
+    (h) =>
+      h === 'nis' ||
+      h === 'nim' ||
+      h === 'nisn' ||
+      h.includes('no induk') ||
+      h.includes('nomor induk')
+  );
   const nameCol = lowerHeaders.findIndex(
     (h) => h === 'nama siswa' || h === 'nama lengkap' || h === 'nama'
   );

@@ -963,7 +963,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
           ) : (
             <>
               <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
-                Unduh format Excel berkolom lengkap (<em>Nama Lengkap, Username, NIS, Kelas, Mapel, Avatar, Julukan Karakter, PIN, Status Aktif</em>), isi di Excel, lalu unggah kembali file <strong>.xlsx</strong> atau salin-tempel dari spreadsheet.
+                Unduh format Excel berkolom lengkap (<em>Nama Lengkap, Username, NIS / NIM, Kelas, Mapel, Avatar, Julukan Karakter, PIN, Status Aktif</em>), isi di Excel, lalu unggah kembali file <strong>.xlsx</strong> atau salin-tempel dari spreadsheet. Nilai NIS/NIM yang Anda isi akan dipertahankan sesuai input Anda.
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1053,7 +1053,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                 <PixelTextarea
                   id="imp-raw-text"
                   rows={4}
-                  placeholder={`Contoh header & isi:\nNama Lengkap\tUsername\tNIS\tKelas\tMapel\tAvatar\tJulukan Karakter\tPIN\tStatus Aktif`}
+                  placeholder={`Contoh header & isi:\nNama Lengkap\tUsername\tNIM\tKelas\tMapel\tAvatar\tJulukan Karakter\tPIN\tStatus Aktif`}
                   value={importRawText}
                   onChange={(e) => {
                     setUploadedFile(null);
