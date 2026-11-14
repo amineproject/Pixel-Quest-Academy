@@ -16,6 +16,9 @@ interface ScheduleConfigSectionProps {
   onChangeClassSchedules: (val: Record<string, string>) => void;
   idPrefix?: string;
   targetLabel?: string;
+  hideTargetSelect?: boolean;
+  filterRealmId?: string;
+  filterRealmName?: string;
 }
 
 function getDefaultDateTimeLocal(): string {
@@ -49,11 +52,15 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
   onChangeClassSchedules,
   idPrefix = 'sched',
   targetLabel = 'Target Kelas / Guild',
+  hideTargetSelect = false,
+  filterRealmId,
+  filterRealmName,
 }) => {
   const sortedDungeons = sortDungeonsAlphabetically(dungeons);
   const [mode, setMode] = useState<ScheduleMode>(() =>
     inferMode(scheduledAt, classSchedules)
   );
+  const [showAllClasses, setShowAllClasses] = useState(false);
 
   useEffect(() => {
     setMode(inferMode(scheduledAt, classSchedules));
@@ -74,10 +81,26 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
     }
   };
 
-  const visibleDungeons =
+  const baseDungeons =
     targetDungeonId === 'all'
       ? sortedDungeons
       : sortedDungeons.filter((d) => d.id === targetDungeonId);
+
+  const teachesFilterRealm = (d: Dungeon) => {
+    if (!filterRealmId) return true;
+    if (!d.realmIds || d.realmIds.length === 0) return true;
+    return d.realmIds.includes(filterRealmId);
+  };
+
+  const matchingDungeons =
+    targetDungeonId === 'all' && filterRealmId
+      ? baseDungeons.filter(teachesFilterRealm)
+      : baseDungeons;
+  const nonMatchingCount = baseDungeons.length - matchingDungeons.length;
+  const visibleDungeons =
+    targetDungeonId === 'all' && filterRealmId && !showAllClasses && matchingDungeons.length > 0
+      ? matchingDungeons
+      : baseDungeons;
 
   const handleFillAllPerClass = () => {
     const baseTime =
@@ -98,17 +121,19 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
 
   return (
     <div className="pixel-box-inset p-3 space-y-3 border border-[var(--border-pixel)] bg-[var(--bg-inset)]">
-      <div>
-        <PixelFieldLabel htmlFor={`${idPrefix}-target`}>{targetLabel}</PixelFieldLabel>
-        <PixelSelect
-          id={`${idPrefix}-target`}
-          value={targetDungeonId}
-          onChange={(e) => onChangeTargetDungeonId(e.target.value)}
-        >
-          <option value="all">All Guilds (Semua Kelas)</option>
-          <DungeonOptGroupOptions dungeons={sortedDungeons} />
-        </PixelSelect>
-      </div>
+      {!hideTargetSelect && (
+        <div>
+          <PixelFieldLabel htmlFor={`${idPrefix}-target`}>{targetLabel}</PixelFieldLabel>
+          <PixelSelect
+            id={`${idPrefix}-target`}
+            value={targetDungeonId}
+            onChange={(e) => onChangeTargetDungeonId(e.target.value)}
+          >
+            <option value="all">All Guilds (Semua Kelas)</option>
+            <DungeonOptGroupOptions dungeons={sortedDungeons} />
+          </PixelSelect>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <PixelFieldLabel>
@@ -212,6 +237,27 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
             )}
           </div>
 
+          {filterRealmId && targetDungeonId === 'all' && nonMatchingCount > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-pixel)]/50 text-[11px]">
+              <span className="text-[var(--text-secondary)]">
+                Menampilkan kelas yang mengajarkan{' '}
+                <strong className="text-[var(--text-primary)]">
+                  {filterRealmName || 'mapel ini'}
+                </strong>{' '}
+                ({matchingDungeons.length} kelas).
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllClasses((prev) => !prev)}
+                className="font-semibold text-[var(--accent-primary)] hover:underline cursor-pointer shrink-0"
+              >
+                {showAllClasses
+                  ? 'Sembunyikan kelas lain'
+                  : `Lihat ${nonMatchingCount} kelas lain`}
+              </button>
+            </div>
+          )}
+
           {visibleDungeons.length === 0 ? (
             <p className="text-[12px] text-[var(--text-muted)] italic">
               Belum ada kelas tersedia. Tambahkan kelas terlebih dahulu di menu Dungeons.
@@ -220,6 +266,7 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
             <div className="max-h-52 overflow-y-auto pixel-scroll space-y-2 pr-1">
               {visibleDungeons.map((dng) => {
                 const val = classSchedules[dng.id] || '';
+                const teachesRealm = teachesFilterRealm(dng);
                 return (
                   <div
                     key={dng.id}
@@ -231,6 +278,7 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
                       </p>
                       <p className="text-[10.5px] text-[var(--text-muted)]">
                         {val ? 'Terjadwal sesuai jam kelas' : 'Belum dijadwalkan (tidak tayang)'}
+                        {filterRealmId && !teachesRealm ? ' · Mapel tidak terdaftar di kelas ini' : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
