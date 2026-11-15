@@ -10,6 +10,16 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Academic Years table (Sistem Arsip "Era")
+export const academicYears = pgTable('academic_years', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  startDate: text('start_date').notNull().default(''),
+  endDate: text('end_date').notNull().default(''),
+  isActive: boolean('is_active').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Dungeons table (Rombel / Kelas)
 export const dungeons = pgTable('dungeons', {
   id: text('id').primaryKey(),
@@ -19,6 +29,7 @@ export const dungeons = pgTable('dungeons', {
   capacity: integer('capacity').notNull().default(30),
   description: text('description'),
   realmIds: text('realm_ids'), // JSON array of realm IDs
+  academicYearId: text('academic_year_id').references(() => academicYears.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -51,6 +62,7 @@ export const notices = pgTable('notices', {
   scheduledAt: text('scheduled_at').default(''),
   classSchedules: text('class_schedules').default('{}'),
   author: text('author').notNull().default('Guild Master'),
+  academicYearId: text('academic_year_id').references(() => academicYears.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -95,6 +107,7 @@ export const quests = pgTable('quests', {
   difficulty: text('difficulty').notNull().default('Normal'),
   scheduledAt: text('scheduled_at').default(''),
   classSchedules: text('class_schedules').default('{}'),
+  academicYearId: text('academic_year_id').references(() => academicYears.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

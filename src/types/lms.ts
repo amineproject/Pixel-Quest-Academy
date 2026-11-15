@@ -72,6 +72,14 @@ export interface GameMasterProfile {
   requirePassword?: boolean;
 }
 
+export interface AcademicYear {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
 export interface Dungeon {
   id: string;
   name: string;
@@ -80,6 +88,7 @@ export interface Dungeon {
   capacity: number;
   description: string;
   realmIds?: string[]; // Mata pelajaran yang dibuka di kelas ini
+  academicYearId?: string;
 }
 
 export interface HeroStudent {
@@ -108,6 +117,7 @@ export interface QuestNotice {
   author: string;
   scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
   classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
+  academicYearId?: string;
 }
 
 export interface Realm {
@@ -146,6 +156,7 @@ export interface ActiveQuest {
   difficulty: QuestDifficulty;
   scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
   classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
+  academicYearId?: string;
 }
 
 export type GradeStatus = 'tuntas' | 'belum' | 'proses' | 'remidial';
@@ -172,6 +183,7 @@ export interface SystemSettings {
 export interface AcademyState {
   gmProfile: GameMasterProfile;
   settings: SystemSettings;
+  academicYears?: AcademicYear[];
   dungeons: Dungeon[];
   heroes: HeroStudent[];
   notices: QuestNotice[];

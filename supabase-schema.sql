@@ -5,6 +5,18 @@
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
+-- 0. Academic Years table (Sistem Arsip "Era")
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.academic_years (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    start_date TEXT NOT NULL DEFAULT '',
+    end_date TEXT NOT NULL DEFAULT '',
+    is_active BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- ----------------------------------------------------------------------------
 -- 1. Dungeons table (Rombel / Kelas Petualangan)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.dungeons (
@@ -15,10 +27,12 @@ CREATE TABLE IF NOT EXISTS public.dungeons (
     capacity INTEGER NOT NULL DEFAULT 30,
     description TEXT,
     realm_ids TEXT,
+    academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 ALTER TABLE public.dungeons ADD COLUMN IF NOT EXISTS realm_ids TEXT;
+ALTER TABLE public.dungeons ADD COLUMN IF NOT EXISTS academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL;
 
 -- ----------------------------------------------------------------------------
 -- 2. Heroes table (Siswa / Petualang Terdaftar — TANPA kolom PIN polos)
@@ -101,11 +115,13 @@ CREATE TABLE IF NOT EXISTS public.quests (
     difficulty TEXT NOT NULL DEFAULT 'Normal',
     scheduled_at TEXT NOT NULL DEFAULT '',
     class_schedules TEXT NOT NULL DEFAULT '{}',
+    academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL;
 
 -- ----------------------------------------------------------------------------
 -- 6. Quest Notices table (Papan Pengumuman)
@@ -121,11 +137,13 @@ CREATE TABLE IF NOT EXISTS public.notices (
     scheduled_at TEXT NOT NULL DEFAULT '',
     class_schedules TEXT NOT NULL DEFAULT '{}',
     author TEXT NOT NULL DEFAULT 'Guild Master',
+    academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL;
 
 -- ----------------------------------------------------------------------------
 -- 7. EXP & Loot Grades table (Nilai Rahasia — Terkunci RLS dari akses publik)
@@ -180,6 +198,7 @@ CREATE TABLE IF NOT EXISTS public.private_auth (
 -- ----------------------------------------------------------------------------
 -- 10. Row Level Security (RLS) Ketat
 -- ----------------------------------------------------------------------------
+ALTER TABLE public.academic_years ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dungeons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.heroes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.realms ENABLE ROW LEVEL SECURITY;
@@ -191,6 +210,7 @@ ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.private_auth ENABLE ROW LEVEL SECURITY;
 
 -- Hapus semua policy lama yang terlalu terbuka (FOR ALL USING (true))
+DROP POLICY IF EXISTS "Allow public read academic_years" ON public.academic_years;
 DROP POLICY IF EXISTS "Allow public read dungeons" ON public.dungeons;
 DROP POLICY IF EXISTS "Allow public read heroes" ON public.heroes;
 DROP POLICY IF EXISTS "Allow public read realms" ON public.realms;
@@ -212,6 +232,7 @@ DROP POLICY IF EXISTS "Deny all private_auth" ON public.private_auth;
 
 -- Hanya READ-ONLY (SELECT) untuk tabel materi/kelas/roster publik.
 -- Penulisan/Edit/Hapus HANYA boleh lewat fungsi RPC terautentikasi!
+CREATE POLICY "Allow public read academic_years" ON public.academic_years FOR SELECT USING (true);
 CREATE POLICY "Allow public read dungeons" ON public.dungeons FOR SELECT USING (true);
 CREATE POLICY "Allow public read heroes" ON public.heroes FOR SELECT USING (true);
 CREATE POLICY "Allow public read realms" ON public.realms FOR SELECT USING (true);
@@ -604,21 +625,71 @@ END;
 $$;
 
 -- H. GM CRUD RPCs (Terproteksi Password GM di Database)
+CREATE OR REPLACE FUNCTION public.gm_upsert_academic_year(p_gm_user TEXT, p_gm_pass TEXT, p_data JSONB)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
+DECLARE
+  v_active BOOLEAN := COALESCE((p_data->>'is_active')::boolean, false);
+  v_id TEXT := p_data->>'id';
+BEGIN
+  IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Hanya Super Admin / GM yang dapat mengelola Era.');
+  END IF;
+
+  IF v_active THEN
+    UPDATE public.academic_years SET is_active = false WHERE id <> v_id;
+  END IF;
+
+  INSERT INTO public.academic_years (id, name, start_date, end_date, is_active)
+  VALUES (
+    v_id,
+    TRIM(COALESCE(p_data->>'name', 'Era Baru')),
+    COALESCE(p_data->>'start_date', ''),
+    COALESCE(p_data->>'end_date', ''),
+    v_active
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    start_date = EXCLUDED.start_date,
+    end_date = EXCLUDED.end_date,
+    is_active = EXCLUDED.is_active;
+
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.gm_set_active_era(p_gm_user TEXT, p_gm_pass TEXT, p_era_id TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
+BEGIN
+  IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Hanya Super Admin / GM yang dapat mengganti Era aktif.');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.academic_years WHERE id = p_era_id) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Era tidak ditemukan.');
+  END IF;
+
+  UPDATE public.academic_years SET is_active = (id = p_era_id);
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.gm_upsert_dungeon(p_gm_user TEXT, p_gm_pass TEXT, p_data JSONB)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
 BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.dungeons (id, name, tier, guild_code, capacity, description, realm_ids)
+  INSERT INTO public.dungeons (id, name, tier, guild_code, capacity, description, realm_ids, academic_year_id)
   VALUES (
     p_data->>'id', p_data->>'name', p_data->>'tier', p_data->>'guild_code',
     COALESCE((p_data->>'capacity')::int, 30), COALESCE(p_data->>'description', ''),
-    COALESCE(p_data->>'realm_ids', '[]')
+    COALESCE(p_data->>'realm_ids', '[]'),
+    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), '')
   )
   ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name, tier = EXCLUDED.tier, guild_code = EXCLUDED.guild_code,
-    capacity = EXCLUDED.capacity, description = EXCLUDED.description, realm_ids = EXCLUDED.realm_ids;
+    capacity = EXCLUDED.capacity, description = EXCLUDED.description, realm_ids = EXCLUDED.realm_ids,
+    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.dungeons.academic_year_id);
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -701,20 +772,22 @@ BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.notices (id, title, description, link_url, priority, target_dungeon_id, release_date, scheduled_at, class_schedules, author)
+  INSERT INTO public.notices (id, title, description, link_url, priority, target_dungeon_id, release_date, scheduled_at, class_schedules, author, academic_year_id)
   VALUES (
     p_data->>'id', p_data->>'title', p_data->>'description', COALESCE(p_data->>'link_url', ''),
     COALESCE(p_data->>'priority', 'Medium'), COALESCE(p_data->>'target_dungeon_id', 'all'),
     COALESCE(p_data->>'release_date', to_char(now(), 'YYYY-MM-DD')),
     COALESCE(p_data->>'scheduled_at', ''),
     COALESCE(p_data->>'class_schedules', '{}'),
-    COALESCE(p_data->>'author', 'Guild Master')
+    COALESCE(p_data->>'author', 'Guild Master'),
+    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), '')
   )
   ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title, description = EXCLUDED.description, link_url = EXCLUDED.link_url,
     priority = EXCLUDED.priority, target_dungeon_id = EXCLUDED.target_dungeon_id,
     release_date = EXCLUDED.release_date, scheduled_at = EXCLUDED.scheduled_at,
-    class_schedules = EXCLUDED.class_schedules, author = EXCLUDED.author;
+    class_schedules = EXCLUDED.class_schedules, author = EXCLUDED.author,
+    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.notices.academic_year_id);
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -807,7 +880,7 @@ BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.quests (id, realm_id, dungeon_id, title, instructions, link_url, deadline, max_exp, difficulty, scheduled_at, class_schedules)
+  INSERT INTO public.quests (id, realm_id, dungeon_id, title, instructions, link_url, deadline, max_exp, difficulty, scheduled_at, class_schedules, academic_year_id)
   VALUES (
     p_data->>'id', NULLIF(TRIM(COALESCE(p_data->>'realm_id', '')), ''),
     COALESCE(p_data->>'dungeon_id', 'all'), p_data->>'title',
@@ -815,13 +888,15 @@ BEGIN
     COALESCE(p_data->>'deadline', to_char(now(), 'YYYY-MM-DD')),
     COALESCE((p_data->>'max_exp')::int, 200), COALESCE(p_data->>'difficulty', 'Normal'),
     COALESCE(p_data->>'scheduled_at', ''),
-    COALESCE(p_data->>'class_schedules', '{}')
+    COALESCE(p_data->>'class_schedules', '{}'),
+    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), '')
   )
   ON CONFLICT (id) DO UPDATE SET
     realm_id = EXCLUDED.realm_id, dungeon_id = EXCLUDED.dungeon_id, title = EXCLUDED.title,
     instructions = EXCLUDED.instructions, link_url = EXCLUDED.link_url, deadline = EXCLUDED.deadline,
     max_exp = EXCLUDED.max_exp, difficulty = EXCLUDED.difficulty,
-    scheduled_at = EXCLUDED.scheduled_at, class_schedules = EXCLUDED.class_schedules;
+    scheduled_at = EXCLUDED.scheduled_at, class_schedules = EXCLUDED.class_schedules,
+    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.quests.academic_year_id);
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -933,6 +1008,9 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
 
+  FOR v_item IN SELECT * FROM jsonb_array_elements(COALESCE(p_payload->'academic_years', '[]'::jsonb)) LOOP
+    PERFORM public.gm_upsert_academic_year(p_gm_user, p_gm_pass, v_item);
+  END LOOP;
   FOR v_item IN SELECT * FROM jsonb_array_elements(COALESCE(p_payload->'dungeons', '[]'::jsonb)) LOOP
     PERFORM public.gm_upsert_dungeon(p_gm_user, p_gm_pass, v_item);
   END LOOP;
@@ -971,6 +1049,8 @@ GRANT EXECUTE ON FUNCTION public.update_own_hero_avatar(TEXT, TEXT, TEXT) TO ano
 GRANT EXECUTE ON FUNCTION public.update_own_hero_username(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_hero_grade_statuses(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_gm_grades(TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.gm_upsert_academic_year(TEXT, TEXT, JSONB) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.gm_set_active_era(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_upsert_dungeon(TEXT, TEXT, JSONB) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_delete_dungeon(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_upsert_hero(TEXT, TEXT, JSONB) TO anon, authenticated;
@@ -990,10 +1070,14 @@ GRANT EXECUTE ON FUNCTION public.gm_bulk_sync(TEXT, TEXT, JSONB) TO anon, authen
 -- ----------------------------------------------------------------------------
 -- 13. Initial Seed Data & Migrasi Otomatis Password Lama ke Private Vault
 -- ----------------------------------------------------------------------------
-INSERT INTO public.dungeons (id, name, tier, guild_code, capacity, description, realm_ids) VALUES
-('dng-x-ipa-1', 'Crimson Citadel', 'Kelas X', 'X-IPA-1', 32, 'Rombel sains dasar berfokus pada eksplorasi alchemical chemistry dan biologi terapan.', '["rlm-chem","rlm-math","rlm-bio"]'),
-('dng-x-ipa-2', 'Emerald Bastion', 'Kelas X', 'X-IPA-2', 30, 'Skuadron petualang kelas X dengan penekanan logika matematika dan riset lapangan.', '["rlm-math","rlm-bio"]'),
-('dng-xi-ipa-1', 'Arcane Spire', 'Kelas XI', 'XI-IPA-1', 28, 'Menara pembelajaran tingkat lanjut untuk eksperimen reaksi kimia dan genetika.', '["rlm-chem","rlm-math"]')
+INSERT INTO public.academic_years (id, name, start_date, end_date, is_active) VALUES
+('era-2026-2027', '2026/2027', '2026-07-13', '2027-06-25', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.dungeons (id, name, tier, guild_code, capacity, description, realm_ids, academic_year_id) VALUES
+('dng-x-ipa-1', 'Crimson Citadel', 'Kelas X', 'X-IPA-1', 32, 'Rombel sains dasar berfokus pada eksplorasi alchemical chemistry dan biologi terapan.', '["rlm-chem","rlm-math","rlm-bio"]', 'era-2026-2027'),
+('dng-x-ipa-2', 'Emerald Bastion', 'Kelas X', 'X-IPA-2', 30, 'Skuadron petualang kelas X dengan penekanan logika matematika dan riset lapangan.', '["rlm-math","rlm-bio"]', 'era-2026-2027'),
+('dng-xi-ipa-1', 'Arcane Spire', 'Kelas XI', 'XI-IPA-1', 28, 'Menara pembelajaran tingkat lanjut untuk eksperimen reaksi kimia dan genetika.', '["rlm-chem","rlm-math"]', 'era-2026-2027')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.heroes (id, name, username, student_code, dungeon_id, avatar, hero_class, active, joined_date, enrolled_realm_ids) VALUES
@@ -1079,6 +1163,20 @@ BEGIN
   WHERE id = 'global';
 END $$;
 
+-- Backfill arsip Era untuk baris dungeons, quests, notices lama yang belum memiliki academic_year_id
+DO $$
+DECLARE
+  v_default_era_id TEXT;
+BEGIN
+  SELECT id INTO v_default_era_id FROM public.academic_years WHERE is_active = true LIMIT 1;
+  IF v_default_era_id IS NULL THEN
+    v_default_era_id := 'era-2026-2027';
+  END IF;
+  UPDATE public.dungeons SET academic_year_id = v_default_era_id WHERE academic_year_id IS NULL;
+  UPDATE public.quests SET academic_year_id = v_default_era_id WHERE academic_year_id IS NULL;
+  UPDATE public.notices SET academic_year_id = v_default_era_id WHERE academic_year_id IS NULL;
+END $$;
+
 -- ----------------------------------------------------------------------------
 -- 14. Enable Supabase Realtime
 -- ----------------------------------------------------------------------------
@@ -1086,7 +1184,7 @@ DO $$
 DECLARE
   t TEXT;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['dungeons','heroes','realms','tomes','quests','notices','settings'] LOOP
+  FOREACH t IN ARRAY ARRAY['academic_years','dungeons','heroes','realms','tomes','quests','notices','settings'] LOOP
     BEGIN
       EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
     EXCEPTION WHEN duplicate_object THEN

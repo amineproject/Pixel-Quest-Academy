@@ -13,8 +13,10 @@ import {
   deleteTome,
   getAllAcademyData,
   seedInitialDataIfEmpty,
+  setActiveAcademicYear,
   updateOwnHeroUsernameSql,
   updateSystemSettings,
+  upsertAcademicYear,
   upsertDungeon,
   upsertGrade,
   upsertHero,
@@ -80,6 +82,7 @@ app.get('/api/academy', async (req, res) => {
     // If Supabase is configured, we can also fetch from Supabase
     if (supabaseAdmin) {
       const [
+        { data: eData },
         { data: dData },
         { data: hData },
         { data: rData },
@@ -89,6 +92,7 @@ app.get('/api/academy', async (req, res) => {
         { data: gData },
         { data: sData },
       ] = await Promise.all([
+        supabaseAdmin.from('academic_years').select('*'),
         supabaseAdmin.from('dungeons').select('*'),
         supabaseAdmin.from('heroes').select('*'),
         supabaseAdmin.from('realms').select('*'),
@@ -119,6 +123,17 @@ app.get('/api/academy', async (req, res) => {
             soundEnabled: s.sound_enabled ?? true,
             academicTerm: s.academic_term || 'Semester Ganjil 2026/2027',
           },
+          ...(eData && eData.length > 0
+            ? {
+                academicYears: eData.map((e: any) => ({
+                  id: e.id,
+                  name: e.name,
+                  startDate: e.start_date || e.startDate || '',
+                  endDate: e.end_date || e.endDate || '',
+                  isActive: Boolean(e.is_active ?? e.isActive),
+                })),
+              }
+            : {}),
           dungeons: dData.map((d: any) => {
             let rIds: string[] = [];
             try {
@@ -132,6 +147,7 @@ app.get('/api/academy', async (req, res) => {
               capacity: d.capacity,
               description: d.description || '',
               realmIds: rIds,
+              academicYearId: d.academic_year_id || d.academicYearId || undefined,
             };
           }),
           heroes: (hData || []).map((h: any) => {
@@ -199,6 +215,7 @@ app.get('/api/academy', async (req, res) => {
               difficulty: q.difficulty,
               scheduledAt: q.scheduled_at || q.scheduledAt || '',
               classSchedules: cs,
+              academicYearId: q.academic_year_id || q.academicYearId || undefined,
             };
           }),
           notices: (nData || []).map((n: any) => {
@@ -218,6 +235,7 @@ app.get('/api/academy', async (req, res) => {
               scheduledAt: n.scheduled_at || n.scheduledAt || '',
               classSchedules: cs,
               author: n.author,
+              academicYearId: n.academic_year_id || n.academicYearId || undefined,
             };
           }),
           grades: (gData || []).map((g: any) => ({
@@ -244,6 +262,47 @@ app.get('/api/academy', async (req, res) => {
   }
 });
 
+// Academic Years ("Era") — Guardrail: GM Only
+app.post('/api/eras', async (req, res) => {
+  try {
+    if (req.headers['x-pqa-role'] !== 'admin') {
+      return res.status(403).json({ error: 'Hanya Super Admin / Game Master yang dapat membuat Era.' });
+    }
+    await upsertAcademicYear(req.body);
+    if (supabaseAdmin) {
+      if (req.body.isActive) {
+        await supabaseAdmin.from('academic_years').update({ is_active: false }).neq('id', req.body.id);
+      }
+      await supabaseAdmin.from('academic_years').upsert({
+        id: req.body.id,
+        name: req.body.name,
+        start_date: req.body.startDate || '',
+        end_date: req.body.endDate || '',
+        is_active: Boolean(req.body.isActive),
+      });
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to save Era' });
+  }
+});
+
+app.post('/api/eras/:id/activate', async (req, res) => {
+  try {
+    if (req.headers['x-pqa-role'] !== 'admin') {
+      return res.status(403).json({ error: 'Hanya Super Admin / Game Master yang dapat mengganti Era.' });
+    }
+    await setActiveAcademicYear(req.params.id);
+    if (supabaseAdmin) {
+      await supabaseAdmin.from('academic_years').update({ is_active: false }).neq('id', req.params.id);
+      await supabaseAdmin.from('academic_years').update({ is_active: true }).eq('id', req.params.id);
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to activate Era' });
+  }
+});
+
 // Dungeons
 app.post('/api/dungeons', async (req, res) => {
   try {
@@ -257,6 +316,7 @@ app.post('/api/dungeons', async (req, res) => {
         capacity: req.body.capacity,
         description: req.body.description,
         realm_ids: JSON.stringify(req.body.realmIds || []),
+        academic_year_id: req.body.academicYearId || null,
       });
     }
     res.json({ success: true });
@@ -375,6 +435,7 @@ app.post('/api/notices', async (req, res) => {
         scheduled_at: req.body.scheduledAt || '',
         class_schedules: JSON.stringify(req.body.classSchedules || {}),
         author: req.body.author,
+        academic_year_id: req.body.academicYearId || null,
       });
       if (error) {
         await supabaseAdmin.from('notices').upsert({
@@ -508,6 +569,7 @@ app.post('/api/quests', async (req, res) => {
         difficulty: req.body.difficulty,
         scheduled_at: req.body.scheduledAt || '',
         class_schedules: JSON.stringify(req.body.classSchedules || {}),
+        academic_year_id: req.body.academicYearId || null,
       });
       if (error) {
         await supabaseAdmin.from('quests').upsert({

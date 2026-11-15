@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AcademicYear,
   AcademyState,
   ActiveQuest,
   AncientTome,
@@ -17,7 +18,7 @@ import {
   SystemSettings,
   UserRole,
 } from './types/lms';
-import { INITIAL_ACADEMY_STATE, STORAGE_KEY } from './data/seedData';
+import { DEFAULT_ERA_ID, INITIAL_ACADEMY_STATE, STORAGE_KEY } from './data/seedData';
 import {
   ArcadeShell,
   GM_NAV_ITEMS,
@@ -60,6 +61,8 @@ import {
   cloudDeleteQuest,
   cloudDeleteRealm,
   cloudDeleteTome,
+  cloudSetActiveEra,
+  cloudSyncAcademicYear,
   cloudSyncDungeon,
   cloudSyncGrade,
   cloudSyncHero,
@@ -204,6 +207,10 @@ function loadInitialState(): AcademyState {
     const baseState: AcademyState = {
       ...INITIAL_ACADEMY_STATE,
       ...parsed,
+      academicYears:
+        Array.isArray(parsed.academicYears) && parsed.academicYears.length > 0
+          ? parsed.academicYears
+          : INITIAL_ACADEMY_STATE.academicYears,
       gmProfile: { ...INITIAL_ACADEMY_STATE.gmProfile, ...parsed.gmProfile },
       settings: {
         ...INITIAL_ACADEMY_STATE.settings,
@@ -411,6 +418,38 @@ export default function App() {
     }
   }, [seenStorageKey]);
 
+  // Active Era ("academic_years") derivation & query filtering for dungeons, quests, notices only
+  const academicYears = useMemo<AcademicYear[]>(() => {
+    if (state.academicYears && state.academicYears.length > 0) {
+      return state.academicYears;
+    }
+    return INITIAL_ACADEMY_STATE.academicYears || [];
+  }, [state.academicYears]);
+
+  const activeEra = useMemo<AcademicYear | undefined>(
+    () => academicYears.find((y) => y.isActive) || academicYears[0],
+    [academicYears]
+  );
+
+  const activeEraId = activeEra?.id || DEFAULT_ERA_ID;
+
+  const eraFilteredState = useMemo<AcademyState>(() => {
+    const fallbackLegacyEraId =
+      academicYears.some((y) => y.id === DEFAULT_ERA_ID)
+        ? DEFAULT_ERA_ID
+        : academicYears[0]?.id || DEFAULT_ERA_ID;
+    const isInActiveEra = (itemEraId?: string) =>
+      (itemEraId || fallbackLegacyEraId) === activeEraId;
+
+    return {
+      ...state,
+      academicYears,
+      dungeons: state.dungeons.filter((d) => isInActiveEra(d.academicYearId)),
+      quests: state.quests.filter((q) => isInActiveEra(q.academicYearId)),
+      notices: state.notices.filter((n) => isInActiveEra(n.academicYearId)),
+    };
+  }, [state, academicYears, activeEraId]);
+
   const { unreadNoticeCount, unreadQuestCount } = useMemo(() => {
     if (!authSession.isLoggedIn) {
       return { unreadNoticeCount: 0, unreadQuestCount: 0 };
@@ -419,17 +458,25 @@ export default function App() {
     const seenQuestSet = new Set(seenQuestIds);
     const relevantNotices =
       role === UserRole.HERO && activeHero
-        ? state.notices.filter((n) => isContentVisibleToHero(n, activeHero.dungeonId))
-        : state.notices;
+        ? eraFilteredState.notices.filter((n) => isContentVisibleToHero(n, activeHero.dungeonId))
+        : eraFilteredState.notices;
     const relevantQuests =
       role === UserRole.HERO && activeHero
-        ? state.quests.filter((q) => isContentVisibleToHero(q, activeHero.dungeonId))
-        : state.quests;
+        ? eraFilteredState.quests.filter((q) => isContentVisibleToHero(q, activeHero.dungeonId))
+        : eraFilteredState.quests;
     return {
       unreadNoticeCount: relevantNotices.filter((n) => !seenNoticeSet.has(n.id)).length,
       unreadQuestCount: relevantQuests.filter((q) => !seenQuestSet.has(q.id)).length,
     };
-  }, [authSession.isLoggedIn, role, activeHero, state.notices, state.quests, seenNoticeIds, seenQuestIds]);
+  }, [
+    authSession.isLoggedIn,
+    role,
+    activeHero,
+    eraFilteredState.notices,
+    eraFilteredState.quests,
+    seenNoticeIds,
+    seenQuestIds,
+  ]);
 
   const markGuildNotificationsRead = useCallback(() => {
     const noticeIds = stateRef.current.notices.map((n) => n.id);
@@ -856,6 +903,82 @@ export default function App() {
     syncFromRemote(updatedAuth);
   };
 
+  // Era ("Academic Year") Handlers — Guardrail: ONLY Game Master / Super Admin
+  const handleSwitchEra = (eraId: string) => {
+    if (
+      role !== UserRole.GAME_MASTER ||
+      authSessionRef.current.role !== UserRole.GAME_MASTER
+    ) {
+      playRetroSound('error', stateRef.current.settings.soundEnabled);
+      setDeniedRoute('#/gm/era/switch');
+      showToast('Akses ditolak: Hanya Super Admin yang dapat mengganti Era.', 'danger');
+      return;
+    }
+    const currentYears =
+      stateRef.current.academicYears && stateRef.current.academicYears.length > 0
+        ? stateRef.current.academicYears
+        : INITIAL_ACADEMY_STATE.academicYears || [];
+    const targetEra = currentYears.find((y) => y.id === eraId);
+    if (!targetEra) return;
+
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const nextYears = currentYears.map((y) => ({ ...y, isActive: y.id === eraId }));
+    const next = { ...stateRef.current, academicYears: nextYears };
+    stateRef.current = next;
+    setState(next);
+
+    reportCloudSync(cloudSetActiveEra(eraId, getGmAuth()));
+    fetch(`/api/eras/${encodeURIComponent(eraId)}/activate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-pqa-role': 'admin',
+      },
+    }).catch(() => {});
+    showToast(`Era aktif dialihkan ke Era ${targetEra.name}!`, 'success');
+  };
+
+  const handleCreateEra = (newEra: AcademicYear) => {
+    if (
+      role !== UserRole.GAME_MASTER ||
+      authSessionRef.current.role !== UserRole.GAME_MASTER
+    ) {
+      playRetroSound('error', stateRef.current.settings.soundEnabled);
+      setDeniedRoute('#/gm/era/create');
+      showToast('Akses ditolak: Hanya Super Admin yang dapat membuat Era.', 'danger');
+      return;
+    }
+    const currentYears =
+      stateRef.current.academicYears && stateRef.current.academicYears.length > 0
+        ? stateRef.current.academicYears
+        : INITIAL_ACADEMY_STATE.academicYears || [];
+
+    const uniqueId = currentYears.some((y) => y.id === newEra.id)
+      ? `${newEra.id}-${Date.now().toString().slice(-4)}`
+      : newEra.id;
+    const canonicalEra: AcademicYear = { ...newEra, id: uniqueId, isActive: true };
+
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const nextYears = [
+      canonicalEra,
+      ...currentYears.map((y) => ({ ...y, isActive: false })),
+    ];
+    const next = { ...stateRef.current, academicYears: nextYears };
+    stateRef.current = next;
+    setState(next);
+
+    reportCloudSync(cloudSyncAcademicYear(canonicalEra, getGmAuth()));
+    fetch('/api/eras', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-pqa-role': 'admin',
+      },
+      body: JSON.stringify(canonicalEra),
+    }).catch(() => {});
+    showToast(`Era ${canonicalEra.name} dibuat & diaktifkan!`, 'success');
+  };
+
   // CRUD Upsert & Delete Handlers
   const upsertItem = <T extends { id: string }>(list: T[], item: T): T[] => {
     const exists = list.some((x) => x.id === item.id);
@@ -864,16 +987,23 @@ export default function App() {
 
   const handleSaveDungeon = (dungeon: Dungeon) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
-    const next = { ...stateRef.current, dungeons: upsertItem(stateRef.current.dungeons, dungeon) };
+    const taggedDungeon: Dungeon = {
+      ...dungeon,
+      academicYearId: dungeon.academicYearId || activeEraId,
+    };
+    const next = {
+      ...stateRef.current,
+      dungeons: upsertItem(stateRef.current.dungeons, taggedDungeon),
+    };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncDungeon(dungeon, getGmAuth()));
+    reportCloudSync(cloudSyncDungeon(taggedDungeon, getGmAuth()));
     fetch('/api/dungeons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dungeon),
+      body: JSON.stringify(taggedDungeon),
     }).catch(() => {});
-    showToast(`Dungeon "${dungeon.name}" saved!`);
+    showToast(`Dungeon "${taggedDungeon.name}" saved!`);
   };
 
   const syncBatchCloudDelete = async (
@@ -1190,14 +1320,21 @@ export default function App() {
 
   const handleSaveNotice = (notice: QuestNotice) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
-    const next = { ...stateRef.current, notices: upsertItem(stateRef.current.notices, notice) };
+    const taggedNotice: QuestNotice = {
+      ...notice,
+      academicYearId: notice.academicYearId || activeEraId,
+    };
+    const next = {
+      ...stateRef.current,
+      notices: upsertItem(stateRef.current.notices, taggedNotice),
+    };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncNotice(notice, getGmAuth()));
+    reportCloudSync(cloudSyncNotice(taggedNotice, getGmAuth()));
     fetch('/api/notices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(notice),
+      body: JSON.stringify(taggedNotice),
     }).catch(() => {});
     showToast('Broadcast published to Quest Board!');
   };
@@ -1338,16 +1475,23 @@ export default function App() {
 
   const handleSaveQuest = (quest: ActiveQuest) => {
     playRetroSound('sword', stateRef.current.settings.soundEnabled);
-    const next = { ...stateRef.current, quests: upsertItem(stateRef.current.quests, quest) };
+    const taggedQuest: ActiveQuest = {
+      ...quest,
+      academicYearId: quest.academicYearId || activeEraId,
+    };
+    const next = {
+      ...stateRef.current,
+      quests: upsertItem(stateRef.current.quests, taggedQuest),
+    };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncQuest(quest, getGmAuth()));
+    reportCloudSync(cloudSyncQuest(taggedQuest, getGmAuth()));
     fetch('/api/quests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(quest),
+      body: JSON.stringify(taggedQuest),
     }).catch(() => {});
-    showToast(`Quest "${quest.title}" saved!`);
+    showToast(`Quest "${taggedQuest.title}" saved!`);
   };
 
   const handleDeleteQuest = (id: string) => {
@@ -1614,6 +1758,10 @@ export default function App() {
       onClearSyncLogs={clearSyncLogs}
       unreadNoticeCount={unreadNoticeCount}
       unreadQuestCount={unreadQuestCount}
+      academicYears={academicYears}
+      activeEraId={activeEraId}
+      onSwitchEra={handleSwitchEra}
+      onCreateEra={handleCreateEra}
       onLogout={handleLogout}
       onOpenGmDrawer={() => {
         playRetroSound('blip', state.settings.soundEnabled);
@@ -1639,7 +1787,7 @@ export default function App() {
             <>
               {gmMenu === 'hq' && (
                 <GmDashboard
-                  state={state}
+                  state={eraFilteredState}
                   onNavigate={handleSelectGmMenu}
                   lastSyncTimeLabel={lastSyncTimeLabel}
                   syncStatus={syncStatus}
@@ -1647,7 +1795,7 @@ export default function App() {
               )}
               {gmMenu === 'dungeons' && (
                 <GmDungeons
-                  state={state}
+                  state={eraFilteredState}
                   onSaveDungeon={handleSaveDungeon}
                   onDeleteDungeon={handleDeleteDungeon}
                   onDeleteDungeonsBatch={handleDeleteDungeonsBatch}
@@ -1655,7 +1803,7 @@ export default function App() {
               )}
               {gmMenu === 'heroes' && (
                 <GmHeroes
-                  state={state}
+                  state={eraFilteredState}
                   onSaveHero={handleSaveHero}
                   onImportHeroes={handleImportHeroes}
                   onDeleteHero={handleDeleteHero}
@@ -1664,14 +1812,14 @@ export default function App() {
               )}
               {gmMenu === 'quest_board' && (
                 <GmQuestBoard
-                  state={state}
+                  state={eraFilteredState}
                   onSaveNotice={handleSaveNotice}
                   onDeleteNotice={handleDeleteNotice}
                 />
               )}
               {gmMenu === 'realms' && (
                 <GmRealms
-                  state={state}
+                  state={eraFilteredState}
                   onSaveRealm={handleSaveRealm}
                   onDeleteRealm={handleDeleteRealm}
                   onDeleteRealmsBatch={handleDeleteRealmsBatch}
@@ -1679,7 +1827,7 @@ export default function App() {
               )}
               {gmMenu === 'scrolls' && (
                 <GmScrolls
-                  state={state}
+                  state={eraFilteredState}
                   onSaveTome={handleSaveTome}
                   onDeleteTome={handleDeleteTome}
                   onDeleteTomesBatch={handleDeleteTomesBatch}
@@ -1687,7 +1835,7 @@ export default function App() {
               )}
               {gmMenu === 'active_quests' && (
                 <GmActiveQuests
-                  state={state}
+                  state={eraFilteredState}
                   onSaveQuest={handleSaveQuest}
                   onDeleteQuest={handleDeleteQuest}
                   onDeleteQuestsBatch={handleDeleteQuestsBatch}
@@ -1695,23 +1843,23 @@ export default function App() {
               )}
               {gmMenu === 'quest_list' && (
                 <QuestBoardView
-                  state={state}
+                  state={eraFilteredState}
                   role={UserRole.GAME_MASTER}
                   onNavigateGm={handleSelectGmMenu}
                 />
               )}
               {gmMenu === 'exp_loot' && (
                 <GmExpLoot
-                  state={state}
+                  state={eraFilteredState}
                   onSaveGrade={handleSaveGrade}
                   onSaveGradesBatch={handleSaveGradesBatch}
                 />
               )}
               {gmMenu === 'guild_chronicles' && (
-                <GmGuildChronicles state={state} />
+                <GmGuildChronicles state={eraFilteredState} />
               )}
               {gmMenu === 'hall_of_fame' && (
-                <HallOfFameView state={state} role={UserRole.GAME_MASTER} />
+                <HallOfFameView state={eraFilteredState} role={UserRole.GAME_MASTER} />
               )}
               {gmMenu === 'settings' && (
                 <GmSettings
@@ -1739,7 +1887,7 @@ export default function App() {
               <>
                 {heroMenu === 'notice' && (
                   <HeroNotice
-                    state={state}
+                    state={eraFilteredState}
                     hero={activeHero}
                     onNavigate={handleSelectHeroMenu}
                     onAttemptRestrictedRoute={handleTriggerAccessDenied}
@@ -1751,28 +1899,28 @@ export default function App() {
                   />
                 )}
                 {heroMenu === 'scroll_library' && (
-                  <HeroScrollLibrary state={state} hero={activeHero} />
+                  <HeroScrollLibrary state={eraFilteredState} hero={activeHero} />
                 )}
                 {heroMenu === 'quest_list' && (
                   <QuestBoardView
-                    state={state}
+                    state={eraFilteredState}
                     role={UserRole.HERO}
                     hero={activeHero}
                   />
                 )}
                 {heroMenu === 'my_guild' && (
-                  <HeroMyGuild state={state} hero={activeHero} />
+                  <HeroMyGuild state={eraFilteredState} hero={activeHero} />
                 )}
                 {heroMenu === 'hall_of_fame' && (
                   <HallOfFameView
-                    state={state}
+                    state={eraFilteredState}
                     role={UserRole.HERO}
                     hero={activeHero}
                   />
                 )}
                 {heroMenu === 'hero_log' && (
                   <HeroLog
-                    state={state}
+                    state={eraFilteredState}
                     hero={activeHero}
                     currentTheme={state.settings.theme}
                     onUpdateTheme={handleUpdateTheme}

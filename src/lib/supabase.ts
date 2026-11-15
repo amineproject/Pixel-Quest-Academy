@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
+  AcademicYear,
   AcademyState,
   ActiveQuest,
   AncientTome,
@@ -517,6 +518,7 @@ export async function fetchAcademyFromSupabase(
 
   try {
     const [
+      erasRes,
       dungeonsRes,
       heroesRes,
       noticesRes,
@@ -525,6 +527,7 @@ export async function fetchAcademyFromSupabase(
       questsRes,
       settingsRes,
     ] = await Promise.all([
+      client.from('academic_years').select('*'),
       client.from('dungeons').select('*'),
       client.from('heroes').select('*'),
       client.from('notices').select('*'),
@@ -539,6 +542,7 @@ export async function fetchAcademyFromSupabase(
       return null;
     }
 
+    const eList = !erasRes.error && Array.isArray(erasRes.data) ? erasRes.data : [];
     const dList = dungeonsRes.data || [];
     const hList = heroesRes.data || [];
     const nList = noticesRes.data || [];
@@ -583,6 +587,17 @@ export async function fetchAcademyFromSupabase(
     const isProtectedPass = !sRow?.gm_password || sRow.gm_password === '[PROTECTED]';
 
     return {
+      ...(eList.length > 0
+        ? {
+            academicYears: eList.map((e: any) => ({
+              id: e.id,
+              name: e.name,
+              startDate: e.start_date || '',
+              endDate: e.end_date || '',
+              isActive: Boolean(e.is_active),
+            })),
+          }
+        : {}),
       dungeons: dList.map((d: any) => {
         let rIds: string[] = [];
         try {
@@ -598,6 +613,7 @@ export async function fetchAcademyFromSupabase(
           capacity: Number(d.capacity) || 30,
           description: d.description || '',
           realmIds: rIds,
+          ...(d.academic_year_id ? { academicYearId: d.academic_year_id } : {}),
         };
       }),
       heroes: hList.map((h: any) => {
@@ -634,6 +650,7 @@ export async function fetchAcademyFromSupabase(
         scheduledAt: n.scheduled_at || '',
         classSchedules: parseClassSchedules(n.class_schedules),
         author: n.author || 'Guild Master',
+        ...(n.academic_year_id ? { academicYearId: n.academic_year_id } : {}),
       })),
       realms: rList.map((r: any) => ({
         id: r.id,
@@ -668,6 +685,7 @@ export async function fetchAcademyFromSupabase(
         difficulty: q.difficulty || 'Normal',
         scheduledAt: q.scheduled_at || '',
         classSchedules: parseClassSchedules(q.class_schedules),
+        ...(q.academic_year_id ? { academicYearId: q.academic_year_id } : {}),
       })),
       grades: gradesList,
       settings: sRow
@@ -771,6 +789,56 @@ async function runGmRpc(
   return { handled: true, result: { ok: true } };
 }
 
+export async function cloudSyncAcademicYear(
+  era: AcademicYear,
+  gmAuth?: GmAuthCredentials
+): Promise<CloudSyncResult> {
+  const client = getSupabase();
+  if (!client) return { ok: true };
+  try {
+    const payload = {
+      id: era.id,
+      name: era.name,
+      start_date: era.startDate,
+      end_date: era.endDate,
+      is_active: era.isActive,
+    };
+    const rpc = await runGmRpc(client, 'gm_upsert_academic_year', gmAuth, { p_data: payload });
+    if (rpc.handled) return rpc.result;
+
+    if (era.isActive) {
+      await client.from('academic_years').update({ is_active: false }).neq('id', era.id);
+    }
+    const { error } = await client.from('academic_years').upsert(payload);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Gagal sinkronisasi Era.' };
+  }
+}
+
+export async function cloudSetActiveEra(
+  eraId: string,
+  gmAuth?: GmAuthCredentials
+): Promise<CloudSyncResult> {
+  const client = getSupabase();
+  if (!client) return { ok: true };
+  try {
+    const rpc = await runGmRpc(client, 'gm_set_active_era', gmAuth, { p_era_id: eraId });
+    if (rpc.handled) return rpc.result;
+
+    await client.from('academic_years').update({ is_active: false }).neq('id', eraId);
+    const { error } = await client
+      .from('academic_years')
+      .update({ is_active: true })
+      .eq('id', eraId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Gagal mengganti Era aktif.' };
+  }
+}
+
 export async function cloudSyncDungeon(
   dungeon: Dungeon,
   gmAuth?: GmAuthCredentials
@@ -786,6 +854,7 @@ export async function cloudSyncDungeon(
       capacity: dungeon.capacity,
       description: dungeon.description,
       realm_ids: JSON.stringify(dungeon.realmIds || []),
+      academic_year_id: dungeon.academicYearId || null,
     };
     const rpc = await runGmRpc(client, 'gm_upsert_dungeon', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
@@ -912,6 +981,7 @@ export async function cloudSyncNotice(
       scheduled_at: notice.scheduledAt || '',
       class_schedules: JSON.stringify(notice.classSchedules || {}),
       author: notice.author,
+      academic_year_id: notice.academicYearId || null,
     };
     const rpc = await runGmRpc(client, 'gm_upsert_notice', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
@@ -1081,6 +1151,7 @@ export async function cloudSyncQuest(
       difficulty: quest.difficulty,
       scheduled_at: quest.scheduledAt || '',
       class_schedules: JSON.stringify(quest.classSchedules || {}),
+      academic_year_id: quest.academicYearId || null,
     };
     const rpc = await runGmRpc(client, 'gm_upsert_quest', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
@@ -1242,6 +1313,13 @@ export async function uploadAllLocalToSupabase(
   try {
     const validDungeonIds = new Set(state.dungeons.map((d) => d.id));
     const bulkPayload = {
+      academic_years: (state.academicYears || []).map((e) => ({
+        id: e.id,
+        name: e.name,
+        start_date: e.startDate,
+        end_date: e.endDate,
+        is_active: e.isActive,
+      })),
       dungeons: state.dungeons.map((d) => ({
         id: d.id,
         name: d.name,
@@ -1250,6 +1328,7 @@ export async function uploadAllLocalToSupabase(
         capacity: d.capacity,
         description: d.description,
         realm_ids: JSON.stringify(d.realmIds || []),
+        academic_year_id: d.academicYearId || null,
       })),
       realms: state.realms.map((r) => ({
         id: r.id,
@@ -1298,6 +1377,7 @@ export async function uploadAllLocalToSupabase(
         difficulty: q.difficulty,
         scheduled_at: q.scheduledAt || '',
         class_schedules: JSON.stringify(q.classSchedules || {}),
+        academic_year_id: q.academicYearId || null,
       })),
       notices: state.notices.map((n) => ({
         id: n.id,
@@ -1310,6 +1390,7 @@ export async function uploadAllLocalToSupabase(
         scheduled_at: n.scheduledAt || '',
         class_schedules: JSON.stringify(n.classSchedules || {}),
         author: n.author,
+        academic_year_id: n.academicYearId || null,
       })),
       grades: state.grades.map((g) => ({
         id: g.id,

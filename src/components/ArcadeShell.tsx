@@ -26,12 +26,14 @@ import {
   VolumeX,
 } from 'lucide-react';
 import {
+  AcademicYear,
   AvatarClass,
   GmMenuId,
   HeroMenuId,
   PixelTheme,
   UserRole,
 } from '../types/lms';
+import { EraSelector } from './EraSelector';
 import { PixelAvatar, PixelCoin, PixelStar } from './PixelArt';
 import { PixelButton, PixelConfirmDialog, PixelModal } from './PixelUI';
 import { PWAInstallButton } from './PWAInstallBanner';
@@ -157,6 +159,10 @@ export interface ArcadeShellProps {
   onClearSyncLogs?: () => void;
   unreadNoticeCount?: number;
   unreadQuestCount?: number;
+  academicYears?: AcademicYear[];
+  activeEraId?: string;
+  onSwitchEra?: (eraId: string) => void;
+  onCreateEra?: (era: AcademicYear) => void;
   onOpenGmDrawer: () => void;
   onOpenHeroDrawer?: () => void;
   onLogout: () => void;
@@ -189,6 +195,10 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   onClearSyncLogs,
   unreadNoticeCount = 0,
   unreadQuestCount = 0,
+  academicYears = [],
+  activeEraId = '',
+  onSwitchEra,
+  onCreateEra,
   onOpenGmDrawer,
   onOpenHeroDrawer,
   onLogout,
@@ -572,19 +582,32 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   <h1 className="font-pixel-display text-[13px] sm:text-[14.5px] text-[var(--text-primary)] truncate leading-snug">
                     {activeTitle}
                   </h1>
-                  <p className="text-[12px] text-[var(--text-secondary)] leading-tight mt-0.5 truncate flex items-center gap-1">
-                    {isGm ? (
-                      <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
-                        <Crown size={12} /> GM
+                  <div className="text-[12px] text-[var(--text-secondary)] leading-tight mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1 min-w-0">
+                      {isGm ? (
+                        <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
+                          <Crown size={12} /> GM
+                        </span>
+                      ) : (
+                        <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
+                          <Shield size={12} /> HERO
+                        </span>
+                      )}
+                      <span aria-hidden="true">·</span>
+                      <span className="truncate font-semibold max-w-[150px] sm:max-w-[220px]">
+                        {isGm ? gmName : activeHeroName}
                       </span>
-                    ) : (
-                      <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
-                        <Shield size={12} /> HERO
-                      </span>
+                    </span>
+                    {academicYears.length > 0 && (
+                      <EraSelector
+                        academicYears={academicYears}
+                        activeEraId={activeEraId}
+                        canManage={isGm}
+                        onSwitchEra={onSwitchEra}
+                        onCreateEra={onCreateEra}
+                      />
                     )}
-                    <span aria-hidden="true">·</span>
-                    <span className="truncate font-semibold">{isGm ? gmName : activeHeroName}</span>
-                  </p>
+                  </div>
                 </div>
               </div>
 

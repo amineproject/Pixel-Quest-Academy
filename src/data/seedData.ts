@@ -1,6 +1,7 @@
 import { AcademyState } from '../types/lms';
 
 export const STORAGE_KEY = 'pixel_quest_academy_state_v2';
+export const DEFAULT_ERA_ID = 'era-2026-2027';
 
 export const INITIAL_ACADEMY_STATE: AcademyState = {
   gmProfile: {
@@ -18,6 +19,15 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
     soundEnabled: true,
     academicTerm: 'Semester Ganjil 2026/2027',
   },
+  academicYears: [
+    {
+      id: DEFAULT_ERA_ID,
+      name: '2026/2027',
+      startDate: '2026-07-13',
+      endDate: '2027-06-25',
+      isActive: true,
+    },
+  ],
   dungeons: [
     {
       id: 'dng-x-ipa-1',
@@ -27,6 +37,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       capacity: 32,
       description: 'Rombel sains dasar berfokus pada eksplorasi alchemical chemistry dan biologi terapan.',
       realmIds: ['rlm-chem', 'rlm-math', 'rlm-bio'],
+      academicYearId: DEFAULT_ERA_ID,
     },
     {
       id: 'dng-x-ipa-2',
@@ -36,6 +47,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       capacity: 30,
       description: 'Skuadron petualang kelas X dengan penekanan logika matematika dan riset lapangan.',
       realmIds: ['rlm-math', 'rlm-bio'],
+      academicYearId: DEFAULT_ERA_ID,
     },
     {
       id: 'dng-xi-ipa-1',
@@ -45,6 +57,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       capacity: 28,
       description: 'Menara pembelajaran tingkat lanjut untuk eksperimen reaksi kimia dan genetika.',
       realmIds: ['rlm-chem', 'rlm-math'],
+      academicYearId: DEFAULT_ERA_ID,
     },
   ],
   heroes: [
@@ -131,6 +144,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       targetDungeonId: 'dng-x-ipa-1',
       releaseDate: '2026-11-11',
       author: 'Pak Budi Santoso',
+      academicYearId: DEFAULT_ERA_ID,
     },
     {
       id: 'ntc-2',
@@ -141,6 +155,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       targetDungeonId: 'all',
       releaseDate: '2026-11-09',
       author: 'Pak Budi Santoso',
+      academicYearId: DEFAULT_ERA_ID,
     },
     {
       id: 'ntc-3',
@@ -151,6 +166,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       targetDungeonId: 'all',
       releaseDate: '2026-11-05',
       author: 'Pak Budi Santoso',
+      academicYearId: DEFAULT_ERA_ID,
     },
   ],
   realms: [
@@ -277,6 +293,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       deadline: '2026-11-18',
       maxExp: 200,
       difficulty: 'Normal',
+      academicYearId: DEFAULT_ERA_ID,
     },
     {
       id: 'qst-2',
@@ -288,6 +305,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       deadline: '2026-11-22',
       maxExp: 300,
       difficulty: 'Boss',
+      academicYearId: DEFAULT_ERA_ID,
     },
     {
       id: 'qst-3',
@@ -299,6 +317,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       deadline: '2026-11-20',
       maxExp: 250,
       difficulty: 'Elite',
+      academicYearId: DEFAULT_ERA_ID,
     },
     {
       id: 'qst-4',
@@ -310,6 +329,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       deadline: '2026-11-25',
       maxExp: 200,
       difficulty: 'Normal',
+      academicYearId: DEFAULT_ERA_ID,
     },
   ],
   grades: [

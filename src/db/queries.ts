@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
 import { db } from './index.ts';
 import {
+  academicYears,
   dungeons,
   grades,
   heroes,
@@ -12,8 +13,9 @@ import {
   tomes,
   users,
 } from './schema.ts';
-import { INITIAL_ACADEMY_STATE } from '../data/seedData.ts';
+import { DEFAULT_ERA_ID, INITIAL_ACADEMY_STATE } from '../data/seedData.ts';
 import {
+  AcademicYear,
   ActiveQuest,
   AncientTome,
   Dungeon,
@@ -28,6 +30,22 @@ import {
 
 export async function seedInitialDataIfEmpty() {
   try {
+    const existingEras = await db.select().from(academicYears);
+    if (existingEras.length === 0) {
+      for (const era of INITIAL_ACADEMY_STATE.academicYears || []) {
+        await db
+          .insert(academicYears)
+          .values({
+            id: era.id,
+            name: era.name,
+            startDate: era.startDate,
+            endDate: era.endDate,
+            isActive: era.isActive,
+          })
+          .onConflictDoNothing();
+      }
+    }
+
     const existingDungeons = await db.select().from(dungeons);
     if (existingDungeons.length === 0) {
       console.log('Seeding initial Cloud SQL data for Pixel Quest Academy...');
@@ -42,6 +60,7 @@ export async function seedInitialDataIfEmpty() {
           capacity: d.capacity,
           description: d.description,
           realmIds: JSON.stringify(d.realmIds || []),
+          academicYearId: d.academicYearId || DEFAULT_ERA_ID,
         });
       }
 
@@ -105,6 +124,7 @@ export async function seedInitialDataIfEmpty() {
           difficulty: q.difficulty,
           scheduledAt: q.scheduledAt || '',
           classSchedules: JSON.stringify(q.classSchedules || {}),
+          academicYearId: q.academicYearId || DEFAULT_ERA_ID,
         });
       }
 
@@ -121,6 +141,7 @@ export async function seedInitialDataIfEmpty() {
           scheduledAt: n.scheduledAt || '',
           classSchedules: JSON.stringify(n.classSchedules || {}),
           author: n.author,
+          academicYearId: n.academicYearId || DEFAULT_ERA_ID,
         });
       }
 
@@ -165,6 +186,7 @@ export async function seedInitialDataIfEmpty() {
 export async function getAllAcademyData() {
   try {
     const [
+      academicYearsList,
       dungeonsList,
       heroesList,
       noticesList,
@@ -174,6 +196,7 @@ export async function getAllAcademyData() {
       gradesList,
       settingsRow,
     ] = await Promise.all([
+      db.select().from(academicYears),
       db.select().from(dungeons),
       db.select().from(heroes),
       db.select().from(notices),
@@ -214,6 +237,16 @@ export async function getAllAcademyData() {
         soundEnabled: s.soundEnabled,
         academicTerm: s.academicTerm,
       },
+      academicYears:
+        academicYearsList.length > 0
+          ? academicYearsList.map((e) => ({
+              id: e.id,
+              name: e.name,
+              startDate: e.startDate,
+              endDate: e.endDate,
+              isActive: Boolean(e.isActive),
+            }))
+          : INITIAL_ACADEMY_STATE.academicYears,
       dungeons: dungeonsList.map((d) => {
         let rIds: string[] = [];
         try {
@@ -227,6 +260,7 @@ export async function getAllAcademyData() {
           capacity: d.capacity,
           description: d.description || '',
           realmIds: rIds,
+          academicYearId: d.academicYearId || DEFAULT_ERA_ID,
         };
       }),
       heroes: heroesList.map((h) => {
@@ -264,6 +298,7 @@ export async function getAllAcademyData() {
           scheduledAt: n.scheduledAt || '',
           classSchedules: cs,
           author: n.author,
+          academicYearId: n.academicYearId || DEFAULT_ERA_ID,
         };
       }),
       realms: realmsList.map((r) => ({
@@ -310,6 +345,7 @@ export async function getAllAcademyData() {
           difficulty: q.difficulty as any,
           scheduledAt: q.scheduledAt || '',
           classSchedules: cs,
+          academicYearId: q.academicYearId || DEFAULT_ERA_ID,
         };
       }),
       grades: gradesList.map((g) => ({
@@ -332,10 +368,54 @@ export async function getAllAcademyData() {
   }
 }
 
+// Academic Years ("Era") CRUD — Archive Only, Never Delete
+export async function upsertAcademicYear(era: AcademicYear) {
+  try {
+    if (era.isActive) {
+      await db.update(academicYears).set({ isActive: false });
+    }
+    return await db
+      .insert(academicYears)
+      .values({
+        id: era.id,
+        name: era.name,
+        startDate: era.startDate || '',
+        endDate: era.endDate || '',
+        isActive: Boolean(era.isActive),
+      })
+      .onConflictDoUpdate({
+        target: academicYears.id,
+        set: {
+          name: era.name,
+          startDate: era.startDate || '',
+          endDate: era.endDate || '',
+          isActive: Boolean(era.isActive),
+        },
+      });
+  } catch (error) {
+    console.error('Failed to upsert academic year:', error);
+    throw new Error('Failed to save Era.', { cause: error });
+  }
+}
+
+export async function setActiveAcademicYear(eraId: string) {
+  try {
+    await db.update(academicYears).set({ isActive: false });
+    return await db
+      .update(academicYears)
+      .set({ isActive: true })
+      .where(eq(academicYears.id, eraId));
+  } catch (error) {
+    console.error('Failed to activate academic year:', error);
+    throw new Error('Failed to switch active Era.', { cause: error });
+  }
+}
+
 // Dungeons CRUD
 export async function upsertDungeon(d: Dungeon) {
   try {
     const realmIdsJson = d.realmIds ? JSON.stringify(d.realmIds) : '[]';
+    const eraId = d.academicYearId || DEFAULT_ERA_ID;
     return await db
       .insert(dungeons)
       .values({
@@ -346,6 +426,7 @@ export async function upsertDungeon(d: Dungeon) {
         capacity: d.capacity,
         description: d.description,
         realmIds: realmIdsJson,
+        academicYearId: eraId,
       })
       .onConflictDoUpdate({
         target: dungeons.id,
@@ -356,6 +437,7 @@ export async function upsertDungeon(d: Dungeon) {
           capacity: d.capacity,
           description: d.description,
           realmIds: realmIdsJson,
+          academicYearId: eraId,
         },
       });
   } catch (error) {
@@ -562,6 +644,7 @@ export async function upsertNotice(n: QuestNotice) {
   try {
     const cleanLink = (n.linkUrl || '').trim();
     const csJson = JSON.stringify(n.classSchedules || {});
+    const eraId = n.academicYearId || DEFAULT_ERA_ID;
     return await db
       .insert(notices)
       .values({
@@ -575,6 +658,7 @@ export async function upsertNotice(n: QuestNotice) {
         scheduledAt: n.scheduledAt || '',
         classSchedules: csJson,
         author: n.author,
+        academicYearId: eraId,
       })
       .onConflictDoUpdate({
         target: notices.id,
@@ -587,6 +671,7 @@ export async function upsertNotice(n: QuestNotice) {
           releaseDate: n.releaseDate,
           scheduledAt: n.scheduledAt || '',
           classSchedules: csJson,
+          academicYearId: eraId,
         },
       });
   } catch (error) {
@@ -701,6 +786,7 @@ export async function upsertQuest(q: ActiveQuest) {
   try {
     const cleanLink = (q.linkUrl || '').trim();
     const csJson = JSON.stringify(q.classSchedules || {});
+    const eraId = q.academicYearId || DEFAULT_ERA_ID;
     return await db
       .insert(quests)
       .values({
@@ -715,6 +801,7 @@ export async function upsertQuest(q: ActiveQuest) {
         difficulty: q.difficulty,
         scheduledAt: q.scheduledAt || '',
         classSchedules: csJson,
+        academicYearId: eraId,
       })
       .onConflictDoUpdate({
         target: quests.id,
@@ -729,6 +816,7 @@ export async function upsertQuest(q: ActiveQuest) {
           difficulty: q.difficulty,
           scheduledAt: q.scheduledAt || '',
           classSchedules: csJson,
+          academicYearId: eraId,
         },
       });
   } catch (error) {
