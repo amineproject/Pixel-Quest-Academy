@@ -24,6 +24,7 @@ import {
   HERO_NAV_ITEMS,
   SyncLogEntry,
   getGmMenuIcon,
+  getHeroMenuIcon,
 } from './components/ArcadeShell';
 import {
   AccessDeniedModal,
@@ -120,6 +121,15 @@ const HeroMyGuild = lazy(() =>
 );
 const HeroLog = lazy(() =>
   import('./views/hero/HeroLog').then((m) => ({ default: m.HeroLog }))
+);
+const QuestBoardView = lazy(() =>
+  import('./views/shared/QuestBoardView').then((m) => ({ default: m.QuestBoardView }))
+);
+const GmGuildChronicles = lazy(() =>
+  import('./views/gm/GmGuildChronicles').then((m) => ({ default: m.GmGuildChronicles }))
+);
+const HallOfFameView = lazy(() =>
+  import('./views/shared/HallOfFameView').then((m) => ({ default: m.HallOfFameView }))
 );
 const AboutView = lazy(() =>
   import('./views/shared/AboutView').then((m) => ({ default: m.AboutView }))
@@ -260,6 +270,7 @@ export default function App() {
     () => authSession.heroId || ''
   );
   const [gmDrawerOpen, setGmDrawerOpen] = useState(false);
+  const [heroDrawerOpen, setHeroDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [lastSyncTimeLabel, setLastSyncTimeLabel] = useState<string | null>(null);
@@ -668,6 +679,7 @@ export default function App() {
   const handleSelectHeroMenu = (id: HeroMenuId) => {
     playRetroSound('blip', state.settings.soundEnabled);
     setHeroMenu(id);
+    setHeroDrawerOpen(false);
     window.location.hash = `#/hero/${id}`;
     syncFromRemote();
   };
@@ -1607,6 +1619,10 @@ export default function App() {
         playRetroSound('blip', state.settings.soundEnabled);
         setGmDrawerOpen(true);
       }}
+      onOpenHeroDrawer={() => {
+        playRetroSound('blip', state.settings.soundEnabled);
+        setHeroDrawerOpen(true);
+      }}
     >
       <PixelToast message={toast?.message || null} tone={toast?.tone} />
       <OfflineIndicator />
@@ -1677,12 +1693,25 @@ export default function App() {
                   onDeleteQuestsBatch={handleDeleteQuestsBatch}
                 />
               )}
+              {gmMenu === 'quest_list' && (
+                <QuestBoardView
+                  state={state}
+                  role={UserRole.GAME_MASTER}
+                  onNavigateGm={handleSelectGmMenu}
+                />
+              )}
               {gmMenu === 'exp_loot' && (
                 <GmExpLoot
                   state={state}
                   onSaveGrade={handleSaveGrade}
                   onSaveGradesBatch={handleSaveGradesBatch}
                 />
+              )}
+              {gmMenu === 'guild_chronicles' && (
+                <GmGuildChronicles state={state} />
+              )}
+              {gmMenu === 'hall_of_fame' && (
+                <HallOfFameView state={state} role={UserRole.GAME_MASTER} />
               )}
               {gmMenu === 'settings' && (
                 <GmSettings
@@ -1724,8 +1753,22 @@ export default function App() {
                 {heroMenu === 'scroll_library' && (
                   <HeroScrollLibrary state={state} hero={activeHero} />
                 )}
+                {heroMenu === 'quest_list' && (
+                  <QuestBoardView
+                    state={state}
+                    role={UserRole.HERO}
+                    hero={activeHero}
+                  />
+                )}
                 {heroMenu === 'my_guild' && (
                   <HeroMyGuild state={state} hero={activeHero} />
+                )}
+                {heroMenu === 'hall_of_fame' && (
+                  <HallOfFameView
+                    state={state}
+                    role={UserRole.HERO}
+                    hero={activeHero}
+                  />
                 )}
                 {heroMenu === 'hero_log' && (
                   <HeroLog
@@ -1752,7 +1795,7 @@ export default function App() {
       {/* Game Master Menu Drawer */}
       <PixelModal
         open={gmDrawerOpen}
-        title={`Game Master — ${GM_NAV_ITEMS.length} Menu`}
+        title="Game Master"
         onClose={() => setGmDrawerOpen(false)}
       >
         <div className="grid grid-cols-2 min-[380px]:grid-cols-3 gap-2.5">
@@ -1777,6 +1820,42 @@ export default function App() {
                   {item.shortLabel}
                 </span>
                 <span className="text-[11px] sm:text-[11.5px] font-medium opacity-85 leading-none">
+                  {item.standardName}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </PixelModal>
+
+      {/* Hero Mobile Menu Drawer */}
+      <PixelModal
+        open={heroDrawerOpen}
+        title="Menu Petualang"
+        onClose={() => setHeroDrawerOpen(false)}
+      >
+        <div className="grid grid-cols-2 min-[380px]:grid-cols-3 gap-2.5">
+          {HERO_NAV_ITEMS.map((item) => {
+            const active = heroMenu === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onMouseEnter={() => playThrottledHoverBlip(state.settings.soundEnabled)}
+                onClick={() => handleSelectHeroMenu(item.id)}
+                className={`pixel-btn pixel-module-card min-h-[78px] p-2 flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer ${
+                  active
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
+                }`}
+              >
+                <span className={active ? 'text-[var(--text-on-accent)]' : 'text-[var(--accent-warning)]'}>
+                  {getHeroMenuIcon(item.id, 22)}
+                </span>
+                <span className="font-pixel-ui text-[10.5px] leading-tight">
+                  {item.shortLabel}
+                </span>
+                <span className="text-[12px] font-medium opacity-85 leading-none">
                   {item.standardName}
                 </span>
               </button>

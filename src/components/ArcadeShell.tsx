@@ -1,9 +1,11 @@
 import React from 'react';
 import {
   AlertCircle,
+  BarChart3,
   BookOpen,
   Castle,
   Check,
+  ClipboardList,
   Crown,
   Gamepad2,
   Grid,
@@ -11,6 +13,7 @@ import {
   Info,
   LogOut,
   Map,
+  Medal,
   RefreshCw,
   ScrollText,
   Settings,
@@ -49,7 +52,10 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'realms', label: 'Realms / Skill Trees', shortLabel: 'Realms', standardName: 'Mapel' },
   { id: 'scrolls', label: 'Ancient Tomes', shortLabel: 'Tomes', standardName: 'Materi' },
   { id: 'active_quests', label: 'Active Quests', shortLabel: 'Quests', standardName: 'Tugas' },
+  { id: 'quest_list', label: 'Quest Board', shortLabel: 'Board', standardName: 'Papan Tugas' },
   { id: 'exp_loot', label: 'EXP & Loot', shortLabel: 'EXP', standardName: 'Penilaian' },
+  { id: 'guild_chronicles', label: 'Guild Chronicles', shortLabel: 'Chronicles', standardName: 'Statistik' },
+  { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'settings', label: 'System Settings', shortLabel: 'Config', standardName: 'Pengaturan' },
   { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.0' },
 ];
@@ -62,7 +68,9 @@ export const HERO_NAV_ITEMS: {
 }[] = [
   { id: 'notice', label: 'Guild Notice', shortLabel: 'Town Hub', standardName: 'Pengumuman' },
   { id: 'scroll_library', label: 'Scroll Library', shortLabel: 'Scrolls', standardName: 'Materi' },
+  { id: 'quest_list', label: 'Quest Board', shortLabel: 'Board', standardName: 'Papan Tugas' },
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
+  { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
   { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.0' },
 ];
@@ -83,8 +91,14 @@ export function getGmMenuIcon(id: GmMenuId, size = 18) {
       return <BookOpen size={size} />;
     case 'active_quests':
       return <Sword size={size} />;
+    case 'quest_list':
+      return <ClipboardList size={size} />;
     case 'exp_loot':
       return <Trophy size={size} />;
+    case 'guild_chronicles':
+      return <BarChart3 size={size} />;
+    case 'hall_of_fame':
+      return <Medal size={size} />;
     case 'settings':
       return <Settings size={size} />;
     case 'about':
@@ -98,8 +112,12 @@ export function getHeroMenuIcon(id: HeroMenuId, size = 18) {
       return <ScrollText size={size} />;
     case 'scroll_library':
       return <BookOpen size={size} />;
+    case 'quest_list':
+      return <ClipboardList size={size} />;
     case 'my_guild':
       return <Castle size={size} />;
+    case 'hall_of_fame':
+      return <Medal size={size} />;
     case 'hero_log':
       return <Star size={size} />;
     case 'about':
@@ -140,6 +158,7 @@ export interface ArcadeShellProps {
   unreadNoticeCount?: number;
   unreadQuestCount?: number;
   onOpenGmDrawer: () => void;
+  onOpenHeroDrawer?: () => void;
   onLogout: () => void;
   children: React.ReactNode;
 }
@@ -171,6 +190,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   unreadNoticeCount = 0,
   unreadQuestCount = 0,
   onOpenGmDrawer,
+  onOpenHeroDrawer,
   onLogout,
   children,
 }) => {
@@ -185,6 +205,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
     : HERO_NAV_ITEMS.find((i) => i.id === heroMenu)?.label || 'Guild Notice';
 
   const quickGmTabs: GmMenuId[] = ['hq', 'dungeons', 'active_quests', 'exp_loot'];
+  const quickHeroTabs: HeroMenuId[] = ['notice', 'quest_list', 'scroll_library', 'hall_of_fame'];
 
   const isMinimalPaper = theme === 'gameboy_green';
   const totalUnreadGuild = unreadNoticeCount + unreadQuestCount;
@@ -388,7 +409,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             {/* Sidebar Menu Links */}
             <nav className="flex-1 overflow-y-auto pixel-scroll p-2.5 space-y-1">
               <p className="px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wider text-[var(--text-muted)]">
-                {isGm ? `Menu Pengelola (${GM_NAV_ITEMS.length})` : `Menu Petualang (${HERO_NAV_ITEMS.length})`}
+                {isGm ? 'Menu Pengelola' : 'Menu Petualang'}
               </p>
 
               {isGm
@@ -548,17 +569,17 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   className="md:hidden shrink-0 animate-pixel-bounce"
                 />
                 <div className="min-w-0 flex-1">
-                  <h1 className="font-pixel-display text-[12px] sm:text-[14px] text-[var(--text-primary)] truncate leading-snug">
+                  <h1 className="font-pixel-display text-[13px] sm:text-[14.5px] text-[var(--text-primary)] truncate leading-snug">
                     {activeTitle}
                   </h1>
-                  <p className="text-[11.5px] sm:text-[12px] text-[var(--text-secondary)] leading-tight mt-0.5 truncate flex items-center gap-1">
+                  <p className="text-[12px] text-[var(--text-secondary)] leading-tight mt-0.5 truncate flex items-center gap-1">
                     {isGm ? (
-                      <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[10.5px] font-bold shrink-0">
-                        <Crown size={11} /> GM
+                      <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
+                        <Crown size={12} /> GM
                       </span>
                     ) : (
-                      <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[10.5px] font-bold shrink-0">
-                        <Shield size={11} /> HERO
+                      <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
+                        <Shield size={12} /> HERO
                       </span>
                     )}
                     <span aria-hidden="true">·</span>
@@ -696,7 +717,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             {badgeCount}
                           </span>
                         )}
-                        <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
+                        <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
                           {item.shortLabel}
                         </span>
                       </button>
@@ -717,39 +738,57 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         {unreadNoticeCount}
                       </span>
                     )}
-                    <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap">
+                    <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap">
                       Menu
                     </span>
                   </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-5 h-full">
-                  {HERO_NAV_ITEMS.map((item) => {
-                    const active = heroMenu === item.id;
-                    const badgeCount = getBadgeCountForHero(item.id);
+                  {quickHeroTabs.map((tabId) => {
+                    const item = HERO_NAV_ITEMS.find((i) => i.id === tabId)!;
+                    const active = heroMenu === tabId;
+                    const badgeCount = getBadgeCountForHero(tabId);
                     return (
                       <button
-                        key={item.id}
+                        key={tabId}
                         type="button"
-                        onClick={() => onSelectHeroMenu(item.id)}
-                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
+                        onClick={() => onSelectHeroMenu(tabId)}
+                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
                           active
                             ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                         }`}
                       >
-                        {getHeroMenuIcon(item.id, 19)}
+                        {getHeroMenuIcon(tabId, 19)}
                         {badgeCount > 0 && (
                           <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
                             {badgeCount}
                           </span>
                         )}
-                        <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
+                        <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
                           {item.shortLabel}
                         </span>
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenHeroDrawer) onOpenHeroDrawer();
+                      else onSelectHeroMenu('my_guild');
+                    }}
+                    className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
+                      !quickHeroTabs.includes(heroMenu)
+                        ? 'bg-[var(--comic-gold)] text-[#09090f] font-bold'
+                        : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
+                    }`}
+                  >
+                    <Grid size={19} />
+                    <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap">
+                      Menu
+                    </span>
+                  </button>
                 </div>
               )}
             </nav>

@@ -11,14 +11,19 @@ export type GmMenuId =
   | 'realms'
   | 'scrolls'
   | 'active_quests'
+  | 'quest_list'
   | 'exp_loot'
+  | 'guild_chronicles'
+  | 'hall_of_fame'
   | 'settings'
   | 'about';
 
 export type HeroMenuId =
   | 'notice'
   | 'scroll_library'
+  | 'quest_list'
   | 'my_guild'
+  | 'hall_of_fame'
   | 'hero_log'
   | 'about';
 

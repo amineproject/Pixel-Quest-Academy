@@ -1,12 +1,8 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   AcademyState,
   GmMenuId,
 } from '../../types/lms';
-import {
-  GM_NAV_ITEMS,
-  getGmMenuIcon,
-} from '../../components/ArcadeShell';
 import { PixelAvatar, PixelCoin, PixelStar } from '../../components/PixelArt';
 import {
   PixelButton,
@@ -24,7 +20,6 @@ import {
   getGmLevelProgress,
   getHeroTotalExp,
 } from '../../utils/exp';
-import { playThrottledHoverBlip } from '../../utils/sound';
 
 export interface GmDashboardProps {
   /** Current academy data state. */
@@ -39,7 +34,7 @@ export interface GmDashboardProps {
 
 /**
  * Game Master HQ / Tavern Hall dashboard displaying GM level/XP progression,
- * live academy stats, keyboard-navigable Command Menu, and Tavern Highlights.
+ * live academy stats, and Tavern Highlights.
  */
 export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
   state,
@@ -53,16 +48,12 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
   const tomes = state?.tomes ?? [];
   const grades = state?.grades ?? [];
   const notices = state?.notices ?? [];
-  const soundEnabled = state?.settings?.soundEnabled ?? true;
 
   const gmName = state?.gmProfile?.name?.trim() || 'Game Master';
   const gmTitle = state?.gmProfile?.title?.trim() || 'Guild Overseer';
   const gmAvatar = state?.gmProfile?.avatar || 'guild_master';
   const academicTerm =
     state?.settings?.academicTerm?.trim() || 'Tahun Ajaran Aktif';
-
-  const [focusedModuleIndex, setFocusedModuleIndex] = useState<number>(0);
-  const moduleBtnRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const {
     activeHeroes,
@@ -121,32 +112,6 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
     };
   }, [heroes, dungeons.length, tomes.length, quests, grades, notices]);
 
-  const handleModuleGridKeyDown = (
-    e: React.KeyboardEvent<HTMLButtonElement>,
-    idx: number
-  ) => {
-    const cols = 3;
-    let nextIdx = idx;
-    if (e.key === 'ArrowRight') nextIdx = Math.min(GM_NAV_ITEMS.length - 1, idx + 1);
-    else if (e.key === 'ArrowLeft') nextIdx = Math.max(0, idx - 1);
-    else if (e.key === 'ArrowDown') nextIdx = Math.min(GM_NAV_ITEMS.length - 1, idx + cols);
-    else if (e.key === 'ArrowUp') nextIdx = Math.max(0, idx - cols);
-    else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onNavigate(GM_NAV_ITEMS[idx].id);
-      return;
-    } else {
-      return;
-    }
-
-    e.preventDefault();
-    if (nextIdx !== idx) {
-      playThrottledHoverBlip(soundEnabled);
-      setFocusedModuleIndex(nextIdx);
-      moduleBtnRefs.current[nextIdx]?.focus();
-    }
-  };
-
   const syncLabel =
     syncStatus === 'syncing'
       ? 'Syncing...'
@@ -196,40 +161,40 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
         {/* 4 Live KPI Counters (Item 2.1: Heroes aktif, Quests menunggu, Notice terbaru, Last sync) */}
         <div className="grid grid-cols-1 min-[340px]:grid-cols-2 gap-2.5 pt-1 min-w-0">
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">HEROES AKTIF</span>
               <PixelStar size={14} className="shrink-0 text-[var(--accent-success)]" />
             </p>
-            <p className="font-pixel-display text-[14px] sm:text-[16px] text-[var(--accent-success)] tabular-nums truncate mt-1.5">
+            <p className="font-pixel-display text-[14.5px] sm:text-[16px] text-[var(--accent-success)] tabular-nums truncate mt-1.5">
               {activeHeroes}/{heroes.length}
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">QUESTS MENUNGGU</span>
               <span className="shrink-0 text-[13px]" aria-hidden="true">⚔️</span>
             </p>
-            <p className="font-pixel-display text-[14px] sm:text-[16px] text-[var(--accent-warning)] tabular-nums truncate mt-1.5">
+            <p className="font-pixel-display text-[14.5px] sm:text-[16px] text-[var(--accent-warning)] tabular-nums truncate mt-1.5">
               {pendingQuestsCount}/{quests.length}
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">NOTICE TERBARU</span>
               <span className="shrink-0 text-[13px]" aria-hidden="true">📜</span>
             </p>
-            <p className="font-pixel-display text-[12.5px] sm:text-[13.5px] text-[var(--text-primary)] truncate mt-1.5">
+            <p className="font-pixel-display text-[13px] sm:text-[14px] text-[var(--text-primary)] truncate mt-1.5">
               {latestNotice
                 ? `${notices.length} · ${formatRetroDate(latestNotice.releaseDate)}`
                 : '0 Notice'}
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">LAST SYNC</span>
               <PixelCoin size={14} className="shrink-0 animate-coin-shine" />
             </p>
-            <p className="font-pixel-display text-[13px] sm:text-[14.5px] text-[#0369a1] tabular-nums truncate mt-1.5">
+            <p className="font-pixel-display text-[13.5px] sm:text-[14.5px] text-[#0369a1] tabular-nums truncate mt-1.5">
               {syncLabel}
             </p>
           </div>
@@ -251,51 +216,6 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
           </div>
         )}
       </ThemedPanelCard>
-
-      {/* Command Center with Dynamic Count (1.3), Micro-interaction (2.4), Keyboard Nav (2.5) */}
-      <section className="min-w-0">
-        <PixelSectionTitle
-          title={`Command Menu (${GM_NAV_ITEMS.length} Modules)`}
-          subtitle="Akses cepat seluruh modul Game Master (navigasi ↑↓←→ + Enter)"
-        />
-        <div
-          role="grid"
-          aria-label="Command Menu"
-          className="grid grid-cols-3 gap-2"
-        >
-          {GM_NAV_ITEMS.map((item, idx) => (
-            <button
-              key={item.id}
-              ref={(el) => {
-                moduleBtnRefs.current[idx] = el;
-              }}
-              type="button"
-              onFocus={() => setFocusedModuleIndex(idx)}
-              onMouseEnter={() => {
-                setFocusedModuleIndex(idx);
-                playThrottledHoverBlip(soundEnabled);
-              }}
-              onKeyDown={(e) => handleModuleGridKeyDown(e, idx)}
-              onClick={() => onNavigate(item.id)}
-              className={`pixel-btn pixel-module-card min-h-[80px] p-2 bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-alt)] flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer min-w-0 ${
-                focusedModuleIndex === idx
-                  ? 'ring-2 ring-[var(--comic-gold)]/70'
-                  : ''
-              }`}
-            >
-              <span className="text-[var(--accent-warning)]">
-                {getGmMenuIcon(item.id, 22)}
-              </span>
-              <span className="font-pixel-ui text-[9.5px] sm:text-[10px] text-[var(--text-primary)] leading-tight">
-                {item.shortLabel}
-              </span>
-              <span className="text-[11px] sm:text-[11.5px] font-medium text-[var(--text-muted)] leading-none">
-                {item.standardName}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
 
       {/* Top Hero & Recent Broadcast Snapshot */}
       <section className="space-y-3 min-w-0">

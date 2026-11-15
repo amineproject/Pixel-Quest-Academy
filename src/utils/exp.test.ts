@@ -2,12 +2,16 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   calculateExpEarned,
+  escapeCsvCell,
   getGmLevelProgress,
   getGuildLeaderboard,
   getHeroAchievements,
   getHeroLevelProgress,
   getHeroTotalExp,
+  getScopedHeroLeaderboardInputs,
+  getWeeklyGuildLeaderboard,
   isContentVisibleToHero,
+  maskHeroName,
 } from './exp';
 import {
   loadOfflineContentSnapshot,
@@ -300,3 +304,76 @@ describe('Content Scheduling & Offline Sync Snapshot', () => {
     assert.equal(loaded.tomes[0].title, 'Aljabar Dasar');
   });
 });
+
+describe('Hall of Fame Weekly XP, Privacy Mask & CSV Export', () => {
+  it('ranks active heroes by XP earned within last 7 days with totalExp tie-breaker', () => {
+    const now = new Date(2026, 2, 10, 12, 0, 0); // 2026-03-10
+    const grades: ExpGrade[] = [
+      { id: 'w1', heroId: 'h1', questId: 'q1', realmId: 'r1', score: 90, expEarned: 90, status: 'tuntas', feedback: 'Ok', gradedDate: '2026-02-20' }, // old (>7 days)
+      { id: 'w2', heroId: 'h2', questId: 'q1', realmId: 'r1', score: 80, expEarned: 160, status: 'tuntas', feedback: 'Ok', gradedDate: '2026-03-08' }, // recent (within 7 days)
+      { id: 'w3', heroId: 'h4', questId: 'q1', realmId: 'r1', score: 100, expEarned: 200, status: 'tuntas', feedback: 'Ok', gradedDate: '2026-03-10' }, // today
+    ];
+
+    const ranked = getWeeklyGuildLeaderboard(sampleHeroes, grades, now);
+    assert.equal(ranked.length, 3);
+    assert.equal(ranked[0].hero.id, 'h4');
+    assert.equal(ranked[0].weeklyExp, 200);
+    assert.equal(ranked[1].hero.id, 'h2');
+    assert.equal(ranked[1].weeklyExp, 160);
+    assert.equal(ranked[2].hero.id, 'h1');
+    assert.equal(ranked[2].weeklyExp, 0);
+    assert.equal(ranked[2].totalExp, 90);
+  });
+
+  it('masks hero names for privacy mode and escapes CSV cells cleanly', () => {
+    assert.equal(maskHeroName('Arga Pratama', 1), 'A*** (Hero #1)');
+    assert.equal(maskHeroName('', 4), 'Hero #4');
+    assert.equal(escapeCsvCell('Bima Sakti'), 'Bima Sakti');
+    assert.equal(escapeCsvCell('Kelas, A "VII"'), '"Kelas, A ""VII"""');
+  });
+
+  it('scopes student leaderboard strictly to same class and enrolled Realms', () => {
+    const classPeers: HeroStudent[] = [
+      { ...sampleHeroes[0], dungeonId: 'd1', enrolledRealmIds: ['r1', 'r2'] },
+      { ...sampleHeroes[1], dungeonId: 'd1', enrolledRealmIds: ['r1'] },
+      { ...sampleHeroes[3], dungeonId: 'd1', enrolledRealmIds: ['r3'] }, // different mapel
+      {
+        id: 'h5',
+        name: 'Damar Kelas Lain',
+        username: 'damar',
+        studentCode: '2001',
+        dungeonId: 'd2', // different class
+        avatar: 'knight',
+        heroClass: 'Knight',
+        active: true,
+        joinedDate: '2026-01-01',
+        enrolledRealmIds: ['r1'],
+      },
+    ];
+    const grades: ExpGrade[] = [
+      { id: 'x1', heroId: 'h1', questId: 'q1', realmId: 'r1', score: 90, expEarned: 90, status: 'tuntas', feedback: 'Ok', gradedDate: '2026-03-10' },
+      { id: 'x2', heroId: 'h1', questId: 'q5', realmId: 'r3', score: 100, expEarned: 500, status: 'tuntas', feedback: 'Ok', gradedDate: '2026-03-10' },
+      { id: 'x3', heroId: 'h5', questId: 'q1', realmId: 'r1', score: 100, expEarned: 999, status: 'tuntas', feedback: 'Ok', gradedDate: '2026-03-10' },
+    ];
+
+    const { scopedHeroes, scopedGrades } = getScopedHeroLeaderboardInputs(
+      classPeers[0],
+      classPeers,
+      [],
+      grades,
+      'all'
+    );
+
+    // Only h1 & h2 (same class d1 + shared realm r1)
+    assert.deepEqual(
+      scopedHeroes.map((h) => h.id),
+      ['h1', 'h2']
+    );
+    // Only grades for r1 and r2
+    assert.deepEqual(
+      scopedGrades.map((g) => g.id),
+      ['x1']
+    );
+  });
+});
+

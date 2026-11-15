@@ -183,6 +183,145 @@ export function getGuildLeaderboard(
   }));
 }
 
+export interface WeeklyLeaderboardEntry extends GuildLeaderboardEntry {
+  weeklyExp: number;
+}
+
+/**
+ * Computes Heroes ranked by EXP earned within the last 7 days (weekly XP),
+ * breaking ties by total EXP, completed quest count, and name.
+ */
+export function getWeeklyGuildLeaderboard(
+  heroes: HeroStudent[],
+  grades: ExpGrade[],
+  now: Date = new Date()
+): WeeklyLeaderboardEntry[] {
+  const activeHeroes = heroes.filter((h) => h.active);
+  const cutoffMs =
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) -
+    6 * 24 * 60 * 60 * 1000;
+  const endOfTodayMs =
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) +
+    24 * 60 * 60 * 1000 -
+    1;
+
+  const ranked = activeHeroes
+    .map((hero) => {
+      const heroGrades = grades.filter((g) => g.heroId === hero.id);
+      const totalExp = heroGrades.reduce(
+        (sum, g) => sum + (Number(g.expEarned) || 0),
+        0
+      );
+      const weeklyExp = heroGrades.reduce((sum, g) => {
+        const dt = parseLocalDateTime(g.gradedDate);
+        if (!dt) return sum;
+        const utcMs = Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate());
+        if (utcMs >= cutoffMs && utcMs <= endOfTodayMs) {
+          return sum + (Number(g.expEarned) || 0);
+        }
+        return sum;
+      }, 0);
+      const tuntasCount = heroGrades.filter(
+        (g) => getEffectiveGradeStatus(g) === 'tuntas'
+      ).length;
+      const lvl = getHeroLevelProgress(totalExp);
+      return {
+        hero,
+        weeklyExp,
+        totalExp,
+        level: lvl.level,
+        title: lvl.title,
+        tuntasCount,
+      };
+    })
+    .sort((a, b) => {
+      if (b.weeklyExp !== a.weeklyExp) return b.weeklyExp - a.weeklyExp;
+      if (b.totalExp !== a.totalExp) return b.totalExp - a.totalExp;
+      if (b.tuntasCount !== a.tuntasCount) return b.tuntasCount - a.tuntasCount;
+      return a.hero.name.localeCompare(b.hero.name, 'id', { sensitivity: 'base' });
+    });
+
+  return ranked.map((entry, idx) => ({
+    rank: idx + 1,
+    ...entry,
+  }));
+}
+
+/**
+ * Masks a Hero's full name for privacy mode on the Hall of Fame leaderboard.
+ */
+export function maskHeroName(name: string, rank: number): string {
+  const clean = (name || '').trim();
+  if (!clean) return `Hero #${rank}`;
+  const firstChar = clean.charAt(0).toUpperCase();
+  return `${firstChar}*** (Hero #${rank})`;
+}
+
+/**
+ * Filters peer Heroes and EXP grades strictly to the logged-in Hero's own class (Dungeon)
+ * and the Realms (Mapel) they are enrolled in, preventing students from other classes
+ * or unrelated subjects from appearing in student leaderboards.
+ */
+export function getScopedHeroLeaderboardInputs(
+  currentHero: HeroStudent,
+  allHeroes: HeroStudent[],
+  dungeons: Dungeon[],
+  grades: ExpGrade[],
+  selectedRealmId: string = 'all'
+): {
+  scopedHeroes: HeroStudent[];
+  scopedGrades: ExpGrade[];
+  allowedRealmIds: string[] | null;
+} {
+  const myRealms = getHeroEffectiveRealmIds(currentHero, dungeons);
+  const targetRealms =
+    selectedRealmId !== 'all'
+      ? [selectedRealmId]
+      : myRealms && myRealms.length > 0
+        ? myRealms
+        : null;
+
+  const targetRealmSet = targetRealms ? new Set(targetRealms) : null;
+
+  const scopedHeroes = allHeroes.filter((peer) => {
+    if (!peer.active || peer.dungeonId !== currentHero.dungeonId) {
+      return false;
+    }
+    if (!targetRealmSet) {
+      return true;
+    }
+    const peerRealms = getHeroEffectiveRealmIds(peer, dungeons);
+    if (!peerRealms || peerRealms.length === 0) {
+      return true;
+    }
+    return peerRealms.some((rid) => targetRealmSet.has(rid));
+  });
+
+  const scopedHeroIdSet = new Set(scopedHeroes.map((h) => h.id));
+  const scopedGrades = grades.filter(
+    (g) =>
+      scopedHeroIdSet.has(g.heroId) &&
+      (!targetRealmSet || targetRealmSet.has(g.realmId))
+  );
+
+  return {
+    scopedHeroes,
+    scopedGrades,
+    allowedRealmIds: myRealms,
+  };
+}
+
+/**
+ * Safely escapes a single CSV field cell according to RFC 4180.
+ */
+export function escapeCsvCell(value: string | number | undefined | null): string {
+  const str = String(value ?? '');
+  if (/[",\r\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 export function formatRetroDate(isoDate: string): string {
   if (!isoDate) return '-';
   const parts = isoDate.split('-');

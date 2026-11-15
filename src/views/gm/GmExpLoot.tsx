@@ -599,19 +599,19 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       ) : (
         <div className="space-y-3.5">
           {/* Active Mapel & Quest Summary Banner */}
-          <ThemedPanelCard className="p-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg-surface-alt)]">
-            <div className="flex items-center gap-2 min-w-0">
-              <BookOpen size={16} className="text-[var(--accent-warning)] shrink-0" />
+          <ThemedPanelCard className="p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-[var(--bg-surface-alt)]">
+            <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+              <BookOpen size={17} className="text-[var(--accent-warning)] shrink-0 mt-0.5 sm:mt-0" />
               <div className="min-w-0">
-                <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)] truncate">
+                <p className="font-pixel-ui text-[10.5px] sm:text-[11px] text-[var(--accent-warning)] break-words">
                   {activeRealm ? `${activeRealm.code} — ${activeRealm.name}` : 'MAPEL'} · +{activeQuest.maxExp} EXP
                 </p>
-                <p className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
+                <p className="text-[14px] font-bold text-[var(--text-primary)] break-words mt-0.5">
                   {activeQuest.title}
                 </p>
               </div>
             </div>
-            <span className="text-[11.5px] font-semibold text-[var(--text-secondary)] tabular-nums shrink-0">
+            <span className="text-[12px] font-semibold text-[var(--text-secondary)] tabular-nums shrink-0">
               {eligibleHeroes.length} Siswa · {heroGroupsByClass.length} Kelas
             </span>
           </ThemedPanelCard>
@@ -626,8 +626,8 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             ).length;
 
             return (
-              <ThemedPanelCard key={group.key} className="p-3 sm:p-3.5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
+              <ThemedPanelCard key={group.key} className="p-3.5 space-y-3">
+                <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2.5 pb-2.5 border-b border-[var(--border-pixel)]/40">
                   <button
                     type="button"
                     onClick={() =>
@@ -636,34 +636,34 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                         [group.key]: !prev[group.key],
                       }))
                     }
-                    className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+                    className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
                   >
-                    <span className="w-7 h-7 flex items-center justify-center bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60 text-[var(--text-primary)] shrink-0">
+                    <span className="w-8 h-8 flex items-center justify-center bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60 text-[var(--text-primary)] shrink-0">
                       {isCollapsed ? (
-                        <ChevronRight size={15} />
+                        <ChevronRight size={16} />
                       ) : (
-                        <ChevronDown size={15} />
+                        <ChevronDown size={16} />
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <GraduationCap
-                          size={14}
+                          size={15}
                           className="text-[var(--accent-primary)] shrink-0"
                         />
-                        <span className="font-pixel-ui text-[10px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
+                        <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
                           {group.dungeon?.guildCode || 'LAIN'}
                         </span>
-                        <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
+                        <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] truncate">
                           {group.dungeon?.name || 'Kelas Lainnya'}
                         </h3>
                         {group.dungeon?.tier && (
-                          <span className="text-[11px] text-[var(--text-muted)]">
+                          <span className="text-[12px] text-[var(--text-secondary)]">
                             ({group.dungeon.tier})
                           </span>
                         )}
                       </div>
-                      <p className="text-[11.5px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
+                      <p className="text-[12px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
                         {gradedCount}/{group.heroes.length} siswa sudah dinilai
                       </p>
                     </div>
@@ -674,8 +674,9 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                     size="sm"
                     variant="success"
                     onClick={() => handleSaveClassGrades(group.heroes)}
+                    className="w-full min-[420px]:w-auto"
                   >
-                    <Save size={13} />
+                    <Save size={14} />
                     Simpan Kelas
                   </PixelButton>
                 </div>

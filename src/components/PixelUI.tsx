@@ -40,9 +40,9 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASSES = {
-  sm: 'min-h-[40px] px-3 py-1.5 text-[11.5px]',
-  md: 'min-h-[44px] px-4 py-2 text-[12.5px]',
-  lg: 'min-h-[48px] px-5 py-2.5 text-[13.5px]',
+  sm: 'min-h-[40px] px-3 py-1.5 text-[12px] sm:text-[12.5px]',
+  md: 'min-h-[44px] px-4 py-2 text-[13px] sm:text-[13.5px]',
+  lg: 'min-h-[48px] px-5 py-2.5 text-[14px]',
 };
 
 export const PixelButton: React.FC<PixelButtonProps> = ({
@@ -82,7 +82,7 @@ export const PixelSectionTitle: React.FC<{
 
   return (
     <div
-      className={`flex flex-wrap items-start justify-between gap-2.5 mb-3 min-w-0 ${
+      className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 sm:gap-3 mb-3.5 min-w-0 ${
         theme === 'gameboy_green'
           ? 'pb-2 border-b border-[#e2ddd3]'
           : theme === 'nes_classic'
@@ -92,19 +92,19 @@ export const PixelSectionTitle: React.FC<{
     >
       <div className="min-w-0 flex-1">
         <h2
-          className={`font-pixel-display text-[14px] sm:text-[16px] leading-snug tracking-wide text-[var(--text-primary)] break-words [overflow-wrap:anywhere] ${
+          className={`font-pixel-display text-[15px] sm:text-[16px] leading-snug tracking-wide text-[var(--text-primary)] break-words [overflow-wrap:anywhere] ${
             theme === 'cyber_retro' ? 'uppercase' : ''
           }`}
         >
           {title}
         </h2>
         {subtitle && (
-          <p className="text-[12.5px] sm:text-[13px] text-[var(--text-secondary)] mt-0.5 leading-snug break-words">
+          <p className="text-[13px] sm:text-[13.5px] text-[var(--text-secondary)] mt-1 leading-relaxed break-words">
             {subtitle}
           </p>
         )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="w-full sm:w-auto sm:shrink-0">{action}</div>}
     </div>
   );
 };
@@ -149,7 +149,7 @@ export const PixelFieldLabel: React.FC<{
 }> = ({ htmlFor, children }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-pixel-ui text-[11px] uppercase tracking-wide text-[var(--text-secondary)] mb-1 leading-snug"
+    className="block font-pixel-ui text-[11.5px] sm:text-[12px] uppercase tracking-wide text-[var(--text-secondary)] mb-1.5 leading-snug"
   >
     {children}
   </label>
@@ -159,7 +159,7 @@ export const PixelInput: React.FC<
   React.InputHTMLAttributes<HTMLInputElement>
 > = ({ className = '', ...rest }) => (
   <input
-    className={`pixel-box-inset pixel-focus w-full min-w-0 min-h-[42px] px-3 py-1.5 text-[14px] font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] bg-[var(--bg-inset)] outline-none ${className}`}
+    className={`pixel-box-inset pixel-focus w-full min-w-0 min-h-[44px] px-3 py-2 text-[14px] font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] bg-[var(--bg-inset)] outline-none ${className}`}
     {...rest}
   />
 );
@@ -168,7 +168,7 @@ export const PixelSelect: React.FC<
   React.SelectHTMLAttributes<HTMLSelectElement>
 > = ({ className = '', children, ...rest }) => (
   <select
-    className={`pixel-box-inset pixel-focus w-full min-w-0 min-h-[42px] px-3 py-1.5 text-[14px] font-medium text-[var(--text-primary)] bg-[var(--bg-inset)] outline-none cursor-pointer ${className}`}
+    className={`pixel-box-inset pixel-focus w-full min-w-0 min-h-[44px] pl-3 pr-8 py-2 text-[14px] font-medium text-[var(--text-primary)] bg-[var(--bg-inset)] outline-none cursor-pointer text-ellipsis overflow-hidden ${className}`}
     {...rest}
   >
     {children}

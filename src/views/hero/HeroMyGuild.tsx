@@ -10,6 +10,7 @@ import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
   getGuildLeaderboard,
   getHeroEffectiveRealmIds,
+  getScopedHeroLeaderboardInputs,
 } from '../../utils/exp';
 
 interface HeroMyGuildProps {
@@ -28,9 +29,14 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
     .sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
 
   const guildLeaderboard = useMemo(() => {
-    const classPeers = partyMembers.length > 0 ? partyMembers : state.heroes;
-    return getGuildLeaderboard(classPeers, state.grades).slice(0, 15);
-  }, [partyMembers, state.heroes, state.grades]);
+    const { scopedHeroes, scopedGrades } = getScopedHeroLeaderboardInputs(
+      hero,
+      state.heroes,
+      state.dungeons,
+      state.grades
+    );
+    return getGuildLeaderboard(scopedHeroes, scopedGrades).slice(0, 15);
+  }, [hero, state.heroes, state.dungeons, state.grades]);
 
   return (
     <div className="space-y-5">
