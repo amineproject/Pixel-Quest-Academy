@@ -210,9 +210,13 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                       <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
                         {formatChapterLabel(tome.chapter)} · {realm?.name || 'General'}
                       </p>
-                      <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTome(tome)}
+                        className="text-left text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
+                      >
                         {tome.title}
-                      </h3>
+                      </button>
                     </div>
                   </div>
 
@@ -236,9 +240,11 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                   </div>
                 </div>
 
-                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed break-words [overflow-wrap:anywhere]">
-                  {tome.summary}
-                </p>
+                {tome.summary && (
+                  <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+                    {tome.summary}
+                  </p>
+                )}
 
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                   <span
@@ -253,12 +259,6 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                   </span>
                 </div>
 
-                {tome.linkUrl && (
-                  <div>
-                    <PixelLinkButton url={tome.linkUrl} label="Buka Tautan Materi" />
-                  </div>
-                )}
-
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40">
                   <span className="text-[12px] text-[var(--text-muted)] tabular-nums">
                     Published {formatRetroDate(tome.publishedDate)}
@@ -270,7 +270,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                     onClick={() => setPreviewTome(tome)}
                   >
                     <BookOpen size={14} />
-                    Read Preview
+                    Baca Materi
                   </PixelButton>
                 </div>
               </ThemedPanelCard>
@@ -291,9 +291,23 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
       >
         {previewTome && (
           <div className="space-y-3 min-w-0">
-            <p className="text-[12.5px] font-semibold text-[var(--accent-warning)] break-words">
-              {state.realms.find((r) => r.id === previewTome.realmId)?.name}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[12.5px] font-semibold text-[var(--accent-warning)] break-words">
+                {state.realms.find((r) => r.id === previewTome.realmId)?.code} —{' '}
+                {state.realms.find((r) => r.id === previewTome.realmId)?.name}
+              </p>
+              <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
+                {getScheduleStatusSummary(previewTome, state.dungeons).label}
+              </span>
+            </div>
+            {previewTome.summary && (
+              <p className="pixel-box-inset p-2.5 text-[12.5px] text-[var(--text-secondary)] italic leading-relaxed break-words [overflow-wrap:anywhere]">
+                {previewTome.summary}
+              </p>
+            )}
+            <ThemedReadingSurface>
+              {previewTome.content}
+            </ThemedReadingSurface>
             {previewTome.linkUrl && (
               <div>
                 <PixelLinkButton
@@ -302,17 +316,27 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                 />
               </div>
             )}
-            <ThemedReadingSurface>
-              {previewTome.content}
-            </ThemedReadingSurface>
-            <PixelButton
-              type="button"
-              variant="neutral"
-              fullWidth
-              onClick={() => setPreviewTome(null)}
-            >
-              Close Tome
-            </PixelButton>
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <PixelButton
+                type="button"
+                variant="warning"
+                onClick={() => {
+                  const t = previewTome;
+                  setPreviewTome(null);
+                  openEdit(t);
+                }}
+              >
+                <Pencil size={14} />
+                Edit Materi
+              </PixelButton>
+              <PixelButton
+                type="button"
+                variant="neutral"
+                onClick={() => setPreviewTome(null)}
+              >
+                Tutup
+              </PixelButton>
+            </div>
           </div>
         )}
       </PixelModal>

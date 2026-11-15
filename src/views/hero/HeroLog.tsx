@@ -4,10 +4,15 @@ import {
   AlertTriangle,
   AtSign,
   Award,
+  BookOpen,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Compass,
   Crown,
+  Eye,
   Flame,
+  GraduationCap,
   KeyRound,
   Lock,
   Palette,
@@ -22,6 +27,7 @@ import {
 } from 'lucide-react';
 import {
   AcademyState,
+  ActiveQuest,
   AvatarClass,
   GradeStatus,
   HeroStudent,
@@ -34,15 +40,18 @@ import {
   PixelEmptyChest,
   PixelFieldLabel,
   PixelInput,
+  PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
 } from '../../components/PixelUI';
 import {
   ThemedAchievementCard,
   ThemedPanelCard,
+  ThemedReadingSurface,
 } from '../../components/ThemePrimitives';
 import {
   formatRetroDate,
+  getDeadlineUrgency,
   getEffectiveGradeStatus,
   getHeroAchievements,
   getHeroEffectiveRealmIds,
@@ -123,6 +132,10 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   );
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [statusRealmFilter, setStatusRealmFilter] = useState<string>('all');
+  const [statusGroupMode, setStatusGroupMode] = useState<'class_realm' | 'realm_class'>('class_realm');
+  const [collapsedStatusGroups, setCollapsedStatusGroups] = useState<Record<string, boolean>>({});
+  const [detailQuest, setDetailQuest] = useState<ActiveQuest | null>(null);
 
   const [now, setNow] = useState<Date>(() => new Date());
 
@@ -459,20 +472,356 @@ export const HeroLog: React.FC<HeroLogProps> = ({
         </ThemedPanelCard>
       )}
 
-      {/* Status Breakdown Grouped By Realm (Symbols Only) */}
+      {/* Status & Penilaian Grouped By Mapel & Kelas (Symbols Only) */}
       <section className="space-y-3">
-        <PixelSectionTitle title="Status per Realm / Mapel" />
+        <PixelSectionTitle
+          title="Penilaian per Mapel & Kelas"
+          subtitle="Rekap status tugas dikelompokkan berdasarkan kelas dan mata pelajaran"
+        />
 
-        {visibleRealms.length === 0 ? (
-          <PixelEmptyChest
-            title="Belum Ada Tugas!"
-            description="Belum ada tugas atau quest yang ditugaskan untuk kelas dan mapel kamu."
-          />
-        ) : (
-          visibleRealms.map((realm) => {
-            const realmQuests = relevantQuests.filter(
+        {visibleRealms.length > 0 && (
+          <div className="space-y-2">
+            {/* Group Mode Toggle */}
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setStatusGroupMode('class_realm')}
+                className={`pixel-btn min-h-[36px] px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
+                  statusGroupMode === 'class_realm'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                }`}
+              >
+                <GraduationCap size={14} />
+                <span>Per Kelas &amp; Mapel</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusGroupMode('realm_class')}
+                className={`pixel-btn min-h-[36px] px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
+                  statusGroupMode === 'realm_class'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                }`}
+              >
+                <BookOpen size={14} />
+                <span>Per Mapel &amp; Kelas</span>
+              </button>
+            </div>
+
+            {/* Subject Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll">
+              <button
+                type="button"
+                onClick={() => setStatusRealmFilter('all')}
+                className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                  statusRealmFilter === 'all'
+                    ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                }`}
+              >
+                Semua Mapel ({relevantQuests.length})
+              </button>
+              {visibleRealms.map((r) => {
+                const count = relevantQuests.filter((q) => q.realmId === r.id).length;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setStatusRealmFilter(r.id)}
+                    className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                      statusRealmFilter === r.id
+                        ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {r.code} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {(() => {
+          const filteredQuestsForStatus = relevantQuests.filter(
+            (q) => statusRealmFilter === 'all' || q.realmId === statusRealmFilter
+          );
+
+          if (filteredQuestsForStatus.length === 0) {
+            return (
+              <PixelEmptyChest
+                title="Belum Ada Tugas!"
+                description="Belum ada tugas atau quest yang ditugaskan untuk kelas dan mapel kamu."
+              />
+            );
+          }
+
+          const heroDungeon = state.dungeons.find((d) => d.id === hero.dungeonId);
+
+          const resolveQuestClassInfo = (q: ActiveQuest) => {
+            if (q.dungeonId !== 'all') {
+              const specific = state.dungeons.find((d) => d.id === q.dungeonId);
+              if (specific) {
+                return {
+                  key: specific.id,
+                  code: specific.guildCode,
+                  label: `${specific.guildCode} — ${specific.name}`,
+                  tier: specific.tier,
+                  scope: 'Khusus Kelas',
+                };
+              }
+            }
+            if (heroDungeon) {
+              return {
+                key: heroDungeon.id,
+                code: heroDungeon.guildCode,
+                label: `${heroDungeon.guildCode} — ${heroDungeon.name}`,
+                tier: heroDungeon.tier,
+                scope: q.dungeonId === 'all' ? 'Lintas Kelas' : 'Kelas Aktif',
+              };
+            }
+            return {
+              key: '__all__',
+              code: 'UMUM',
+              label: 'Semua Kelas',
+              tier: '',
+              scope: 'Umum',
+            };
+          };
+
+          const renderStatusRow = (quest: ActiveQuest, scopeBadge?: string) => {
+            const grade = heroGrades.find((g) => g.questId === quest.id);
+            const status = getEffectiveGradeStatus(grade);
+            const ui = renderStatusSymbol(status);
+
+            return (
+              <div
+                key={quest.id}
+                className="pixel-box-inset p-3 flex items-start justify-between gap-3 overflow-hidden"
+              >
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setDetailQuest(quest)}
+                      className="text-left text-[13.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
+                    >
+                      {quest.title}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`text-[11px] font-bold px-2 py-0.5 border ${ui.badgeClass}`}
+                    >
+                      {ui.label}
+                    </span>
+                    {scopeBadge && (
+                      <span className="text-[10.5px] font-semibold px-1.5 py-0.5 border border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] text-[var(--text-secondary)]">
+                        {scopeBadge}
+                      </span>
+                    )}
+                    <span className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
+                      {grade?.gradedDate
+                        ? `Diperbarui ${formatRetroDate(grade.gradedDate)}`
+                        : `Batas: ${formatRetroDate(quest.deadline)}`}
+                    </span>
+                  </div>
+                  {grade?.feedback && (
+                    <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed pt-0.5 break-words [overflow-wrap:anywhere]">
+                      Catatan Guru: {grade.feedback}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDetailQuest(quest)}
+                    aria-label={`Lihat instruksi ${quest.title}`}
+                    title="Lihat instruksi tugas"
+                    className="pixel-btn min-w-[36px] min-h-[36px] flex items-center justify-center bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer"
+                  >
+                    <Eye size={15} />
+                  </button>
+                  <div
+                    className={`w-10 h-10 shrink-0 border-2 flex items-center justify-center ${ui.iconBoxClass}`}
+                    title={ui.label}
+                    aria-label={ui.label}
+                  >
+                    {ui.icon}
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          if (statusGroupMode === 'class_realm') {
+            // Group by Kelas -> Mapel
+            const classBuckets = new Map<
+              string,
+              {
+                key: string;
+                code: string;
+                label: string;
+                tier: string;
+                quests: ActiveQuest[];
+              }
+            >();
+            filteredQuestsForStatus.forEach((q) => {
+              const info = resolveQuestClassInfo(q);
+              const existing = classBuckets.get(info.key);
+              if (existing) {
+                existing.quests.push(q);
+              } else {
+                classBuckets.set(info.key, {
+                  key: info.key,
+                  code: info.code,
+                  label: info.label,
+                  tier: info.tier,
+                  quests: [q],
+                });
+              }
+            });
+
+            return Array.from(classBuckets.values()).map((cls) => {
+              const classTuntas = cls.quests.filter(
+                (q) =>
+                  getEffectiveGradeStatus(
+                    heroGrades.find((g) => g.questId === q.id)
+                  ) === 'tuntas'
+              ).length;
+              const realmsInClass = state.realms.filter((r) =>
+                cls.quests.some((q) => q.realmId === r.id)
+              );
+
+              return (
+                <ThemedPanelCard key={cls.key} className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <GraduationCap
+                        size={17}
+                        className="text-[var(--accent-primary)] shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-pixel-ui text-[10px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
+                            {cls.code}
+                          </span>
+                          <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
+                            {cls.label}
+                          </h3>
+                          {cls.tier && (
+                            <span className="text-[11px] text-[var(--text-muted)]">
+                              ({cls.tier})
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11.5px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
+                          {realmsInClass.length} Mapel · {classTuntas}/{cls.quests.length} Tugas Tuntas
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {realmsInClass.map((realm) => {
+                      const realmQuests = cls.quests.filter(
+                        (q) => q.realmId === realm.id
+                      );
+                      const groupKey = `${cls.key}::${realm.id}`;
+                      const isCollapsed = Boolean(collapsedStatusGroups[groupKey]);
+                      const tuntasInRealm = realmQuests.filter(
+                        (q) =>
+                          getEffectiveGradeStatus(
+                            heroGrades.find((g) => g.questId === q.id)
+                          ) === 'tuntas'
+                      ).length;
+
+                      return (
+                        <div
+                          key={groupKey}
+                          className="pixel-box-inset p-2.5 sm:p-3 space-y-2.5 border border-[var(--border-pixel)]/50 bg-[var(--bg-inset)]"
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCollapsedStatusGroups((prev) => ({
+                                ...prev,
+                                [groupKey]: !prev[groupKey],
+                              }))
+                            }
+                            className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <PixelRealmGlyph
+                                icon={realm.icon}
+                                color={realm.accentColor}
+                                size={22}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
+                                  {realm.code} — {realm.name}
+                                </h4>
+                                <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
+                                  {tuntasInRealm}/{realmQuests.length} Tuntas
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[var(--text-secondary)] shrink-0">
+                              {isCollapsed ? (
+                                <ChevronRight size={16} />
+                              ) : (
+                                <ChevronDown size={16} />
+                              )}
+                            </span>
+                          </button>
+
+                          {!isCollapsed && (
+                            <div className="space-y-2">
+                              {realmQuests.map((quest) => {
+                                const info = resolveQuestClassInfo(quest);
+                                return renderStatusRow(quest, info.scope);
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ThemedPanelCard>
+              );
+            });
+          }
+
+          // Mode 2: Per Mapel -> Kelas
+          const realmsToShow = visibleRealms.filter(
+            (r) => statusRealmFilter === 'all' || r.id === statusRealmFilter
+          );
+
+          return realmsToShow.map((realm) => {
+            const realmQuests = filteredQuestsForStatus.filter(
               (q) => q.realmId === realm.id
             );
+            if (realmQuests.length === 0) return null;
+
+            const classSubGroups = new Map<
+              string,
+              { key: string; label: string; quests: ActiveQuest[] }
+            >();
+            realmQuests.forEach((q) => {
+              const info = resolveQuestClassInfo(q);
+              const existing = classSubGroups.get(info.key);
+              if (existing) {
+                existing.quests.push(q);
+              } else {
+                classSubGroups.set(info.key, {
+                  key: info.key,
+                  label: info.label,
+                  quests: [q],
+                });
+              }
+            });
 
             return (
               <ThemedPanelCard key={realm.id} className="space-y-3">
@@ -495,55 +844,83 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                 </div>
 
                 <div className="space-y-2.5">
-                  {realmQuests.map((quest) => {
-                    const grade = heroGrades.find((g) => g.questId === quest.id);
-                    const status = getEffectiveGradeStatus(grade);
-                    const ui = renderStatusSymbol(status);
-
-                    return (
-                      <div
-                        key={quest.id}
-                        className="pixel-box-inset p-3 flex items-start justify-between gap-3 overflow-hidden"
-                      >
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <p className="text-[13.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
-                            {quest.title}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`text-[11px] font-bold px-2 py-0.5 border ${ui.badgeClass}`}
-                            >
-                              {ui.label}
-                            </span>
-                            <span className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
-                              {grade?.gradedDate
-                                ? `Diperbarui ${formatRetroDate(grade.gradedDate)}`
-                                : `Batas: ${formatRetroDate(quest.deadline)}`}
-                            </span>
-                          </div>
-                          {grade?.feedback && (
-                            <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed pt-0.5 break-words [overflow-wrap:anywhere]">
-                              Catatan Guru: {grade.feedback}
-                            </p>
-                          )}
-                        </div>
-
-                        <div
-                          className={`w-10 h-10 shrink-0 border-2 flex items-center justify-center ${ui.iconBoxClass}`}
-                          title={ui.label}
-                          aria-label={ui.label}
-                        >
-                          {ui.icon}
-                        </div>
+                  {Array.from(classSubGroups.values()).map((cg) => (
+                    <div
+                      key={`${realm.id}-${cg.key}`}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--accent-primary)]">
+                        <GraduationCap size={13} />
+                        <span>Kelas: {cg.label}</span>
                       </div>
-                    );
-                  })}
+                      <div className="space-y-2">
+                        {cg.quests.map((quest) => {
+                          const info = resolveQuestClassInfo(quest);
+                          return renderStatusRow(quest, info.scope);
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </ThemedPanelCard>
             );
-          })
-        )}
+          });
+        })()}
       </section>
+
+      {/* Quest Instruction Detail Pop-Up Modal */}
+      <PixelModal
+        open={Boolean(detailQuest)}
+        title={detailQuest ? detailQuest.title : ''}
+        onClose={() => setDetailQuest(null)}
+      >
+        {detailQuest && (() => {
+          const realm = state.realms.find((r) => r.id === detailQuest.realmId);
+          const grade = heroGrades.find((g) => g.questId === detailQuest.id);
+          const status = getEffectiveGradeStatus(grade);
+          const ui = renderStatusSymbol(status);
+          const urgency = getDeadlineUrgency(detailQuest.deadline);
+          return (
+            <div className="space-y-3 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[12px] font-semibold text-[var(--accent-warning)] break-words">
+                  {realm?.code} — {realm?.name} · [{detailQuest.difficulty.toUpperCase()}]
+                </p>
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 border ${ui.badgeClass}`}
+                >
+                  {ui.label}
+                </span>
+              </div>
+              <p className="text-[12px] text-[var(--text-muted)] tabular-nums">
+                Tenggat: {formatRetroDate(detailQuest.deadline)} ({urgency.label})
+              </p>
+              <ThemedReadingSurface>
+                {detailQuest.instructions}
+              </ThemedReadingSurface>
+              {grade?.feedback && (
+                <div className="pixel-box-inset p-2.5 text-[12.5px] text-[var(--text-primary)]">
+                  <strong>Catatan Guru:</strong> {grade.feedback}
+                </div>
+              )}
+              {detailQuest.linkUrl && (
+                <PixelLinkButton
+                  url={detailQuest.linkUrl}
+                  label="Buka Tautan Tugas"
+                />
+              )}
+              <PixelButton
+                type="button"
+                variant="primary"
+                fullWidth
+                onClick={() => setDetailQuest(null)}
+              >
+                Tutup
+              </PixelButton>
+            </div>
+          );
+        })()}
+      </PixelModal>
 
       {/* Student Avatar Picker Modal */}
       {onUpdateAvatar && (

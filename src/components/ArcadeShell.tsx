@@ -5,6 +5,7 @@ import {
   Crown,
   Gamepad2,
   Grid,
+  Info,
   LogOut,
   Map,
   RefreshCw,
@@ -46,6 +47,7 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'active_quests', label: 'Active Quests', shortLabel: 'Quests', standardName: 'Tugas' },
   { id: 'exp_loot', label: 'EXP & Loot', shortLabel: 'EXP', standardName: 'Penilaian' },
   { id: 'settings', label: 'System Settings', shortLabel: 'Config', standardName: 'Pengaturan' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.0' },
 ];
 
 export const HERO_NAV_ITEMS: {
@@ -58,6 +60,7 @@ export const HERO_NAV_ITEMS: {
   { id: 'scroll_library', label: 'Scroll Library', shortLabel: 'Scrolls', standardName: 'Materi' },
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
   { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.0' },
 ];
 
 export function getGmMenuIcon(id: GmMenuId, size = 18) {
@@ -80,6 +83,8 @@ export function getGmMenuIcon(id: GmMenuId, size = 18) {
       return <Trophy size={size} />;
     case 'settings':
       return <Settings size={size} />;
+    case 'about':
+      return <Info size={size} />;
   }
 }
 
@@ -93,6 +98,8 @@ export function getHeroMenuIcon(id: HeroMenuId, size = 18) {
       return <Castle size={size} />;
     case 'hero_log':
       return <Star size={size} />;
+    case 'about':
+      return <Info size={size} />;
   }
 }
 
@@ -276,7 +283,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             {/* Sidebar Menu Links */}
             <nav className="flex-1 overflow-y-auto pixel-scroll p-2.5 space-y-1">
               <p className="px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wider text-[var(--text-muted)]">
-                {isGm ? 'Menu Pengelola (9)' : 'Menu Petualang'}
+                {isGm ? `Menu Pengelola (${GM_NAV_ITEMS.length})` : `Menu Petualang (${HERO_NAV_ITEMS.length})`}
               </p>
 
               {isGm
@@ -535,12 +542,12 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   >
                     <Grid size={19} />
                     <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap">
-                      9 Menus
+                      Menu
                     </span>
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 h-full">
+                <div className="grid grid-cols-5 h-full">
                   {HERO_NAV_ITEMS.map((item) => {
                     const active = heroMenu === item.id;
                     return (
@@ -548,14 +555,14 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         key={item.id}
                         type="button"
                         onClick={() => onSelectHeroMenu(item.id)}
-                        className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-1 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
+                        className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
                           active
                             ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                         }`}
                       >
                         {getHeroMenuIcon(item.id, 19)}
-                        <span className="font-pixel-ui text-[9px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
+                        <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
                           {item.shortLabel}
                         </span>
                       </button>

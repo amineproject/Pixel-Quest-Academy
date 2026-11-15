@@ -12,13 +12,15 @@ export type GmMenuId =
   | 'scrolls'
   | 'active_quests'
   | 'exp_loot'
-  | 'settings';
+  | 'settings'
+  | 'about';
 
 export type HeroMenuId =
   | 'notice'
   | 'scroll_library'
   | 'my_guild'
-  | 'hero_log';
+  | 'hero_log'
+  | 'about';
 
 export type PixelTheme =
   | 'sunny_quest'

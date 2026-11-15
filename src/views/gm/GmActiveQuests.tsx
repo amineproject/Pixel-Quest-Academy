@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ChevronDown,
   ChevronRight,
+  Eye,
   GraduationCap,
   Layers,
   List,
@@ -33,7 +34,11 @@ import {
   PixelTextarea,
 } from '../../components/PixelUI';
 import { ScheduleConfigSection } from '../../components/ScheduleConfigSection';
-import { QuestCard, ThemedPanelCard } from '../../components/ThemePrimitives';
+import {
+  QuestCard,
+  ThemedPanelCard,
+  ThemedReadingSurface,
+} from '../../components/ThemePrimitives';
 import {
   formatRetroDate,
   getScheduleStatusSummary,
@@ -84,6 +89,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   const [collapsedRealms, setCollapsedRealms] = useState<Record<string, boolean>>({});
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [previewQuest, setPreviewQuest] = useState<ActiveQuest | null>(null);
   const [editing, setEditing] = useState<ActiveQuest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ActiveQuest | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -327,13 +333,26 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                 [{quest.difficulty.toUpperCase()}] · +{quest.maxExp} EXP ·{' '}
                 {realm?.code || 'REALM'}
               </p>
-              <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+              <button
+                type="button"
+                onClick={() => setPreviewQuest(quest)}
+                className="text-left text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
+              >
                 {quest.title}
-              </h3>
+              </button>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setPreviewQuest(quest)}
+              aria-label={`Lihat instruksi ${quest.title}`}
+              title="Lihat instruksi lengkap"
+              className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--accent-primary)] text-[var(--text-on-accent)] cursor-pointer"
+            >
+              <Eye size={15} />
+            </button>
             <button
               type="button"
               onClick={() => openEdit(quest)}
@@ -353,7 +372,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           </div>
         </div>
 
-        <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+        <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
           {quest.instructions}
         </p>
 
@@ -373,17 +392,19 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           </span>
         </div>
 
-        {quest.linkUrl && (
-          <div>
-            <PixelLinkButton url={quest.linkUrl} label="Buka Tautan Tugas" />
-          </div>
-        )}
-
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40 text-[12px] text-[var(--text-muted)] tabular-nums">
           <span>
-            Target: {dungeon ? `${dungeon.guildCode} — ${dungeon.name}` : 'Semua Kelas (Mapel Terkait)'}
+            Target: {dungeon ? `${dungeon.guildCode} — ${dungeon.name}` : 'Semua Kelas (Mapel Terkait)'} · Due: {formatRetroDate(quest.deadline)}
           </span>
-          <span>Due: {formatRetroDate(quest.deadline)}</span>
+          <PixelButton
+            type="button"
+            size="sm"
+            variant="primary"
+            onClick={() => setPreviewQuest(quest)}
+          >
+            <Eye size={14} />
+            Lihat Instruksi
+          </PixelButton>
         </div>
       </QuestCard>
     );
@@ -908,6 +929,82 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           )}
         </>
       )}
+
+      {/* QUEST DETAIL POP-UP MODAL */}
+      <PixelModal
+        open={Boolean(previewQuest)}
+        title={previewQuest ? previewQuest.title : ''}
+        onClose={() => setPreviewQuest(null)}
+      >
+        {previewQuest && (() => {
+          const realm = state.realms.find((r) => r.id === previewQuest.realmId);
+          const dungeon = state.dungeons.find(
+            (d) => d.id === previewQuest.dungeonId
+          );
+          const sched = getScheduleStatusSummary(previewQuest, state.dungeons);
+          return (
+            <div className="space-y-3 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[12.5px] font-semibold text-[var(--accent-warning)] break-words">
+                  {realm ? `${realm.code} — ${realm.name}` : 'Mapel'} · [
+                  {previewQuest.difficulty.toUpperCase()}] · +{previewQuest.maxExp} EXP
+                </p>
+                <span className="text-[11.5px] font-semibold text-[var(--text-muted)] tabular-nums">
+                  Due: {formatRetroDate(previewQuest.deadline)}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 border font-semibold bg-[var(--bg-inset)] text-[var(--text-primary)] border-[var(--border-pixel)]/50">
+                  Target:{' '}
+                  {dungeon
+                    ? `${dungeon.guildCode} — ${dungeon.name}`
+                    : 'Semua Kelas (Mapel Terkait)'}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 border font-semibold bg-[var(--bg-inset)] text-[var(--text-secondary)] border-[var(--border-pixel)]/50">
+                  <CalendarClock size={11} />
+                  {sched.label}
+                </span>
+              </div>
+
+              <ThemedReadingSurface>
+                {previewQuest.instructions}
+              </ThemedReadingSurface>
+
+              {previewQuest.linkUrl && (
+                <div>
+                  <PixelLinkButton
+                    url={previewQuest.linkUrl}
+                    label="Buka Tautan Tugas"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <PixelButton
+                  type="button"
+                  variant="warning"
+                  onClick={() => {
+                    const q = previewQuest;
+                    setPreviewQuest(null);
+                    openEdit(q);
+                  }}
+                >
+                  <Pencil size={14} />
+                  Edit Tugas
+                </PixelButton>
+                <PixelButton
+                  type="button"
+                  variant="neutral"
+                  onClick={() => setPreviewQuest(null)}
+                >
+                  Tutup
+                </PixelButton>
+              </div>
+            </div>
+          );
+        })()}
+      </PixelModal>
 
       {/* CREATE / EDIT QUEST MODAL */}
       <PixelModal

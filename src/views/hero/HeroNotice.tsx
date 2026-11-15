@@ -5,6 +5,7 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  Eye,
   Flame,
   KeyRound,
   Lock,
@@ -14,7 +15,9 @@ import {
 } from 'lucide-react';
 import {
   AcademyState,
+  ActiveQuest,
   AvatarClass,
+  GradeStatus,
   HeroMenuId,
   HeroStudent,
   NoticePriority,
@@ -35,6 +38,7 @@ import {
   QuestCard,
   ThemedNoticeCard,
   ThemedPanelCard,
+  ThemedReadingSurface,
 } from '../../components/ThemePrimitives';
 import {
   formatRetroDate,
@@ -79,6 +83,10 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   const [selectedNotice, setSelectedNotice] = useState<QuestNotice | null>(
     null
   );
+  const [selectedQuestItem, setSelectedQuestItem] = useState<{
+    quest: ActiveQuest;
+    status: GradeStatus;
+  } | null>(null);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarClass>(hero.avatar);
 
@@ -456,21 +464,30 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
                     </span>
                   </div>
                 </div>
-                <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuestItem({ quest: q, status })}
+                  className="text-left text-[14.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
+                >
                   {q.title}
-                </h3>
-                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                </button>
+                <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
                   {q.instructions}
                 </p>
-                {q.linkUrl && (
-                  <div className="pt-1.5 border-t border-[var(--border-pixel)]/30">
-                    <PixelLinkButton
-                      url={q.linkUrl}
-                      label="Buka Tautan Tugas"
-                      compact
-                    />
-                  </div>
-                )}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/30">
+                  <span className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
+                    {urgency.label}
+                  </span>
+                  <PixelButton
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setSelectedQuestItem({ quest: q, status })}
+                  >
+                    <Eye size={14} />
+                    Lihat Instruksi
+                  </PixelButton>
+                </div>
               </QuestCard>
             );
           })
@@ -533,6 +550,61 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
             </PixelButton>
           </div>
         )}
+      </PixelModal>
+
+      {/* Quest Instruction Detail Pop-Up Modal */}
+      <PixelModal
+        open={Boolean(selectedQuestItem)}
+        title={selectedQuestItem ? selectedQuestItem.quest.title : ''}
+        onClose={() => setSelectedQuestItem(null)}
+      >
+        {selectedQuestItem && (() => {
+          const { quest: sq, status: st } = selectedQuestItem;
+          const realm = state.realms.find((r) => r.id === sq.realmId);
+          const urgency = getDeadlineUrgency(sq.deadline);
+          const statusLabel =
+            st === 'tuntas'
+              ? 'Tuntas'
+              : st === 'proses'
+                ? 'Proses Dinilai'
+                : st === 'remidial'
+                  ? 'Remidial'
+                  : 'Belum Dikerjakan';
+          return (
+            <div className="space-y-3 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[12px] font-semibold text-[var(--accent-warning)] break-words">
+                  {realm?.code} — {realm?.name} · [{sq.difficulty.toUpperCase()}]
+                </p>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded border border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] text-[var(--text-primary)]">
+                  {statusLabel}
+                </span>
+              </div>
+              <p className="text-[12px] text-[var(--text-muted)] tabular-nums">
+                Tenggat: {formatRetroDate(sq.deadline)} ({urgency.label})
+              </p>
+              <ThemedReadingSurface>
+                {sq.instructions}
+              </ThemedReadingSurface>
+              {sq.linkUrl && (
+                <div>
+                  <PixelLinkButton
+                    url={sq.linkUrl}
+                    label="Buka Tautan Tugas"
+                  />
+                </div>
+              )}
+              <PixelButton
+                type="button"
+                variant="primary"
+                fullWidth
+                onClick={() => setSelectedQuestItem(null)}
+              >
+                Tutup Instruksi
+              </PixelButton>
+            </div>
+          );
+        })()}
       </PixelModal>
 
       {/* Student Avatar Picker Modal */}

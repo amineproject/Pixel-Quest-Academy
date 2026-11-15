@@ -2,15 +2,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
+  BookOpen,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Download,
   FileSpreadsheet,
   FileText,
+  GraduationCap,
   Save,
   Upload,
   XCircle,
 } from 'lucide-react';
-import { AcademyState, ExpGrade, GradeStatus } from '../../types/lms';
+import { AcademyState, Dungeon, ExpGrade, GradeStatus } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
   DungeonOptGroupOptions,
@@ -86,13 +90,30 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const [selectedRealmId, setSelectedRealmId] = useState(
     state.realms[0]?.id || ''
   );
-  const questsForRealm = state.quests.filter(
-    (q) => q.realmId === selectedRealmId
-  );
+  const [selectedDungeonId, setSelectedDungeonId] = useState('all');
+  const [collapsedClasses, setCollapsedClasses] = useState<Record<string, boolean>>({});
+
+  const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+
+  const doesDungeonTeachRealm = (d: Dungeon, rId: string) =>
+    !d.realmIds || d.realmIds.length === 0 || d.realmIds.includes(rId);
+
+  const questsForRealm = state.quests.filter((q) => {
+    if (q.realmId !== selectedRealmId) return false;
+    if (selectedDungeonId === 'all') return true;
+    if (q.dungeonId === selectedDungeonId) return true;
+    if (q.dungeonId === 'all') {
+      if (q.scheduledAt === '__per_class__') {
+        return Boolean(q.classSchedules?.[selectedDungeonId]);
+      }
+      return true;
+    }
+    return false;
+  });
+
   const [selectedQuestId, setSelectedQuestId] = useState(
     questsForRealm[0]?.id || ''
   );
-  const [selectedDungeonId, setSelectedDungeonId] = useState('all');
 
   // Class Recap Download Modal State
   const [recapModalOpen, setRecapModalOpen] = useState(false);
@@ -108,17 +129,31 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const excelInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    const nextQuests = state.quests.filter(
-      (q) => q.realmId === selectedRealmId
-    );
+    const nextQuests = state.quests.filter((q) => {
+      if (q.realmId !== selectedRealmId) return false;
+      if (selectedDungeonId === 'all') return true;
+      if (q.dungeonId === selectedDungeonId) return true;
+      if (q.dungeonId === 'all') {
+        if (q.scheduledAt === '__per_class__') {
+          return Boolean(q.classSchedules?.[selectedDungeonId]);
+        }
+        return true;
+      }
+      return false;
+    });
     if (!nextQuests.some((q) => q.id === selectedQuestId)) {
       setSelectedQuestId(nextQuests[0]?.id || '');
     }
-  }, [selectedRealmId, selectedQuestId, state.quests]);
+  }, [selectedRealmId, selectedDungeonId, selectedQuestId, state.quests]);
 
   const activeQuest = state.quests.find((q) => q.id === selectedQuestId);
-
-  const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+  const activeRealm = state.realms.find((r) => r.id === selectedRealmId);
+  const teachingDungeons = sortedDungeons.filter((d) =>
+    doesDungeonTeachRealm(d, selectedRealmId)
+  );
+  const otherDungeons = sortedDungeons.filter(
+    (d) => !doesDungeonTeachRealm(d, selectedRealmId)
+  );
 
   const openRecapModal = () => {
     const defaultDungeon =
@@ -244,11 +279,210 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     });
   };
 
+  const handleSaveClassGrades = async (heroesInClass: typeof eligibleHeroes) => {
+    if (!activeQuest || heroesInClass.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const batch: ExpGrade[] = heroesInClass.map((h) => {
+      const status = draftStatuses[h.id] || 'tuntas';
+      const score =
+        status === 'belum'
+          ? 0
+          : Math.max(0, Math.min(100, Number(draftScores[h.id]) || 0));
+      const existing = state.grades.find(
+        (g) => g.heroId === h.id && g.questId === activeQuest.id
+      );
+      return {
+        id: existing?.id || `grd-${h.id}-${activeQuest.id}`,
+        heroId: h.id,
+        questId: activeQuest.id,
+        realmId: activeQuest.realmId,
+        score,
+        expEarned: status === 'belum' ? 0 : calculateExpEarned(score, activeQuest.maxExp),
+        status,
+        feedback: (draftNotes[h.id] || '').trim(),
+        gradedDate: today,
+      };
+    });
+    if (onSaveGradesBatch) {
+      await onSaveGradesBatch(batch);
+    } else {
+      batch.forEach((g) => onSaveGrade(g));
+    }
+  };
+
+  // Group eligible heroes by Kelas (Dungeon)
+  const heroGroupsByClass = (() => {
+    const groups: { key: string; dungeon: Dungeon | null; heroes: typeof eligibleHeroes }[] = [];
+    const seenIds = new Set<string>();
+    sortedDungeons.forEach((dng) => {
+      const members = eligibleHeroes.filter((h) => h.dungeonId === dng.id);
+      if (members.length > 0) {
+        groups.push({ key: dng.id, dungeon: dng, heroes: members });
+        members.forEach((m) => seenIds.add(m.id));
+      }
+    });
+    const ungrouped = eligibleHeroes.filter((h) => !seenIds.has(h.id));
+    if (ungrouped.length > 0) {
+      groups.push({ key: '__ungrouped__', dungeon: null, heroes: ungrouped });
+    }
+    return groups;
+  })();
+
+  const renderHeroGradeCard = (hero: (typeof eligibleHeroes)[number]) => {
+    if (!activeQuest) return null;
+    const status = draftStatuses[hero.id] ?? 'tuntas';
+    const score = status === 'belum' ? 0 : (draftScores[hero.id] ?? 80);
+    const rank = getRankFromScore(score);
+    const expEarned =
+      status === 'belum'
+        ? 0
+        : calculateExpEarned(score, activeQuest.maxExp);
+    const existingGrade = state.grades.find(
+      (g) => g.heroId === hero.id && g.questId === activeQuest.id
+    );
+    const savedStatus = getEffectiveGradeStatus(existingGrade);
+
+    return (
+      <div
+        key={hero.id}
+        className="pixel-box-inset p-3 space-y-2.5 bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <PixelAvatar avatar={hero.avatar} size={40} className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <h4 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
+                {hero.name}
+              </h4>
+              <p className="text-[12px] text-[var(--text-secondary)] break-words">
+                NIS {hero.studentCode} ·{' '}
+                {existingGrade
+                  ? `Tersimpan: ${existingGrade.score}/100 · ${savedStatus.toUpperCase()}`
+                  : 'Belum dinilai'}
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0 tabular-nums">
+            <p className="font-pixel-display text-[12px] text-[var(--accent-warning)]">
+              RANK {rank}
+            </p>
+            <p className="text-[12.5px] font-bold text-[var(--accent-success)]">
+              +{expEarned} EXP
+            </p>
+          </div>
+        </div>
+
+        {/* Status Symbol Selector for Student View */}
+        <div className="space-y-1.5">
+          <span className="font-pixel-ui text-[9px] text-[var(--text-muted)] block uppercase">
+            Status di Akun Siswa (Simbol):
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            {STATUS_OPTIONS.map((opt) => {
+              const isSelected = status === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setDraftStatuses({ ...draftStatuses, [hero.id]: opt.id });
+                    if (opt.id === 'belum') {
+                      setDraftScores({ ...draftScores, [hero.id]: 0 });
+                    } else if ((draftScores[hero.id] ?? 0) === 0 && opt.id === 'tuntas') {
+                      setDraftScores({ ...draftScores, [hero.id]: 80 });
+                    }
+                  }}
+                  className={`min-h-[36px] px-2 py-1 border-2 flex items-center justify-center gap-1.5 text-[11px] cursor-pointer transition-all ${
+                    isSelected
+                      ? opt.activeClass
+                      : 'border-[var(--border-pixel)]/50 bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {opt.icon}
+                  <span className="truncate">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Score slider & numeric input */}
+        <div className="flex items-center gap-2.5">
+          <input
+            type="range"
+            min={0}
+            max={100}
+            aria-label={`Skor ${hero.name}`}
+            value={score}
+            onChange={(e) => {
+              const nextScore = Number(e.target.value);
+              setDraftScores({
+                ...draftScores,
+                [hero.id]: nextScore,
+              });
+              setDraftStatuses({
+                ...draftStatuses,
+                [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
+              });
+            }}
+            className="min-w-0 flex-1 accent-[var(--accent-warning)] min-h-[36px] cursor-pointer"
+          />
+          <PixelInput
+            type="number"
+            min={0}
+            max={100}
+            aria-label={`Input nilai angka ${hero.name}`}
+            value={score}
+            onChange={(e) => {
+              const nextScore = Math.max(
+                0,
+                Math.min(100, Number(e.target.value) || 0)
+              );
+              setDraftScores({
+                ...draftScores,
+                [hero.id]: nextScore,
+              });
+              setDraftStatuses({
+                ...draftStatuses,
+                [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
+              });
+            }}
+            className="!w-16 sm:!w-20 shrink-0 text-center tabular-nums"
+          />
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <PixelInput
+            placeholder="Catatan Loot / feedback guru..."
+            value={draftNotes[hero.id] ?? ''}
+            onChange={(e) =>
+              setDraftNotes({
+                ...draftNotes,
+                [hero.id]: e.target.value,
+              })
+            }
+            className="flex-1"
+          />
+          <PixelButton
+            type="button"
+            size="sm"
+            variant="success"
+            onClick={() => handleSaveHeroGrade(hero.id)}
+            className="shrink-0"
+          >
+            <Save size={14} />
+            Save
+          </PixelButton>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <PixelSectionTitle
         title="EXP & Loot / Penilaian"
-        subtitle="Isi status & skor siswa atau unduh/unggah tabel penilaian Excel"
+        subtitle="Kelompokkan penilaian berdasarkan Mapel & Kelas atau unggah/unduh rekap Excel"
         action={
           <div className="flex flex-wrap items-center gap-1.5">
             <PixelButton
@@ -274,23 +508,61 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       />
 
       <ThemedPanelCard className="p-3.5 space-y-3">
-        <div>
-          <PixelFieldLabel htmlFor="grd-realm">1. Pilih Realm (Mapel)</PixelFieldLabel>
-          <PixelSelect
-            id="grd-realm"
-            value={selectedRealmId}
-            onChange={(e) => setSelectedRealmId(e.target.value)}
-          >
-            {state.realms.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.code} — {r.name}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <PixelFieldLabel htmlFor="grd-realm">1. Pilih Mapel (Realm)</PixelFieldLabel>
+            <PixelSelect
+              id="grd-realm"
+              value={selectedRealmId}
+              onChange={(e) => setSelectedRealmId(e.target.value)}
+            >
+              {state.realms.map((r) => {
+                const qCount = state.quests.filter((q) => q.realmId === r.id).length;
+                return (
+                  <option key={r.id} value={r.id}>
+                    {r.code} — {r.name} ({qCount} Tugas)
+                  </option>
+                );
+              })}
+            </PixelSelect>
+          </div>
+
+          <div>
+            <PixelFieldLabel htmlFor="grd-dng">2. Filter Kelas / Guild</PixelFieldLabel>
+            <PixelSelect
+              id="grd-dng"
+              value={selectedDungeonId}
+              onChange={(e) => setSelectedDungeonId(e.target.value)}
+            >
+              <option value="all">
+                Semua Kelas Pengampu ({teachingDungeons.length} Kelas)
               </option>
-            ))}
-          </PixelSelect>
+              {teachingDungeons.length > 0 && (
+                <optgroup label={`Kelas Pengajar ${activeRealm?.code || 'Mapel'}`}>
+                  {teachingDungeons.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.guildCode} — {d.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {otherDungeons.length > 0 && (
+                <optgroup label="Kelas Lainnya">
+                  {otherDungeons.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.guildCode} — {d.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </PixelSelect>
+          </div>
         </div>
 
         <div>
-          <PixelFieldLabel htmlFor="grd-quest">2. Pilih Active Quest</PixelFieldLabel>
+          <PixelFieldLabel htmlFor="grd-quest">
+            3. Pilih Active Quest / Tugas ({questsForRealm.length} tersedia)
+          </PixelFieldLabel>
           <PixelSelect
             id="grd-quest"
             value={selectedQuestId}
@@ -298,28 +570,18 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             disabled={questsForRealm.length === 0}
           >
             {questsForRealm.length === 0 ? (
-              <option value="">Belum ada Quest di Realm ini</option>
+              <option value="">Belum ada Quest di Mapel &amp; Kelas ini</option>
             ) : (
-              questsForRealm.map((q) => (
-                <option key={q.id} value={q.id}>
-                  {q.title} (Max {q.maxExp} EXP)
-                </option>
-              ))
+              questsForRealm.map((q) => {
+                const targetDng = state.dungeons.find((d) => d.id === q.dungeonId);
+                const scope = targetDng ? targetDng.guildCode : 'Semua Kelas';
+                return (
+                  <option key={q.id} value={q.id}>
+                    [{scope}] {q.title} (Max {q.maxExp} EXP)
+                  </option>
+                );
+              })
             )}
-          </PixelSelect>
-        </div>
-
-        <div>
-          <PixelFieldLabel htmlFor="grd-dng">3. Filter Kelas / Dungeon</PixelFieldLabel>
-          <PixelSelect
-            id="grd-dng"
-            value={selectedDungeonId}
-            onChange={(e) => setSelectedDungeonId(e.target.value)}
-          >
-            <option value="all">
-              Target Quest ({activeQuest?.dungeonId === 'all' ? 'All Guilds' : 'Guild Terkait'})
-            </option>
-            <DungeonOptGroupOptions dungeons={sortedDungeons} />
           </PixelSelect>
         </div>
       </ThemedPanelCard>
@@ -327,156 +589,102 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       {!activeQuest ? (
         <PixelEmptyChest
           title="No Quests in This Realm!"
-          description="Buat Active Quest pada Realm ini terlebih dahulu untuk mengisi nilai."
+          description="Buat Active Quest pada Mapel & Kelas ini terlebih dahulu untuk mengisi nilai."
         />
       ) : eligibleHeroes.length === 0 ? (
         <PixelEmptyChest
           title="No Active Heroes Found!"
-          description="Tidak ada Hero aktif di Dungeon yang dipilih."
+          description="Tidak ada Hero aktif di Kelas & Mapel yang dipilih."
         />
       ) : (
-        <div className="space-y-3">
-          {eligibleHeroes.map((hero) => {
-            const status = draftStatuses[hero.id] ?? 'tuntas';
-            const score = status === 'belum' ? 0 : (draftScores[hero.id] ?? 80);
-            const rank = getRankFromScore(score);
-            const expEarned =
-              status === 'belum'
-                ? 0
-                : calculateExpEarned(score, activeQuest.maxExp);
-            const existingGrade = state.grades.find(
-              (g) => g.heroId === hero.id && g.questId === activeQuest.id
-            );
-            const savedStatus = getEffectiveGradeStatus(existingGrade);
+        <div className="space-y-3.5">
+          {/* Active Mapel & Quest Summary Banner */}
+          <ThemedPanelCard className="p-3 flex flex-wrap items-center justify-between gap-2 bg-[var(--bg-surface-alt)]">
+            <div className="flex items-center gap-2 min-w-0">
+              <BookOpen size={16} className="text-[var(--accent-warning)] shrink-0" />
+              <div className="min-w-0">
+                <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)] truncate">
+                  {activeRealm ? `${activeRealm.code} — ${activeRealm.name}` : 'MAPEL'} · +{activeQuest.maxExp} EXP
+                </p>
+                <p className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
+                  {activeQuest.title}
+                </p>
+              </div>
+            </div>
+            <span className="text-[11.5px] font-semibold text-[var(--text-secondary)] tabular-nums shrink-0">
+              {eligibleHeroes.length} Siswa · {heroGroupsByClass.length} Kelas
+            </span>
+          </ThemedPanelCard>
+
+          {/* Grouped by Kelas */}
+          {heroGroupsByClass.map((group) => {
+            const isCollapsed = Boolean(collapsedClasses[group.key]);
+            const gradedCount = group.heroes.filter((h) =>
+              state.grades.some(
+                (g) => g.heroId === h.id && g.questId === activeQuest.id
+              )
+            ).length;
 
             return (
-              <ThemedPanelCard key={hero.id} className="p-3.5 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <PixelAvatar avatar={hero.avatar} size={40} className="shrink-0" />
+              <ThemedPanelCard key={group.key} className="p-3 sm:p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsedClasses((prev) => ({
+                        ...prev,
+                        [group.key]: !prev[group.key],
+                      }))
+                    }
+                    className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+                  >
+                    <span className="w-7 h-7 flex items-center justify-center bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60 text-[var(--text-primary)] shrink-0">
+                      {isCollapsed ? (
+                        <ChevronRight size={15} />
+                      ) : (
+                        <ChevronDown size={15} />
+                      )}
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
-                        {hero.name}
-                      </h3>
-                      <p className="text-[12px] text-[var(--text-secondary)] break-words">
-                        {existingGrade
-                          ? `Tersimpan: ${existingGrade.score}/100 · Status: ${savedStatus.toUpperCase()}`
-                          : 'Belum dinilai (Belum Dikerjakan)'}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <GraduationCap
+                          size={14}
+                          className="text-[var(--accent-primary)] shrink-0"
+                        />
+                        <span className="font-pixel-ui text-[10px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
+                          {group.dungeon?.guildCode || 'LAIN'}
+                        </span>
+                        <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
+                          {group.dungeon?.name || 'Kelas Lainnya'}
+                        </h3>
+                        {group.dungeon?.tier && (
+                          <span className="text-[11px] text-[var(--text-muted)]">
+                            ({group.dungeon.tier})
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11.5px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
+                        {gradedCount}/{group.heroes.length} siswa sudah dinilai
                       </p>
                     </div>
-                  </div>
-                  <div className="text-right shrink-0 tabular-nums">
-                    <p className="font-pixel-display text-[12px] text-[var(--accent-warning)]">
-                      RANK {rank}
-                    </p>
-                    <p className="text-[12.5px] font-bold text-[var(--accent-success)]">
-                      +{expEarned} EXP
-                    </p>
-                  </div>
-                </div>
+                  </button>
 
-                {/* Status Symbol Selector for Student View */}
-                <div className="space-y-1.5">
-                  <span className="font-pixel-ui text-[9px] text-[var(--text-muted)] block uppercase">
-                    Status di Akun Siswa (Simbol):
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    {STATUS_OPTIONS.map((opt) => {
-                      const isSelected = status === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => {
-                            setDraftStatuses({ ...draftStatuses, [hero.id]: opt.id });
-                            if (opt.id === 'belum') {
-                              setDraftScores({ ...draftScores, [hero.id]: 0 });
-                            } else if ((draftScores[hero.id] ?? 0) === 0 && opt.id === 'tuntas') {
-                              setDraftScores({ ...draftScores, [hero.id]: 80 });
-                            }
-                          }}
-                          className={`min-h-[36px] px-2 py-1 border-2 flex items-center justify-center gap-1.5 text-[11px] cursor-pointer transition-all ${
-                            isSelected
-                              ? opt.activeClass
-                              : 'border-[var(--border-pixel)]/50 bg-[var(--bg-inset)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                          }`}
-                        >
-                          {opt.icon}
-                          <span className="truncate">{opt.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Score slider & numeric input */}
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    aria-label={`Skor ${hero.name}`}
-                    value={score}
-                    onChange={(e) => {
-                      const nextScore = Number(e.target.value);
-                      setDraftScores({
-                        ...draftScores,
-                        [hero.id]: nextScore,
-                      });
-                      setDraftStatuses({
-                        ...draftStatuses,
-                        [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
-                      });
-                    }}
-                    className="min-w-0 flex-1 accent-[var(--accent-warning)] min-h-[36px] cursor-pointer"
-                  />
-                  <PixelInput
-                    type="number"
-                    min={0}
-                    max={100}
-                    aria-label={`Input nilai angka ${hero.name}`}
-                    value={score}
-                    onChange={(e) => {
-                      const nextScore = Math.max(
-                        0,
-                        Math.min(100, Number(e.target.value) || 0)
-                      );
-                      setDraftScores({
-                        ...draftScores,
-                        [hero.id]: nextScore,
-                      });
-                      setDraftStatuses({
-                        ...draftStatuses,
-                        [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
-                      });
-                    }}
-                    className="!w-16 sm:!w-20 shrink-0 text-center tabular-nums"
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <PixelInput
-                    placeholder="Catatan Loot / feedback guru..."
-                    value={draftNotes[hero.id] ?? ''}
-                    onChange={(e) =>
-                      setDraftNotes({
-                        ...draftNotes,
-                        [hero.id]: e.target.value,
-                      })
-                    }
-                    className="flex-1"
-                  />
                   <PixelButton
                     type="button"
                     size="sm"
                     variant="success"
-                    onClick={() => handleSaveHeroGrade(hero.id)}
-                    className="shrink-0"
+                    onClick={() => handleSaveClassGrades(group.heroes)}
                   >
-                    <Save size={14} />
-                    Save
+                    <Save size={13} />
+                    Simpan Kelas
                   </PixelButton>
                 </div>
+
+                {!isCollapsed && (
+                  <div className="space-y-2.5">
+                    {group.heroes.map((hero) => renderHeroGradeCard(hero))}
+                  </div>
+                )}
               </ThemedPanelCard>
             );
           })}

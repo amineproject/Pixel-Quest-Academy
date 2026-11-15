@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Sword } from 'lucide-react';
+import { BookOpen, Eye, Sword } from 'lucide-react';
 import {
   AcademyState,
+  ActiveQuest,
   AncientTome,
   HeroStudent,
 } from '../../types/lms';
@@ -22,6 +23,7 @@ import {
   formatChapterLabel,
   formatRetroDate,
   formatScheduleDateTime,
+  getDeadlineUrgency,
   getEffectiveScheduleForClass,
   getHeroEffectiveRealmIds,
   isContentVisibleToHero,
@@ -39,6 +41,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
   const [selectedRealmId, setSelectedRealmId] = useState<string>('all');
   const [tab, setTab] = useState<'tomes' | 'quests'>('tomes');
   const [readingTome, setReadingTome] = useState<AncientTome | null>(null);
+  const [readingQuest, setReadingQuest] = useState<ActiveQuest | null>(null);
 
   const [now, setNow] = useState<Date>(() => new Date());
 
@@ -182,20 +185,19 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                       <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
                         {formatChapterLabel(tome.chapter)} · {realm?.name}
                       </p>
-                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
+                      <button
+                        type="button"
+                        onClick={() => setReadingTome(tome)}
+                        className="text-left text-[14.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
+                      >
                         {tome.title}
-                      </h3>
+                      </button>
                     </div>
                   </div>
-                  <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
-                    {tome.summary}
-                  </p>
-                  {tome.linkUrl && (
-                    <PixelLinkButton
-                      url={tome.linkUrl}
-                      label="Buka Tautan Materi"
-                      compact
-                    />
+                  {tome.summary && (
+                    <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+                      {tome.summary}
+                    </p>
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40">
                     <span className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
@@ -207,7 +209,8 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                       variant="success"
                       onClick={() => setReadingTome(tome)}
                     >
-                      Read Tome
+                      <BookOpen size={14} />
+                      Baca Materi
                     </PixelButton>
                   </div>
                 </ThemedPanelCard>
@@ -224,27 +227,36 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
         <div className="space-y-3">
           {filteredQuests.map((quest) => {
             const realm = state.realms.find((r) => r.id === quest.realmId);
+            const urgency = getDeadlineUrgency(quest.deadline);
             return (
-              <QuestCard key={quest.id}>
+              <QuestCard key={quest.id} urgent={urgency.isUrgent}>
                 <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] tabular-nums break-words">
                   {realm?.name} · [{quest.difficulty.toUpperCase()}]
                 </p>
-                <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+                <button
+                  type="button"
+                  onClick={() => setReadingQuest(quest)}
+                  className="text-left text-[14.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
+                >
                   {quest.title}
-                </h3>
-                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                </button>
+                <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
                   {quest.instructions}
                 </p>
-                {quest.linkUrl && (
-                  <PixelLinkButton
-                    url={quest.linkUrl}
-                    label="Buka Tautan Tugas"
-                    compact
-                  />
-                )}
-                <p className="text-[12px] text-[var(--text-muted)] pt-1.5 border-t border-[var(--border-pixel)]/40 tabular-nums">
-                  Batas Waktu: {formatRetroDate(quest.deadline)} · Read-Only Briefing
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40 tabular-nums">
+                  <span className="text-[11.5px] text-[var(--text-muted)]">
+                    Batas: {formatRetroDate(quest.deadline)} ({urgency.label})
+                  </span>
+                  <PixelButton
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setReadingQuest(quest)}
+                  >
+                    <Eye size={14} />
+                    Lihat Instruksi
+                  </PixelButton>
+                </div>
               </QuestCard>
             );
           })}
@@ -266,6 +278,11 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
             <p className="text-[12px] font-semibold text-[var(--accent-warning)] break-words">
               {state.realms.find((r) => r.id === readingTome.realmId)?.name}
             </p>
+            {readingTome.summary && (
+              <p className="pixel-box-inset p-2.5 text-[12.5px] text-[var(--text-secondary)] italic leading-relaxed break-words [overflow-wrap:anywhere]">
+                {readingTome.summary}
+              </p>
+            )}
             <ThemedReadingSurface>
               {readingTome.content}
             </ThemedReadingSurface>
@@ -281,10 +298,51 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
               fullWidth
               onClick={() => setReadingTome(null)}
             >
-              Finish Reading
+              Selesai Membaca
             </PixelButton>
           </div>
         )}
+      </PixelModal>
+
+      {/* Full Read-Only Quest Instructions Modal */}
+      <PixelModal
+        open={Boolean(readingQuest)}
+        title={readingQuest ? readingQuest.title : ''}
+        onClose={() => setReadingQuest(null)}
+      >
+        {readingQuest && (() => {
+          const realm = state.realms.find((r) => r.id === readingQuest.realmId);
+          const urgency = getDeadlineUrgency(readingQuest.deadline);
+          return (
+            <div className="space-y-3 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[12px] font-semibold text-[var(--accent-warning)] break-words">
+                  {realm?.code} — {realm?.name} · [{readingQuest.difficulty.toUpperCase()}]
+                </p>
+                <span className="text-[11.5px] font-semibold text-[var(--text-muted)] tabular-nums">
+                  Batas: {formatRetroDate(readingQuest.deadline)} ({urgency.label})
+                </span>
+              </div>
+              <ThemedReadingSurface>
+                {readingQuest.instructions}
+              </ThemedReadingSurface>
+              {readingQuest.linkUrl && (
+                <PixelLinkButton
+                  url={readingQuest.linkUrl}
+                  label="Buka Tautan Tugas"
+                />
+              )}
+              <PixelButton
+                type="button"
+                variant="primary"
+                fullWidth
+                onClick={() => setReadingQuest(null)}
+              >
+                Tutup Instruksi
+              </PixelButton>
+            </div>
+          );
+        })()}
       </PixelModal>
     </div>
   );

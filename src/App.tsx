@@ -21,6 +21,7 @@ import { INITIAL_ACADEMY_STATE, STORAGE_KEY } from './data/seedData';
 import {
   ArcadeShell,
   GM_NAV_ITEMS,
+  HERO_NAV_ITEMS,
   getGmMenuIcon,
 } from './components/ArcadeShell';
 import {
@@ -83,6 +84,9 @@ import { HeroNotice } from './views/hero/HeroNotice';
 import { HeroScrollLibrary } from './views/hero/HeroScrollLibrary';
 import { HeroMyGuild } from './views/hero/HeroMyGuild';
 import { HeroLog } from './views/hero/HeroLog';
+
+// Shared Views
+import { AboutView } from './views/shared/AboutView';
 
 const AUTH_KEY = 'pixel_quest_auth_session';
 const PERSONAL_THEME_KEY = 'pixel_quest_personal_theme';
@@ -279,9 +283,7 @@ export default function App() {
         }
       } else if (hash.startsWith('#/hero/')) {
         const slug = hash.replace('#/hero/', '').split('/')[0] as HeroMenuId;
-        if (
-          ['notice', 'scroll_library', 'my_guild', 'hero_log'].includes(slug)
-        ) {
+        if (HERO_NAV_ITEMS.some((i) => i.id === slug)) {
           setHeroMenu(slug);
         }
       }
@@ -1437,6 +1439,12 @@ export default function App() {
               onRequestGmReauth={openGmReauthModal}
             />
           )}
+          {gmMenu === 'about' && (
+            <AboutView
+              role={UserRole.GAME_MASTER}
+              currentTheme={state.settings.theme}
+            />
+          )}
         </>
       ) : (
         activeHero && (
@@ -1467,17 +1475,23 @@ export default function App() {
                 onUpdateUsername={handleUpdateHeroUsername}
               />
             )}
+            {heroMenu === 'about' && (
+              <AboutView
+                role={UserRole.HERO}
+                currentTheme={state.settings.theme}
+              />
+            )}
           </>
         )
       )}
 
-      {/* Game Master 9-Menu Drawer */}
+      {/* Game Master Menu Drawer */}
       <PixelModal
         open={gmDrawerOpen}
-        title="Game Master — 9 Menus"
+        title={`Game Master — ${GM_NAV_ITEMS.length} Menu`}
         onClose={() => setGmDrawerOpen(false)}
       >
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-2 min-[380px]:grid-cols-3 gap-2.5">
           {GM_NAV_ITEMS.map((item) => {
             const active = gmMenu === item.id;
             return (
