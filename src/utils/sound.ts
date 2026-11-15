@@ -1,4 +1,5 @@
 let audioCtx: AudioContext | null = null;
+let lastHoverBlipAt = 0;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -20,6 +21,7 @@ function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
+/** Supported 8-bit WebAudio synthesized sound effect identifiers. */
 export type RetroSoundType =
   | 'blip'
   | 'confirm'
@@ -28,9 +30,15 @@ export type RetroSoundType =
   | 'switch'
   | 'start'
   | 'coin'
+  | 'sword'
+  | 'levelup'
   | 'fanfare'
   | 'logout';
 
+/**
+ * Plays a lightweight synthesized 8-bit chiptune sound effect via Web Audio API.
+ * Respects `enabled` flag and `prefers-reduced-motion`.
+ */
 export function playRetroSound(type: RetroSoundType, enabled: boolean): void {
   if (!enabled) return;
   const ctx = getAudioContext();
@@ -90,6 +98,20 @@ export function playRetroSound(type: RetroSoundType, enabled: boolean): void {
       playTone(987.77, now, 0.06);
       playTone(1318.51, now + 0.06, 0.18);
       break;
+    case 'sword':
+      // Crisp 8-bit sword swing & steel ring
+      playTone(880, now, 0.04, 'sawtooth', 0.04);
+      playTone(440, now + 0.035, 0.055, 'sawtooth', 0.035);
+      playTone(1174.66, now + 0.085, 0.11, 'triangle', 0.045);
+      break;
+    case 'levelup':
+      // Ascending RPG level-up arpeggio
+      playTone(523.25, now, 0.07);
+      playTone(659.25, now + 0.07, 0.07);
+      playTone(783.99, now + 0.14, 0.07);
+      playTone(1046.5, now + 0.21, 0.08);
+      playTone(1318.51, now + 0.29, 0.22);
+      break;
     case 'fanfare':
       // Victory / Level Up fanfare
       playTone(523.25, now, 0.08);
@@ -103,4 +125,16 @@ export function playRetroSound(type: RetroSoundType, enabled: boolean): void {
       playTone(220, now + 0.13, 0.14, 'triangle');
       break;
   }
+}
+
+/**
+ * Throttled hover blip for interactive module cards so fast cursor sweeps
+ * do not overlap WebAudio oscillators.
+ */
+export function playThrottledHoverBlip(enabled: boolean): void {
+  if (!enabled) return;
+  const nowMs = Date.now();
+  if (nowMs - lastHoverBlipAt < 130) return;
+  lastHoverBlipAt = nowMs;
+  playRetroSound('blip', enabled);
 }

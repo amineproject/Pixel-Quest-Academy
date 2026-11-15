@@ -76,6 +76,36 @@ export default defineConfig(() => {
                 },
               },
             },
+            {
+              urlPattern: /\/api\/(academy|tomes|quests|notices|dungeons|realms)/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'academy-api-offline-cache',
+                networkTimeoutSeconds: 4,
+                expiration: {
+                  maxEntries: 30,
+                  maxAgeSeconds: 60 * 60 * 24 * 7,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-content-offline-cache',
+                networkTimeoutSeconds: 4,
+                expiration: {
+                  maxEntries: 40,
+                  maxAgeSeconds: 60 * 60 * 24 * 7,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
           ],
         },
         devOptions: {

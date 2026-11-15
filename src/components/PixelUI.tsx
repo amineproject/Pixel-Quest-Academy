@@ -254,17 +254,24 @@ export const PixelExpBar: React.FC<{
   );
 };
 
-export const PixelEmptyChest: React.FC<{
+/**
+ * Global pixel-styled empty state card shown whenever a chest/list has no entries.
+ */
+export const PixelEmptyState: React.FC<{
   title?: string;
   description?: string;
   action?: React.ReactNode;
+  compact?: boolean;
 }> = ({
-  title = 'No Scrolls Found in This Chest!',
-  description = 'Belum ada gulungan atau catatan di dalam peti ini.',
+  title = 'Belum Ada Loot di Peti Ini!',
+  description = 'Belum ada loot atau catatan yang tersedia saat ini. Silakan tambahkan data baru atau periksa filter.',
   action,
+  compact = false,
 }) => {
   const { theme } = useActiveTheme();
-  const illustration = <ThemeEmptyIllustration theme={theme} size={76} />;
+  const illustration = (
+    <ThemeEmptyIllustration theme={theme} size={compact ? 56 : 76} />
+  );
 
   if (theme === 'daylight_rpg') {
     return (
@@ -278,18 +285,34 @@ export const PixelEmptyChest: React.FC<{
   }
 
   return (
-    <div className="pixel-box p-6 flex flex-col items-center text-center gap-3">
+    <div
+      className={`pixel-box flex flex-col items-center text-center gap-3 ${
+        compact ? 'p-4' : 'p-6'
+      }`}
+    >
       {illustration}
       <h3 className="font-pixel-display text-[13.5px] text-[var(--accent-warning)] leading-relaxed">
         {title}
       </h3>
-      <p className="font-pixel-body text-[15px] text-[var(--text-secondary)] max-w-[32ch]">
+      <p className="font-pixel-body text-[14.5px] text-[var(--text-secondary)] max-w-[34ch]">
         {description}
       </p>
       {action && <div className="mt-1">{action}</div>}
     </div>
   );
 };
+
+export const PixelEmptyChest: React.FC<{
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+}> = ({
+  title = 'Belum Ada Loot di Peti Ini!',
+  description = 'Belum ada gulungan atau loot di dalam peti ini.',
+  action,
+}) => (
+  <PixelEmptyState title={title} description={description} action={action} />
+);
 
 export const PixelModal: React.FC<{
   open: boolean;

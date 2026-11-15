@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Share, Smartphone, WifiOff } from 'lucide-react';
 import { useOnlineStatus, usePWAInstall } from '../hooks/usePWAInstall';
+import { loadOfflineContentSnapshot } from '../utils/offlineCache';
 import { PixelButton, PixelModal } from './PixelUI';
 
 export const PWAInstallButton: React.FC<{
@@ -120,13 +121,18 @@ export const OfflineIndicator: React.FC = () => {
   const isOnline = useOnlineStatus();
   if (isOnline) return null;
 
+  const snapshot = loadOfflineContentSnapshot();
+  const offlineSummary = snapshot
+    ? `Mode Offline — ${snapshot.tomes.length} Materi & ${snapshot.quests.length} Tugas tersimpan`
+    : 'Mode Offline — Data tersimpan lokal digunakan';
+
   return (
     <div
       role="status"
-      className="fixed bottom-16 sm:bottom-4 left-3 z-50 flex items-center gap-2 rounded-md border-2 border-[#09090f] bg-[var(--comic-gold)] px-3 py-1.5 text-[11.5px] font-bold text-[#09090f] shadow-[3px_3px_0_0_#09090f]"
+      className="fixed bottom-16 sm:bottom-4 left-3 z-50 flex items-center gap-2 rounded-md border-2 border-[#09090f] bg-[var(--comic-gold)] px-3 py-1.5 text-[11.5px] font-bold text-[#09090f] shadow-[3px_3px_0_0_#09090f] max-w-[calc(100vw-24px)]"
     >
       <WifiOff size={14} className="shrink-0" />
-      <span>Mode Offline — Data tersimpan lokal digunakan</span>
+      <span className="truncate">{offlineSummary}</span>
     </div>
   );
 };

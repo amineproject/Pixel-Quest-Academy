@@ -30,9 +30,14 @@ export function getRankFromScore(score: number): LetterRank {
   return 'D';
 }
 
+/**
+ * Computes numeric EXP earned from a 0-100 score scaled against a quest's max EXP.
+ * @param score Raw numeric score (clamped 0..100).
+ * @param maxExp Maximum EXP reward configured for the quest.
+ */
 export function calculateExpEarned(score: number, maxExp: number): number {
   const clamped = Math.max(0, Math.min(100, score));
-  return Math.round((clamped / 100) * maxExp);
+  return Math.round((clamped / 100) * Math.max(0, maxExp));
 }
 
 export interface LevelProgress {
@@ -54,16 +59,31 @@ const LEVEL_TITLES = [
   'Grand Champion',
 ];
 
+const GM_LEVEL_TITLES = [
+  'Guild Steward',
+  'Scroll Keeper',
+  'Quest Architect',
+  'Dungeon Tactician',
+  'Grand Mentor',
+  'Archmage Educator',
+  'Academy Legend',
+];
+
+/**
+ * Computes a Hero's RPG level, title, and progress bar toward the next level.
+ * Every 250 EXP unlocks a new Hero level.
+ */
 export function getHeroLevelProgress(totalExp: number): LevelProgress {
+  const safeExp = Math.max(0, Number.isFinite(totalExp) ? totalExp : 0);
   const expPerLevel = 250;
-  const level = Math.max(1, Math.floor(totalExp / expPerLevel) + 1);
-  const expIntoLevel = totalExp % expPerLevel;
+  const level = Math.max(1, Math.floor(safeExp / expPerLevel) + 1);
+  const expIntoLevel = safeExp % expPerLevel;
   const percent = Math.min(100, Math.round((expIntoLevel / expPerLevel) * 100));
   const titleIndex = Math.min(LEVEL_TITLES.length - 1, level - 1);
 
   return {
     level,
-    totalExp,
+    totalExp: safeExp,
     expIntoLevel,
     expForNextLevel: expPerLevel,
     percent,
@@ -71,10 +91,96 @@ export function getHeroLevelProgress(totalExp: number): LevelProgress {
   };
 }
 
+/**
+ * Computes a Game Master's progression level and XP bar from active academy stewardship.
+ */
+export function getGmLevelProgress(metrics: {
+  dungeonsCount: number;
+  heroesCount: number;
+  tomesCount: number;
+  questsCount: number;
+  gradesCount: number;
+  noticesCount: number;
+}): LevelProgress {
+  const totalExp =
+    Math.max(0, metrics.dungeonsCount) * 50 +
+    Math.max(0, metrics.heroesCount) * 25 +
+    Math.max(0, metrics.tomesCount) * 40 +
+    Math.max(0, metrics.questsCount) * 60 +
+    Math.max(0, metrics.gradesCount) * 15 +
+    Math.max(0, metrics.noticesCount) * 20;
+  const expPerLevel = 300;
+  const level = Math.max(1, Math.floor(totalExp / expPerLevel) + 1);
+  const expIntoLevel = totalExp % expPerLevel;
+  const percent = Math.min(100, Math.round((expIntoLevel / expPerLevel) * 100));
+  const titleIndex = Math.min(GM_LEVEL_TITLES.length - 1, level - 1);
+
+  return {
+    level,
+    totalExp,
+    expIntoLevel,
+    expForNextLevel: expPerLevel,
+    percent,
+    title: GM_LEVEL_TITLES[titleIndex],
+  };
+}
+
+/**
+ * Sums total EXP earned by a specific Hero across all graded entries.
+ */
 export function getHeroTotalExp(heroId: string, grades: ExpGrade[]): number {
   return grades
     .filter((g) => g.heroId === heroId)
-    .reduce((sum, g) => sum + g.expEarned, 0);
+    .reduce((sum, g) => sum + (Number(g.expEarned) || 0), 0);
+}
+
+export interface GuildLeaderboardEntry {
+  rank: number;
+  hero: HeroStudent;
+  totalExp: number;
+  level: number;
+  title: string;
+  tuntasCount: number;
+}
+
+/**
+ * Builds a sorted Guild Leaderboard ranking Heroes by total EXP descending,
+ * breaking ties by completed quests count and alphabetical name.
+ */
+export function getGuildLeaderboard(
+  heroes: HeroStudent[],
+  grades: ExpGrade[]
+): GuildLeaderboardEntry[] {
+  const activeHeroes = heroes.filter((h) => h.active);
+  const ranked = activeHeroes
+    .map((hero) => {
+      const heroGrades = grades.filter((g) => g.heroId === hero.id);
+      const totalExp = heroGrades.reduce(
+        (sum, g) => sum + (Number(g.expEarned) || 0),
+        0
+      );
+      const tuntasCount = heroGrades.filter(
+        (g) => getEffectiveGradeStatus(g) === 'tuntas'
+      ).length;
+      const lvl = getHeroLevelProgress(totalExp);
+      return {
+        hero,
+        totalExp,
+        level: lvl.level,
+        title: lvl.title,
+        tuntasCount,
+      };
+    })
+    .sort((a, b) => {
+      if (b.totalExp !== a.totalExp) return b.totalExp - a.totalExp;
+      if (b.tuntasCount !== a.tuntasCount) return b.tuntasCount - a.tuntasCount;
+      return a.hero.name.localeCompare(b.hero.name, 'id', { sensitivity: 'base' });
+    });
+
+  return ranked.map((entry, idx) => ({
+    rank: idx + 1,
+    ...entry,
+  }));
 }
 
 export function formatRetroDate(isoDate: string): string {
@@ -173,6 +279,9 @@ export interface HeroAchievementSummary {
   badges: HeroAchievementBadge[];
 }
 
+/**
+ * Evaluates a Hero's 10 achievement badges and on-time completion streak.
+ */
 export function getHeroAchievements(
   hero: HeroStudent,
   quests: ActiveQuest[],
@@ -236,8 +345,8 @@ export function getHeroAchievements(
   const badges: HeroAchievementBadge[] = [
     {
       id: 'first_quest',
-      title: 'Langkah Pertama',
-      description: 'Menyelesaikan minimal 1 tugas hingga berstatus Tuntas.',
+      title: 'First Quest',
+      description: 'Menyelesaikan tugas pertama hingga berstatus Tuntas.',
       unlocked: tuntasGrades.length >= 1,
       progressLabel: `${Math.min(1, tuntasGrades.length)}/1`,
       tone: 'cyan',
@@ -293,8 +402,8 @@ export function getHeroAchievements(
     },
     {
       id: 'mission_master',
-      title: 'Penakluk 5 Misi',
-      description: 'Mengoleksi minimal 5 tugas dengan status Tuntas.',
+      title: 'Dungeon Master',
+      description: 'Menguasai dungeon dengan menuntaskan minimal 5 tugas kelas.',
       unlocked: tuntasGrades.length >= 5,
       progressLabel: `${Math.min(5, tuntasGrades.length)}/5`,
       tone: 'gold',

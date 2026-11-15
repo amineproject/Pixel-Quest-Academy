@@ -30,13 +30,23 @@ export const ThemeBackdropIllustration: React.FC<{ theme: PixelTheme }> = ({
         </svg>
 
         <svg
-          className="absolute top-12 left-6 w-36 h-16 opacity-80 hidden md:block"
+          className="absolute top-12 left-6 w-36 h-16 opacity-85 hidden md:block animate-cloud-drift"
           viewBox="0 0 36 16"
           shapeRendering="crispEdges"
         >
           <rect x="8" y="4" width="12" height="4" fill="#ffffff" />
           <rect x="4" y="8" width="24" height="5" fill="#ffffff" />
           <rect x="6" y="12" width="20" height="2" fill="#dbeafe" />
+        </svg>
+
+        <svg
+          className="absolute top-24 right-28 w-28 h-12 opacity-75 hidden lg:block animate-cloud-drift-slow"
+          viewBox="0 0 36 16"
+          shapeRendering="crispEdges"
+        >
+          <rect x="10" y="4" width="10" height="4" fill="#ffffff" />
+          <rect x="6" y="8" width="20" height="4" fill="#ffffff" />
+          <rect x="8" y="12" width="16" height="2" fill="#dbeafe" />
         </svg>
 
         {/* Bottom rolling pixel grassland hills & cozy pine trees */}
@@ -61,6 +71,26 @@ export const ThemeBackdropIllustration: React.FC<{ theme: PixelTheme }> = ({
           <rect x="1060" y="48" width="52" height="28" fill="#276749" />
           <rect x="1070" y="30" width="32" height="18" fill="#38a169" />
         </svg>
+
+        {/* Cozy flickering pixel campfire on the meadow */}
+        <svg
+          className="absolute bottom-4 left-24 sm:left-32 w-14 h-14 hidden sm:block"
+          viewBox="0 0 24 24"
+          shapeRendering="crispEdges"
+        >
+          {/* Logs */}
+          <rect x="6" y="18" width="12" height="3" fill="#78350f" />
+          <rect x="4" y="19" width="4" height="2" fill="#451a03" />
+          <rect x="16" y="19" width="4" height="2" fill="#451a03" />
+          {/* Flickering flame */}
+          <g className="animate-campfire-flicker">
+            <rect x="9" y="10" width="6" height="8" fill="#f97316" />
+            <rect x="10" y="7" width="4" height="5" fill="#fb923c" />
+            <rect x="11" y="5" width="2" height="3" fill="#fde047" />
+            <rect x="10" y="12" width="4" height="5" fill="#facc15" />
+            <rect x="11" y="14" width="2" height="3" fill="#fef9c3" />
+          </g>
+        </svg>
       </div>
     );
   }
@@ -73,7 +103,7 @@ export const ThemeBackdropIllustration: React.FC<{ theme: PixelTheme }> = ({
       >
         {/* Kawaii clouds, floating stars & pastel flowers */}
         <svg
-          className="absolute top-10 left-8 w-32 h-16 opacity-80 hidden sm:block animate-pixel-float"
+          className="absolute top-10 left-8 w-32 h-16 opacity-85 hidden sm:block animate-cloud-drift"
           viewBox="0 0 32 16"
           shapeRendering="crispEdges"
         >
@@ -121,15 +151,23 @@ export const ThemeBackdropIllustration: React.FC<{ theme: PixelTheme }> = ({
         aria-hidden="true"
         className="fixed inset-0 pointer-events-none overflow-hidden z-0"
       >
-        {/* Starry Royal Twilight + Distant Castle Battlements */}
+        {/* Starry Royal Twilight + Distant Castle Battlements + Torch/Campfire */}
         <svg
-          className="absolute top-10 left-10 w-16 h-16 opacity-60 hidden sm:block"
+          className="absolute top-10 left-10 w-16 h-16 opacity-75 hidden sm:block animate-star-twinkle"
           viewBox="0 0 16 16"
           shapeRendering="crispEdges"
         >
           <rect x="7" y="2" width="2" height="12" fill="#fbbf24" />
           <rect x="2" y="7" width="12" height="2" fill="#fbbf24" />
           <rect x="6" y="6" width="4" height="4" fill="#fef08a" />
+        </svg>
+        <svg
+          className="absolute top-20 right-16 w-10 h-10 opacity-65 hidden md:block animate-star-twinkle"
+          viewBox="0 0 16 16"
+          shapeRendering="crispEdges"
+        >
+          <rect x="7" y="3" width="2" height="10" fill="#fde047" />
+          <rect x="3" y="7" width="10" height="2" fill="#fde047" />
         </svg>
         <svg
           className="absolute bottom-0 left-0 w-full h-40 opacity-35"
@@ -150,6 +188,18 @@ export const ThemeBackdropIllustration: React.FC<{ theme: PixelTheme }> = ({
           <rect x="1158" y="14" width="22" height="16" fill="#14092b" />
           <rect x="1120" y="62" width="18" height="26" fill="#fbbf24" />
           <rect x="0" y="132" width="1200" height="28" fill="#14092b" />
+        </svg>
+        <svg
+          className="absolute bottom-3 right-28 w-12 h-12 hidden sm:block opacity-85"
+          viewBox="0 0 24 24"
+          shapeRendering="crispEdges"
+        >
+          <rect x="7" y="18" width="10" height="3" fill="#451a03" />
+          <g className="animate-campfire-flicker">
+            <rect x="9" y="10" width="6" height="8" fill="#f97316" />
+            <rect x="10" y="7" width="4" height="5" fill="#fbbf24" />
+            <rect x="11" y="12" width="2" height="5" fill="#fef08a" />
+          </g>
         </svg>
       </div>
     );

@@ -47,6 +47,8 @@ import {
   getEffectiveGradeStatus,
   getEffectiveScheduleForClass,
   getHeroEffectiveRealmIds,
+  getHeroLevelProgress,
+  getHeroTotalExp,
   isContentVisibleToHero,
 } from '../../utils/exp';
 
@@ -68,6 +70,9 @@ interface HeroNoticeProps {
     currentPin: string,
     newPin: string
   ) => Promise<{ ok: boolean; error?: string }>;
+  unreadNoticeCount?: number;
+  unreadQuestCount?: number;
+  onMarkGuildNotificationsRead?: () => void;
 }
 
 export const HeroNotice: React.FC<HeroNoticeProps> = ({
@@ -77,6 +82,9 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
   onAttemptRestrictedRoute,
   onUpdateAvatar,
   onChangePin,
+  unreadNoticeCount = 0,
+  unreadQuestCount = 0,
+  onMarkGuildNotificationsRead,
 }) => {
   const [filter, setFilter] = useState<'all' | NoticePriority>('all');
   const [questFilter, setQuestFilter] = useState<'priority' | 'belum' | 'remidial' | 'all'>('priority');
@@ -153,8 +161,36 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
     }
   });
 
+  const heroTotalExp = getHeroTotalExp(hero.id, state.grades);
+  const heroLevel = getHeroLevelProgress(heroTotalExp);
+
   return (
     <div className="space-y-5">
+      {/* Guild Notification Alert Banner (Item 3.4) */}
+      {(unreadNoticeCount > 0 || unreadQuestCount > 0) && (
+        <section className="pixel-box p-3 bg-[var(--surface-tint)] flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-7 h-7 rounded border-2 border-[var(--border-pixel)] bg-[var(--accent-danger)] text-white flex items-center justify-center shrink-0">
+              <ShieldAlert size={15} />
+            </span>
+            <p className="text-[12.5px] font-bold text-[var(--text-primary)] leading-snug">
+              Notifikasi Guild: {unreadNoticeCount > 0 ? `${unreadNoticeCount} Notice baru` : ''}
+              {unreadNoticeCount > 0 && unreadQuestCount > 0 ? ' · ' : ''}
+              {unreadQuestCount > 0 ? `${unreadQuestCount} Quest baru` : ''} tersedia!
+            </p>
+          </div>
+          {onMarkGuildNotificationsRead && (
+            <button
+              type="button"
+              onClick={onMarkGuildNotificationsRead}
+              className="pixel-btn min-h-[32px] px-2.5 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[10px] font-bold cursor-pointer shrink-0"
+            >
+              Tandai Dibaca
+            </button>
+          )}
+        </section>
+      )}
+
       {/* Hero Status Header Card (Theme-Adaptive Container) */}
       <ThemedPanelCard className="p-3.5 sm:p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -164,6 +200,9 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
               <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-success)] truncate">
                 <PixelStar size={12} className="shrink-0" />
                 <span className="truncate">{hero.heroClass.toUpperCase()}</span>
+                <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] text-[#09090f] font-bold shrink-0">
+                  Lv.{heroLevel.level}
+                </span>
               </div>
               <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] truncate mt-0.5">
                 {hero.name}
@@ -213,6 +252,14 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
             </PixelButton>
           </div>
         </div>
+
+        {/* RPG Hero EXP & Level Bar (Item 4.1) */}
+        <PixelExpBar
+          percent={heroLevel.percent}
+          labelLeft={`Lv.${heroLevel.level} · ${heroLevel.title}`}
+          labelRight={`${heroLevel.totalExp} EXP (${heroLevel.expIntoLevel}/${heroLevel.expForNextLevel})`}
+          color="var(--accent-warning)"
+        />
 
         {/* RPG Quest Completion Bar (Progress Tuntas only — no numeric scores) */}
         {assignedQuests.length > 0 && (

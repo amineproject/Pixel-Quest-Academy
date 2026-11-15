@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AcademyState,
   ActiveQuest,
@@ -22,6 +22,7 @@ import {
   ArcadeShell,
   GM_NAV_ITEMS,
   HERO_NAV_ITEMS,
+  SyncLogEntry,
   getGmMenuIcon,
 } from './components/ArcadeShell';
 import {
@@ -32,9 +33,22 @@ import {
   PixelModal,
   PixelToast,
 } from './components/PixelUI';
+import { PixelErrorBoundary } from './components/PixelErrorBoundary';
+import { PixelLoadingScreen } from './components/PixelLoadingScreen';
+import { PixelCardSkeleton } from './components/PixelSkeleton';
 import { OfflineIndicator } from './components/PWAInstallBanner';
 import { ThemeProvider } from './context/ThemeContext';
-import { playRetroSound } from './utils/sound';
+import {
+  getEffectiveGradeStatus,
+  getHeroLevelProgress,
+  getHeroTotalExp,
+  isContentVisibleToHero,
+} from './utils/exp';
+import {
+  loadOfflineContentSnapshot,
+  saveOfflineContentSnapshot,
+} from './utils/offlineCache';
+import { playRetroSound, playThrottledHoverBlip } from './utils/sound';
 import {
   AcademyFetchContext,
   bootstrapSupabaseFromUrl,
@@ -65,31 +79,55 @@ import {
 
 const BOOTSTRAPPED_CLOUD_FROM_URL = bootstrapSupabaseFromUrl();
 
-// Login Title View
+// Eager critical entry & HQ views
 import { LoginView } from './views/auth/LoginView';
-
-// Game Master Views
 import { GmDashboard } from './views/gm/GmDashboard';
-import { GmDungeons } from './views/gm/GmDungeons';
-import { GmHeroes } from './views/gm/GmHeroes';
-import { GmQuestBoard } from './views/gm/GmQuestBoard';
-import { GmRealms } from './views/gm/GmRealms';
-import { GmScrolls } from './views/gm/GmScrolls';
-import { GmActiveQuests } from './views/gm/GmActiveQuests';
-import { GmExpLoot } from './views/gm/GmExpLoot';
-import { GmSettings } from './views/gm/GmSettings';
 
-// Hero (Read-Only) Views
-import { HeroNotice } from './views/hero/HeroNotice';
-import { HeroScrollLibrary } from './views/hero/HeroScrollLibrary';
-import { HeroMyGuild } from './views/hero/HeroMyGuild';
-import { HeroLog } from './views/hero/HeroLog';
+// Lazy-loaded Game Master, Hero, and Shared views (Item 5.3 Performance Audit)
+const GmDungeons = lazy(() =>
+  import('./views/gm/GmDungeons').then((m) => ({ default: m.GmDungeons }))
+);
+const GmHeroes = lazy(() =>
+  import('./views/gm/GmHeroes').then((m) => ({ default: m.GmHeroes }))
+);
+const GmQuestBoard = lazy(() =>
+  import('./views/gm/GmQuestBoard').then((m) => ({ default: m.GmQuestBoard }))
+);
+const GmRealms = lazy(() =>
+  import('./views/gm/GmRealms').then((m) => ({ default: m.GmRealms }))
+);
+const GmScrolls = lazy(() =>
+  import('./views/gm/GmScrolls').then((m) => ({ default: m.GmScrolls }))
+);
+const GmActiveQuests = lazy(() =>
+  import('./views/gm/GmActiveQuests').then((m) => ({ default: m.GmActiveQuests }))
+);
+const GmExpLoot = lazy(() =>
+  import('./views/gm/GmExpLoot').then((m) => ({ default: m.GmExpLoot }))
+);
+const GmSettings = lazy(() =>
+  import('./views/gm/GmSettings').then((m) => ({ default: m.GmSettings }))
+);
 
-// Shared Views
-import { AboutView } from './views/shared/AboutView';
+const HeroNotice = lazy(() =>
+  import('./views/hero/HeroNotice').then((m) => ({ default: m.HeroNotice }))
+);
+const HeroScrollLibrary = lazy(() =>
+  import('./views/hero/HeroScrollLibrary').then((m) => ({ default: m.HeroScrollLibrary }))
+);
+const HeroMyGuild = lazy(() =>
+  import('./views/hero/HeroMyGuild').then((m) => ({ default: m.HeroMyGuild }))
+);
+const HeroLog = lazy(() =>
+  import('./views/hero/HeroLog').then((m) => ({ default: m.HeroLog }))
+);
+const AboutView = lazy(() =>
+  import('./views/shared/AboutView').then((m) => ({ default: m.AboutView }))
+);
 
 const AUTH_KEY = 'pixel_quest_auth_session';
 const PERSONAL_THEME_KEY = 'pixel_quest_personal_theme';
+const SYNC_LOGS_KEY = 'pixel_quest_sync_logs_v1';
 const VALID_THEMES: PixelTheme[] = [
   'sunny_quest',
   'daylight_rpg',
@@ -189,6 +227,23 @@ function sanitizeStateForLocalStorage(
   };
 }
 
+function formatClockHHMM(date: Date = new Date()): string {
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function loadSyncLogs(): SyncLogEntry[] {
+  try {
+    const raw = localStorage.getItem(SYNC_LOGS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, 25) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function App() {
   const [authSession, setAuthSession] = useState<AuthSession>(loadInitialAuth);
   const authSessionRef = useRef<AuthSession>(authSession);
@@ -206,6 +261,12 @@ export default function App() {
   );
   const [gmDrawerOpen, setGmDrawerOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [lastSyncTimeLabel, setLastSyncTimeLabel] = useState<string | null>(null);
+  const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>(loadSyncLogs);
+  const [isInitialBooting, setIsInitialBooting] = useState(true);
+  const [seenNoticeIds, setSeenNoticeIds] = useState<string[]>([]);
+  const [seenQuestIds, setSeenQuestIds] = useState<string[]>([]);
 
   // EC-01 Access Denied Guard State
   const [deniedRoute, setDeniedRoute] = useState<string | null>(null);
@@ -230,17 +291,67 @@ export default function App() {
     []
   );
 
+  const appendSyncLog = useCallback(
+    (action: string, status: 'success' | 'error' | 'info', detail: string) => {
+      const now = new Date();
+      const entry: SyncLogEntry = {
+        id: `sync_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: now.toISOString(),
+        timeLabel: formatClockHHMM(now),
+        action,
+        status,
+        detail,
+      };
+      setSyncLogs((prev) => {
+        const next = [entry, ...prev].slice(0, 25);
+        try {
+          localStorage.setItem(SYNC_LOGS_KEY, JSON.stringify(next));
+        } catch {
+          // Ignore storage error
+        }
+        return next;
+      });
+      if (status === 'success') {
+        setSyncStatus('synced');
+        setLastSyncTimeLabel(entry.timeLabel);
+      } else if (status === 'error') {
+        setSyncStatus('error');
+      }
+    },
+    []
+  );
+
+  const clearSyncLogs = useCallback(() => {
+    setSyncLogs([]);
+    try {
+      localStorage.removeItem(SYNC_LOGS_KEY);
+    } catch {
+      // Ignore storage error
+    }
+  }, []);
+
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // Persist State to localStorage (scrubbed when Cloud security is enabled)
+  // Thematic loading splash screen (Item 3.1)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsInitialBooting(false), 620);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // Persist State to localStorage & dedicated offline content cache (Item 3.3)
   useEffect(() => {
     try {
       const safeToStore = sanitizeStateForLocalStorage(state, authSession);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(safeToStore));
+      saveOfflineContentSnapshot({
+        tomes: state.tomes,
+        quests: state.quests,
+        notices: state.notices,
+      });
     } catch {
       // Ignore quota error
     }
@@ -264,6 +375,65 @@ export default function App() {
   const activeHero = activeHeroId
     ? state.heroes.find((h) => h.id === activeHeroId)
     : undefined;
+
+  // Sync seen Guild notifications per logged-in user (Item 3.4)
+  const seenStorageKey = `pixel_quest_seen_guild_${role}_${activeHeroId || 'gm'}`;
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(seenStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { notices?: string[]; quests?: string[] };
+        setSeenNoticeIds(Array.isArray(parsed.notices) ? parsed.notices : []);
+        setSeenQuestIds(Array.isArray(parsed.quests) ? parsed.quests : []);
+      } else {
+        const initialNoticeIds = stateRef.current.notices.map((n) => n.id);
+        const initialQuestIds = stateRef.current.quests.map((q) => q.id);
+        setSeenNoticeIds(initialNoticeIds);
+        setSeenQuestIds(initialQuestIds);
+        localStorage.setItem(
+          seenStorageKey,
+          JSON.stringify({ notices: initialNoticeIds, quests: initialQuestIds })
+        );
+      }
+    } catch {
+      // Ignore storage error
+    }
+  }, [seenStorageKey]);
+
+  const { unreadNoticeCount, unreadQuestCount } = useMemo(() => {
+    if (!authSession.isLoggedIn) {
+      return { unreadNoticeCount: 0, unreadQuestCount: 0 };
+    }
+    const seenNoticeSet = new Set(seenNoticeIds);
+    const seenQuestSet = new Set(seenQuestIds);
+    const relevantNotices =
+      role === UserRole.HERO && activeHero
+        ? state.notices.filter((n) => isContentVisibleToHero(n, activeHero.dungeonId))
+        : state.notices;
+    const relevantQuests =
+      role === UserRole.HERO && activeHero
+        ? state.quests.filter((q) => isContentVisibleToHero(q, activeHero.dungeonId))
+        : state.quests;
+    return {
+      unreadNoticeCount: relevantNotices.filter((n) => !seenNoticeSet.has(n.id)).length,
+      unreadQuestCount: relevantQuests.filter((q) => !seenQuestSet.has(q.id)).length,
+    };
+  }, [authSession.isLoggedIn, role, activeHero, state.notices, state.quests, seenNoticeIds, seenQuestIds]);
+
+  const markGuildNotificationsRead = useCallback(() => {
+    const noticeIds = stateRef.current.notices.map((n) => n.id);
+    const questIds = stateRef.current.quests.map((q) => q.id);
+    setSeenNoticeIds(noticeIds);
+    setSeenQuestIds(questIds);
+    try {
+      localStorage.setItem(
+        seenStorageKey,
+        JSON.stringify({ notices: noticeIds, quests: questIds })
+      );
+    } catch {
+      // Ignore storage error
+    }
+  }, [seenStorageKey]);
 
   // Hash-based route & EC-01 RBAC Guard listener
   useEffect(() => {
@@ -342,6 +512,25 @@ export default function App() {
           },
           gmProfile: { ...prev.gmProfile, ...(remote.gmProfile || {}) },
         };
+
+        // Detect Hero auto-EXP & Level-Up upon sync (Item 4.1)
+        const ses = overrideAuth || authSessionRef.current;
+        if (ses.isLoggedIn && ses.role === UserRole.HERO && ses.heroId) {
+          const prevExp = getHeroTotalExp(ses.heroId, prev.grades);
+          const nextExp = getHeroTotalExp(ses.heroId, next.grades);
+          if (nextExp > prevExp && prev.grades.length > 0) {
+            const prevLvl = getHeroLevelProgress(prevExp).level;
+            const nextLvl = getHeroLevelProgress(nextExp).level;
+            if (nextLvl > prevLvl) {
+              playRetroSound('levelup', next.settings.soundEnabled);
+              showToast(`LEVEL UP! Hero naik ke Lv.${nextLvl} (+${nextExp - prevExp} EXP)!`, 'success');
+            } else {
+              playRetroSound('coin', next.settings.soundEnabled);
+              showToast(`Quest Selesai! Kamu mendapat +${nextExp - prevExp} EXP!`, 'success');
+            }
+          }
+        }
+
         stateRef.current = next;
         setState(next);
         return next;
@@ -351,10 +540,14 @@ export default function App() {
       try {
         const cloudData = await fetchAcademyFromSupabase(getFetchContext(overrideAuth));
         if (cloudData && Array.isArray(cloudData.dungeons) && Array.isArray(cloudData.heroes)) {
-          return mergeRemote(cloudData);
+          const merged = mergeRemote(cloudData);
+          setSyncStatus('synced');
+          setLastSyncTimeLabel(formatClockHHMM(new Date()));
+          return merged;
         }
       } catch (err) {
         console.warn('Supabase sync error:', err);
+        appendSyncLog('Pull Cloud', 'error', err instanceof Error ? err.message : 'Gagal terhubung ke Cloud');
       }
 
       // 2. Fallback to Express backend if running
@@ -365,19 +558,31 @@ export default function App() {
           if (contentType.includes('application/json')) {
             const data = await res.json();
             if (data && Array.isArray(data.dungeons) && Array.isArray(data.heroes)) {
-              return mergeRemote(data);
+              const merged = mergeRemote(data);
+              setSyncStatus('synced');
+              setLastSyncTimeLabel(formatClockHHMM(new Date()));
+              return merged;
             }
           }
         }
       } catch {
-        // Local mode or offline
+        // Local / offline fallback: hydrate cached offline Tomes/Quests/Notices if current list is empty
+        const offlineSnap = loadOfflineContentSnapshot();
+        if (offlineSnap && stateRef.current.tomes.length === 0 && offlineSnap.tomes.length > 0) {
+          mergeRemote({
+            tomes: offlineSnap.tomes,
+            quests: offlineSnap.quests,
+            notices: offlineSnap.notices,
+          });
+        }
       }
       return null;
     },
-    [getFetchContext]
+    [getFetchContext, appendSyncLog, showToast]
   );
 
   const handleLoginAsHero = (hero: HeroStudent, pin?: string) => {
+    playRetroSound('coin', stateRef.current.settings.soundEnabled);
     const nextAuth: AuthSession = {
       isLoggedIn: true,
       role: UserRole.HERO,
@@ -395,6 +600,7 @@ export default function App() {
   };
 
   const handleLoginAsGm = (username: string, password: string) => {
+    playRetroSound('coin', stateRef.current.settings.soundEnabled);
     const nextAuth: AuthSession = {
       isLoggedIn: true,
       role: UserRole.GAME_MASTER,
@@ -453,6 +659,9 @@ export default function App() {
     setGmMenu(id);
     setGmDrawerOpen(false);
     window.location.hash = `#/gm/${id}`;
+    if (id === 'quest_board' || id === 'active_quests') {
+      markGuildNotificationsRead();
+    }
     syncFromRemote();
   };
 
@@ -534,26 +743,32 @@ export default function App() {
 
   const handleManualSync = useCallback(async () => {
     setIsSyncing(true);
+    setSyncStatus('syncing');
     const updated = await syncFromRemote();
     setIsSyncing(false);
     if (updated) {
       playRetroSound('save', stateRef.current.settings.soundEnabled);
-      showToast(
-        `Data Cloud disinkronkan (${updated.dungeons.length} kelas, ${updated.heroes.length} siswa).`,
-        'success'
-      );
+      const detail = `${updated.dungeons.length} kelas, ${updated.heroes.length} siswa, ${updated.tomes.length} materi`;
+      appendSyncLog('Manual Sync', 'success', detail);
+      showToast(`✓ Synced! (${updated.dungeons.length} kelas, ${updated.heroes.length} siswa)`, 'success');
     } else if (!isSupabaseConfigured()) {
+      appendSyncLog('Manual Sync', 'info', 'Mode lokal aktif (Supabase belum terhubung).');
       showToast(
         'Cloud belum dihubungkan. Buka System Settings untuk menghubungkan Supabase.',
         'warning'
       );
     } else {
+      appendSyncLog(
+        'Manual Sync',
+        'success',
+        `Data mutakhir (${stateRef.current.dungeons.length} kelas, ${stateRef.current.heroes.length} siswa)`
+      );
       showToast(
-        `Data sudah mutakhir (${stateRef.current.dungeons.length} kelas, ${stateRef.current.heroes.length} siswa).`,
+        `✓ Data sudah mutakhir (${stateRef.current.dungeons.length} kelas, ${stateRef.current.heroes.length} siswa).`,
         'success'
       );
     }
-  }, [syncFromRemote, showToast]);
+  }, [syncFromRemote, showToast, appendSyncLog]);
 
   const openGmReauthModal = useCallback(() => {
     setReauthUser(
@@ -577,7 +792,10 @@ export default function App() {
   const reportCloudSync = useCallback(
     (promise: Promise<CloudSyncResult>) => {
       promise.then((res) => {
-        if (!res.ok && res.error) {
+        if (res.ok) {
+          appendSyncLog('Cloud Upsert', 'success', 'Perubahan data tersinkron ke Cloud.');
+        } else if (res.error) {
+          appendSyncLog('Cloud Upsert', 'error', res.error);
           showToast(`Gagal sync ke Cloud: ${res.error}`, 'danger');
           if (
             role === UserRole.GAME_MASTER &&
@@ -588,7 +806,7 @@ export default function App() {
         }
       });
     },
-    [showToast, role, openGmReauthModal]
+    [showToast, role, openGmReauthModal, appendSyncLog]
   );
 
   const handleSubmitGmReauth = async (e: React.FormEvent) => {
@@ -1107,7 +1325,7 @@ export default function App() {
   };
 
   const handleSaveQuest = (quest: ActiveQuest) => {
-    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    playRetroSound('sword', stateRef.current.settings.soundEnabled);
     const next = { ...stateRef.current, quests: upsertItem(stateRef.current.quests, quest) };
     stateRef.current = next;
     setState(next);
@@ -1156,7 +1374,9 @@ export default function App() {
   };
 
   const handleSaveGrade = (grade: ExpGrade) => {
-    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const prevExp = getHeroTotalExp(grade.heroId, stateRef.current.grades);
+    const prevLvl = getHeroLevelProgress(prevExp).level;
+
     const existing = stateRef.current.grades.find(
       (g) => g.heroId === grade.heroId && g.questId === grade.questId
     );
@@ -1168,6 +1388,12 @@ export default function App() {
     stateRef.current = next;
     setState(next);
 
+    const nextExp = getHeroTotalExp(grade.heroId, nextGrades);
+    const nextLvl = getHeroLevelProgress(nextExp).level;
+    const leveledUp = nextLvl > prevLvl && getEffectiveGradeStatus(canonicalGrade) === 'tuntas';
+
+    playRetroSound(leveledUp ? 'levelup' : 'sword', stateRef.current.settings.soundEnabled);
+
     reportCloudSync(cloudSyncGrade(canonicalGrade, getGmAuth()));
     fetch('/api/grades', {
       method: 'POST',
@@ -1175,12 +1401,16 @@ export default function App() {
       body: JSON.stringify(canonicalGrade),
     }).catch(() => {});
     const heroName = stateRef.current.heroes.find((h) => h.id === grade.heroId)?.name || 'Hero';
-    showToast(`Saved ${grade.score}/100 (+${grade.expEarned} EXP) for ${heroName}!`);
+    showToast(
+      leveledUp
+        ? `${heroName} LEVEL UP ke Lv.${nextLvl}! (+${grade.expEarned} EXP)`
+        : `Saved ${grade.score}/100 (+${grade.expEarned} EXP) for ${heroName}!`
+    );
   };
 
   const handleSaveGradesBatch = async (gradesToSave: ExpGrade[]) => {
     if (gradesToSave.length === 0) return;
-    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    playRetroSound('sword', stateRef.current.settings.soundEnabled);
 
     const updatedGrades = [...stateRef.current.grades];
     const canonicalList: ExpGrade[] = [];
@@ -1218,11 +1448,13 @@ export default function App() {
     });
 
     if (firstErr?.error) {
+      appendSyncLog('Batch Grade', 'error', firstErr.error);
       showToast(`Sebagian nilai gagal sync ke Cloud: ${firstErr.error}`, 'danger');
       if (isCredentialSyncError(firstErr.error)) {
         openGmReauthModal();
       }
     } else {
+      appendSyncLog('Batch Grade', 'success', `${canonicalList.length} nilai penilaian tersimpan.`);
       showToast(`Berhasil menyimpan ${canonicalList.length} nilai penilaian!`, 'success');
     }
   };
@@ -1316,20 +1548,31 @@ export default function App() {
     showToast('Demo data restored to defaults!', 'warning');
   };
 
+  // Thematic loading splash screen on initial hydration (Item 3.1)
+  if (isInitialBooting) {
+    return (
+      <ThemeProvider theme={state.settings.theme} onChangeTheme={handleUpdateTheme}>
+        <PixelLoadingScreen theme={state.settings.theme} />
+      </ThemeProvider>
+    );
+  }
+
   // If user is not logged in (or Hero session lost/deleted), render the Retro Title & Login Screen!
   if (!authSession.isLoggedIn || (role === UserRole.HERO && !activeHero)) {
     return (
       <ThemeProvider theme={state.settings.theme} onChangeTheme={handleUpdateTheme}>
         <PixelToast message={toast?.message || null} tone={toast?.tone} />
         <OfflineIndicator />
-        <LoginView
-          state={state}
-          onLoginAsHero={handleLoginAsHero}
-          onLoginAsGm={handleLoginAsGm}
-          onUpdateTheme={handleUpdateTheme}
-          onToggleSound={handleToggleSound}
-          onSyncData={syncFromRemote}
-        />
+        <PixelErrorBoundary scopeLabel="Login Screen">
+          <LoginView
+            state={state}
+            onLoginAsHero={handleLoginAsHero}
+            onLoginAsGm={handleLoginAsGm}
+            onUpdateTheme={handleUpdateTheme}
+            onToggleSound={handleToggleSound}
+            onSyncData={syncFromRemote}
+          />
+        </PixelErrorBoundary>
       </ThemeProvider>
     );
   }
@@ -1353,6 +1596,12 @@ export default function App() {
       onToggleSound={handleToggleSound}
       onManualSync={handleManualSync}
       isSyncing={isSyncing}
+      syncStatus={syncStatus}
+      lastSyncTimeLabel={lastSyncTimeLabel}
+      syncLogs={syncLogs}
+      onClearSyncLogs={clearSyncLogs}
+      unreadNoticeCount={unreadNoticeCount}
+      unreadQuestCount={unreadQuestCount}
       onLogout={handleLogout}
       onOpenGmDrawer={() => {
         playRetroSound('blip', state.settings.soundEnabled);
@@ -1362,128 +1611,143 @@ export default function App() {
       <PixelToast message={toast?.message || null} tone={toast?.tone} />
       <OfflineIndicator />
 
-      {role === UserRole.GAME_MASTER ? (
-        <>
-          {gmMenu === 'hq' && (
-            <GmDashboard
-              state={state}
-              onNavigate={handleSelectGmMenu}
-            />
+      <PixelErrorBoundary
+        scopeLabel={role === UserRole.GAME_MASTER ? `GM · ${gmMenu}` : `Hero · ${heroMenu}`}
+        onRecoverHome={() => {
+          if (role === UserRole.GAME_MASTER) setGmMenu('hq');
+          else setHeroMenu('notice');
+        }}
+      >
+        <Suspense fallback={<PixelCardSkeleton />}>
+          {role === UserRole.GAME_MASTER ? (
+            <>
+              {gmMenu === 'hq' && (
+                <GmDashboard
+                  state={state}
+                  onNavigate={handleSelectGmMenu}
+                  lastSyncTimeLabel={lastSyncTimeLabel}
+                  syncStatus={syncStatus}
+                />
+              )}
+              {gmMenu === 'dungeons' && (
+                <GmDungeons
+                  state={state}
+                  onSaveDungeon={handleSaveDungeon}
+                  onDeleteDungeon={handleDeleteDungeon}
+                  onDeleteDungeonsBatch={handleDeleteDungeonsBatch}
+                />
+              )}
+              {gmMenu === 'heroes' && (
+                <GmHeroes
+                  state={state}
+                  onSaveHero={handleSaveHero}
+                  onImportHeroes={handleImportHeroes}
+                  onDeleteHero={handleDeleteHero}
+                  onDeleteHeroesBatch={handleDeleteHeroesBatch}
+                />
+              )}
+              {gmMenu === 'quest_board' && (
+                <GmQuestBoard
+                  state={state}
+                  onSaveNotice={handleSaveNotice}
+                  onDeleteNotice={handleDeleteNotice}
+                />
+              )}
+              {gmMenu === 'realms' && (
+                <GmRealms
+                  state={state}
+                  onSaveRealm={handleSaveRealm}
+                  onDeleteRealm={handleDeleteRealm}
+                  onDeleteRealmsBatch={handleDeleteRealmsBatch}
+                />
+              )}
+              {gmMenu === 'scrolls' && (
+                <GmScrolls
+                  state={state}
+                  onSaveTome={handleSaveTome}
+                  onDeleteTome={handleDeleteTome}
+                  onDeleteTomesBatch={handleDeleteTomesBatch}
+                />
+              )}
+              {gmMenu === 'active_quests' && (
+                <GmActiveQuests
+                  state={state}
+                  onSaveQuest={handleSaveQuest}
+                  onDeleteQuest={handleDeleteQuest}
+                  onDeleteQuestsBatch={handleDeleteQuestsBatch}
+                />
+              )}
+              {gmMenu === 'exp_loot' && (
+                <GmExpLoot
+                  state={state}
+                  onSaveGrade={handleSaveGrade}
+                  onSaveGradesBatch={handleSaveGradesBatch}
+                />
+              )}
+              {gmMenu === 'settings' && (
+                <GmSettings
+                  state={state}
+                  gmAuth={getGmAuth()}
+                  onUpdateGmProfile={handleUpdateGmProfile}
+                  onUpdateSettings={handleUpdateSettings}
+                  onResetDemoData={handleResetDemoData}
+                  onPullCloudData={syncFromRemote}
+                  onTestAccessDenied={() =>
+                    handleTriggerAccessDenied('#/gm/exp-loot/edit')
+                  }
+                  onRequestGmReauth={openGmReauthModal}
+                />
+              )}
+              {gmMenu === 'about' && (
+                <AboutView
+                  role={UserRole.GAME_MASTER}
+                  currentTheme={state.settings.theme}
+                />
+              )}
+            </>
+          ) : (
+            activeHero && (
+              <>
+                {heroMenu === 'notice' && (
+                  <HeroNotice
+                    state={state}
+                    hero={activeHero}
+                    onNavigate={handleSelectHeroMenu}
+                    onAttemptRestrictedRoute={handleTriggerAccessDenied}
+                    onUpdateAvatar={handleUpdateHeroAvatar}
+                    onChangePin={handleChangeOwnHeroPin}
+                    unreadNoticeCount={unreadNoticeCount}
+                    unreadQuestCount={unreadQuestCount}
+                    onMarkGuildNotificationsRead={markGuildNotificationsRead}
+                  />
+                )}
+                {heroMenu === 'scroll_library' && (
+                  <HeroScrollLibrary state={state} hero={activeHero} />
+                )}
+                {heroMenu === 'my_guild' && (
+                  <HeroMyGuild state={state} hero={activeHero} />
+                )}
+                {heroMenu === 'hero_log' && (
+                  <HeroLog
+                    state={state}
+                    hero={activeHero}
+                    currentTheme={state.settings.theme}
+                    onUpdateTheme={handleUpdateTheme}
+                    onUpdateAvatar={handleUpdateHeroAvatar}
+                    onUpdateUsername={handleUpdateHeroUsername}
+                  />
+                )}
+                {heroMenu === 'about' && (
+                  <AboutView
+                    role={UserRole.HERO}
+                    currentTheme={state.settings.theme}
+                  />
+                )}
+              </>
+            )
           )}
-          {gmMenu === 'dungeons' && (
-            <GmDungeons
-              state={state}
-              onSaveDungeon={handleSaveDungeon}
-              onDeleteDungeon={handleDeleteDungeon}
-              onDeleteDungeonsBatch={handleDeleteDungeonsBatch}
-            />
-          )}
-          {gmMenu === 'heroes' && (
-            <GmHeroes
-              state={state}
-              onSaveHero={handleSaveHero}
-              onImportHeroes={handleImportHeroes}
-              onDeleteHero={handleDeleteHero}
-              onDeleteHeroesBatch={handleDeleteHeroesBatch}
-            />
-          )}
-          {gmMenu === 'quest_board' && (
-            <GmQuestBoard
-              state={state}
-              onSaveNotice={handleSaveNotice}
-              onDeleteNotice={handleDeleteNotice}
-            />
-          )}
-          {gmMenu === 'realms' && (
-            <GmRealms
-              state={state}
-              onSaveRealm={handleSaveRealm}
-              onDeleteRealm={handleDeleteRealm}
-              onDeleteRealmsBatch={handleDeleteRealmsBatch}
-            />
-          )}
-          {gmMenu === 'scrolls' && (
-            <GmScrolls
-              state={state}
-              onSaveTome={handleSaveTome}
-              onDeleteTome={handleDeleteTome}
-              onDeleteTomesBatch={handleDeleteTomesBatch}
-            />
-          )}
-          {gmMenu === 'active_quests' && (
-            <GmActiveQuests
-              state={state}
-              onSaveQuest={handleSaveQuest}
-              onDeleteQuest={handleDeleteQuest}
-              onDeleteQuestsBatch={handleDeleteQuestsBatch}
-            />
-          )}
-          {gmMenu === 'exp_loot' && (
-            <GmExpLoot
-              state={state}
-              onSaveGrade={handleSaveGrade}
-              onSaveGradesBatch={handleSaveGradesBatch}
-            />
-          )}
-          {gmMenu === 'settings' && (
-            <GmSettings
-              state={state}
-              gmAuth={getGmAuth()}
-              onUpdateGmProfile={handleUpdateGmProfile}
-              onUpdateSettings={handleUpdateSettings}
-              onResetDemoData={handleResetDemoData}
-              onPullCloudData={syncFromRemote}
-              onTestAccessDenied={() =>
-                handleTriggerAccessDenied('#/gm/exp-loot/edit')
-              }
-              onRequestGmReauth={openGmReauthModal}
-            />
-          )}
-          {gmMenu === 'about' && (
-            <AboutView
-              role={UserRole.GAME_MASTER}
-              currentTheme={state.settings.theme}
-            />
-          )}
-        </>
-      ) : (
-        activeHero && (
-          <>
-            {heroMenu === 'notice' && (
-              <HeroNotice
-                state={state}
-                hero={activeHero}
-                onNavigate={handleSelectHeroMenu}
-                onAttemptRestrictedRoute={handleTriggerAccessDenied}
-                onUpdateAvatar={handleUpdateHeroAvatar}
-                onChangePin={handleChangeOwnHeroPin}
-              />
-            )}
-            {heroMenu === 'scroll_library' && (
-              <HeroScrollLibrary state={state} hero={activeHero} />
-            )}
-            {heroMenu === 'my_guild' && (
-              <HeroMyGuild state={state} hero={activeHero} />
-            )}
-            {heroMenu === 'hero_log' && (
-              <HeroLog
-                state={state}
-                hero={activeHero}
-                currentTheme={state.settings.theme}
-                onUpdateTheme={handleUpdateTheme}
-                onUpdateAvatar={handleUpdateHeroAvatar}
-                onUpdateUsername={handleUpdateHeroUsername}
-              />
-            )}
-            {heroMenu === 'about' && (
-              <AboutView
-                role={UserRole.HERO}
-                currentTheme={state.settings.theme}
-              />
-            )}
-          </>
-        )
-      )}
+        </Suspense>
+      </PixelErrorBoundary>
 
       {/* Game Master Menu Drawer */}
       <PixelModal
@@ -1498,8 +1762,9 @@ export default function App() {
               <button
                 key={item.id}
                 type="button"
+                onMouseEnter={() => playThrottledHoverBlip(state.settings.soundEnabled)}
                 onClick={() => handleSelectGmMenu(item.id)}
-                className={`pixel-btn min-h-[78px] p-2 flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer ${
+                className={`pixel-btn pixel-module-card min-h-[78px] p-2 flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer ${
                   active
                     ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'

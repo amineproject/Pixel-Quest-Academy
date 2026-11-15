@@ -13,14 +13,14 @@
     --border-pixel: #4a3525;
     --border-highlight: #4a3525;
     --shadow-ink: #4a3525;
-    --text-primary: #2b1d12;
-    --text-secondary: #543c29;
-    --text-muted: #6e533d;
-    --accent-primary: #2f855a;
-    --accent-primary-hover: #276749;
+    --text-primary: #24160c;
+    --text-secondary: #432d1c;
+    --text-muted: #563d28;
+    --accent-primary: #276749;
+    --accent-primary-hover: #1f533b;
     --accent-success: #15803d;
-    --accent-warning: #b45309;
-    --accent-danger: #c53030;
+    --accent-warning: #92400e;
+    --accent-danger: #b91c1c;
     --comic-gold: #f6c445;
     --text-on-accent: #ffffff;
     --text-on-success: #ffffff;
@@ -466,13 +466,106 @@
   animation: pixel-coin-shine 1.8s ease-in-out infinite;
 }
 
-.animate-press-start {
+  .animate-press-start {
   animation: pixel-pulse-text 1.2s ease-in-out infinite;
+}
+
+/* 2.4 Micro-interaction hover/press (+2px shift) for module cards */
+.pixel-module-card {
+  transition: transform 110ms ease, box-shadow 110ms ease, background-color 120ms ease;
+}
+
+.pixel-module-card:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 2px 5px 0 0 var(--shadow-ink);
+}
+
+.pixel-module-card:active:not(:disabled) {
+  transform: translate(1px, 2px);
+  box-shadow: 0 1px 0 0 var(--shadow-ink);
+}
+
+/* 4.4 Outdoor world ambient animations */
+@keyframes pixel-cloud-drift {
+  0% {
+    transform: translateX(-8%);
+  }
+  50% {
+    transform: translateX(18%);
+  }
+  100% {
+    transform: translateX(-8%);
+  }
+}
+
+@keyframes pixel-campfire-flicker {
+  0%, 100% {
+    transform: scaleY(1) scaleX(1);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scaleY(1.08) scaleX(0.95);
+    filter: brightness(1.18) drop-shadow(0 0 6px rgba(251, 146, 60, 0.7));
+  }
+  55% {
+    transform: scaleY(0.94) scaleX(1.05);
+    filter: brightness(0.96);
+  }
+  80% {
+    transform: scaleY(1.12) scaleX(0.97);
+    filter: brightness(1.22) drop-shadow(0 0 8px rgba(250, 204, 21, 0.8));
+  }
+}
+
+@keyframes pixel-star-twinkle {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.animate-cloud-drift {
+  animation: pixel-cloud-drift 28s ease-in-out infinite;
+}
+
+.animate-cloud-drift-slow {
+  animation: pixel-cloud-drift 42s ease-in-out infinite reverse;
+}
+
+.animate-campfire-flicker {
+  transform-origin: bottom center;
+  animation: pixel-campfire-flicker 0.9s steps(4, end) infinite;
+}
+
+.animate-star-twinkle {
+  animation: pixel-star-twinkle 2.6s ease-in-out infinite;
+}
+
+/* 3.2 Desktop custom pixel cursor (gauntlet default, pixel sword pointer on interactive controls) */
+@media (pointer: fine) {
+  body {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' shape-rendering='crispEdges'%3E%3Crect x='2' y='2' width='2' height='12' fill='%231e113a'/%3E%3Crect x='4' y='4' width='2' height='10' fill='%23fef3c7'/%3E%3Crect x='6' y='6' width='2' height='8' fill='%23fde68a'/%3E%3Crect x='8' y='8' width='2' height='6' fill='%23f6c445'/%3E%3Crect x='10' y='10' width='4' height='4' fill='%23f6c445'/%3E%3Crect x='4' y='14' width='8' height='2' fill='%231e113a'/%3E%3C/svg%3E") 2 2, auto;
+  }
+
+  a,
+  button,
+  [role="button"],
+  select,
+  .pixel-btn {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' shape-rendering='crispEdges'%3E%3Crect x='2' y='2' width='3' height='3' fill='%23e2e8f0'/%3E%3Crect x='5' y='5' width='3' height='3' fill='%23cbd5e1'/%3E%3Crect x='8' y='8' width='3' height='3' fill='%2394a3b8'/%3E%3Crect x='11' y='11' width='3' height='3' fill='%23fbbf24'/%3E%3Crect x='9' y='13' width='2' height='2' fill='%23b45309'/%3E%3Crect x='13' y='9' width='2' height='2' fill='%23b45309'/%3E%3Crect x='14' y='14' width='3' height='3' fill='%2378350f'/%3E%3Crect x='17' y='17' width='3' height='3' fill='%23fbbf24'/%3E%3C/svg%3E") 2 2, pointer;
+  }
 }
 
 /* Calm motion in Clean Paper Studio */
 [data-theme="gameboy_green"] .animate-pixel-bounce,
-[data-theme="gameboy_green"] .animate-pixel-float {
+[data-theme="gameboy_green"] .animate-pixel-float,
+[data-theme="gameboy_green"] .animate-cloud-drift,
+[data-theme="gameboy_green"] .animate-cloud-drift-slow,
+[data-theme="gameboy_green"] .animate-campfire-flicker {
   animation: none;
 }
 
@@ -492,16 +585,23 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pixel-btn,
-  .pixel-box {
+  .pixel-box,
+  .pixel-module-card {
     transition: none;
   }
-  .pixel-btn:active:not(:disabled) {
+  .pixel-btn:active:not(:disabled),
+  .pixel-module-card:hover:not(:disabled),
+  .pixel-module-card:active:not(:disabled) {
     transform: none;
   }
   .animate-pixel-bounce,
   .animate-pixel-float,
   .animate-coin-shine,
-  .animate-press-start {
+  .animate-press-start,
+  .animate-cloud-drift,
+  .animate-cloud-drift-slow,
+  .animate-campfire-flicker,
+  .animate-star-twinkle {
     animation: none;
   }
 }

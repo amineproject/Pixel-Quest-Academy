@@ -19,7 +19,7 @@ export const RPGDialogueCard: React.FC<{
     {(speaker || metaRight) && (
       <div className="flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[12px] leading-none">
         {speaker && <span className="font-bold text-[#9a3412]">{speaker}</span>}
-        {metaRight && <span className="text-[#6e533d] tabular-nums">{metaRight}</span>}
+        {metaRight && <span className="text-[#563d28] tabular-nums">{metaRight}</span>}
       </div>
     )}
     {children}

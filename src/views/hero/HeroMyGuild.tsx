@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { Crown, Trophy } from 'lucide-react';
 import { AcademyState, HeroStudent } from '../../types/lms';
-import { PixelAvatar } from '../../components/PixelArt';
+import { PixelAvatar, PixelCoin } from '../../components/PixelArt';
 import {
   PixelEmptyChest,
   PixelSectionTitle,
 } from '../../components/PixelUI';
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
-import { getHeroEffectiveRealmIds } from '../../utils/exp';
+import {
+  getGuildLeaderboard,
+  getHeroEffectiveRealmIds,
+} from '../../utils/exp';
 
 interface HeroMyGuildProps {
   state: AcademyState;
@@ -23,11 +27,16 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
     .filter((h) => h.dungeonId === hero.dungeonId && h.active)
     .sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
 
+  const guildLeaderboard = useMemo(() => {
+    const classPeers = partyMembers.length > 0 ? partyMembers : state.heroes;
+    return getGuildLeaderboard(classPeers, state.grades).slice(0, 15);
+  }, [partyMembers, state.heroes, state.grades]);
+
   return (
     <div className="space-y-5">
       <PixelSectionTitle
         title="My Guild / Party"
-        subtitle="Informasi ruang kelas dan rekan petualang (Read-Only)"
+        subtitle="Informasi ruang kelas, leaderboard EXP, dan rekan petualang (Read-Only)"
       />
 
       {!dungeon ? (
@@ -96,7 +105,76 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
         </ThemedPanelCard>
       </section>
 
-      {/* Party Roster (No points/EXP displayed) */}
+      {/* Guild Leaderboard by EXP & Hero Level (Item 4.3) */}
+      <section className="space-y-2.5">
+        <PixelSectionTitle
+          title="Leaderboard Guild"
+          subtitle="Peringkat petualang berdasarkan akumulasi EXP & Quest Tuntas"
+        />
+        {guildLeaderboard.length === 0 ? (
+          <PixelEmptyChest
+            title="Belum Ada Peringkat Guild!"
+            description="Selesaikan Quest untuk mulai mengumpulkan EXP dan masuk ke papan peringkat."
+          />
+        ) : (
+          <div className="space-y-2">
+            {guildLeaderboard.map((entry) => {
+              const isMe = entry.hero.id === hero.id;
+              const rankBadgeClass =
+                entry.rank === 1
+                  ? 'bg-[#ffd000] text-[#09090f] border-[#09090f]'
+                  : entry.rank === 2
+                    ? 'bg-slate-200 text-slate-900 border-slate-700'
+                    : entry.rank === 3
+                      ? 'bg-amber-200 text-amber-950 border-amber-800'
+                      : 'bg-[var(--bg-inset)] text-[var(--text-secondary)] border-[var(--border-pixel)]/60';
+
+              return (
+                <ThemedPanelCard
+                  key={entry.hero.id}
+                  className={`p-3 flex items-center justify-between gap-2.5 ${
+                    isMe ? 'ring-2 ring-[var(--accent-warning)]' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span
+                      className={`w-7 h-7 rounded border-2 font-pixel-display text-[11px] flex items-center justify-center shrink-0 tabular-nums ${rankBadgeClass}`}
+                    >
+                      {entry.rank === 1 ? <Crown size={14} /> : `#${entry.rank}`}
+                    </span>
+                    <PixelAvatar
+                      avatar={entry.hero.avatar}
+                      size={36}
+                      className="shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
+                          {entry.hero.name} {isMe ? '(Kamu)' : ''}
+                        </p>
+                        <span className="px-1.5 py-0.5 rounded bg-[var(--surface-tint)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[9px] font-bold text-[var(--text-primary)] shrink-0 tabular-nums">
+                          Lv.{entry.level}
+                        </span>
+                      </div>
+                      <p className="text-[11.5px] text-[var(--text-secondary)] truncate">
+                        {entry.title} · {entry.tuntasCount} Quest Tuntas
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/50 shrink-0">
+                    <PixelCoin size={13} />
+                    <span className="font-pixel-display text-[11.5px] text-[var(--accent-warning)] tabular-nums">
+                      {entry.totalExp} EXP
+                    </span>
+                  </div>
+                </ThemedPanelCard>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Party Roster */}
       <section className="space-y-2.5">
         <PixelSectionTitle
           title={`Party Roster (${partyMembers.length})`}
@@ -126,7 +204,8 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
                     </p>
                   </div>
                 </div>
-                <span className="font-pixel-ui text-[9px] text-[var(--accent-success)] px-2 py-0.5 border border-[var(--accent-success)]/50 shrink-0">
+                <span className="font-pixel-ui text-[9px] text-[var(--accent-success)] px-2 py-0.5 border border-[var(--accent-success)]/50 shrink-0 flex items-center gap-1">
+                  <Trophy size={10} />
                   AKTIF
                 </span>
               </ThemedPanelCard>

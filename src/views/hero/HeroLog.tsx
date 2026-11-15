@@ -38,6 +38,7 @@ import { PixelAvatar, PixelRealmGlyph } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyChest,
+  PixelExpBar,
   PixelFieldLabel,
   PixelInput,
   PixelLinkButton,
@@ -55,6 +56,8 @@ import {
   getEffectiveGradeStatus,
   getHeroAchievements,
   getHeroEffectiveRealmIds,
+  getHeroLevelProgress,
+  getHeroTotalExp,
   isContentVisibleToHero,
 } from '../../utils/exp';
 
@@ -283,7 +286,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
         }
       />
 
-      {/* Status Symbol Legend & Counters (NO numeric points) */}
+      {/* Status Symbol Legend & Counters + Hero RPG Level & EXP */}
       <ThemedPanelCard className="space-y-3">
         <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-pixel)]/40">
           <PixelAvatar avatar={hero.avatar} size={42} className="shrink-0" />
@@ -292,6 +295,9 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <h3 className="font-pixel-display text-[12px] text-[var(--text-primary)] truncate">
                 {hero.name}
               </h3>
+              <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10px] font-bold text-[#09090f] shrink-0">
+                Lv.{getHeroLevelProgress(getHeroTotalExp(hero.id, state.grades)).level}
+              </span>
               {hero.username ? (
                 <span className="text-[11px] font-bold px-1.5 py-0.5 border border-[var(--accent-warning)]/60 bg-[var(--bg-inset)] text-[var(--accent-warning)] shrink-0">
                   @{hero.username}
@@ -307,6 +313,18 @@ export const HeroLog: React.FC<HeroLogProps> = ({
             </p>
           </div>
         </div>
+
+        {(() => {
+          const lvl = getHeroLevelProgress(getHeroTotalExp(hero.id, state.grades));
+          return (
+            <PixelExpBar
+              percent={lvl.percent}
+              labelLeft={`Lv.${lvl.level} · ${lvl.title}`}
+              labelRight={`${lvl.totalExp} EXP (${lvl.expIntoLevel}/${lvl.expForNextLevel})`}
+              color="var(--accent-warning)"
+            />
+          );
+        })()}
 
         <div className="grid grid-cols-2 gap-2">
           <div className="pixel-box-inset p-2.5 flex items-center gap-2 min-w-0">

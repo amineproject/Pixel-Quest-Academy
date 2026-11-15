@@ -1,10 +1,13 @@
 import React from 'react';
 import {
+  AlertCircle,
   BookOpen,
   Castle,
+  Check,
   Crown,
   Gamepad2,
   Grid,
+  History,
   Info,
   LogOut,
   Map,
@@ -27,6 +30,7 @@ import {
   UserRole,
 } from '../types/lms';
 import { PixelAvatar, PixelCoin, PixelStar } from './PixelArt';
+import { PixelButton, PixelConfirmDialog, PixelModal } from './PixelUI';
 import { PWAInstallButton } from './PWAInstallBanner';
 import { ThemeBackdropIllustration } from './ThemeArtwork';
 
@@ -103,7 +107,17 @@ export function getHeroMenuIcon(id: HeroMenuId, size = 18) {
   }
 }
 
-interface ArcadeShellProps {
+/** Chronological entry recorded in the Cloud/Local sync history modal. */
+export interface SyncLogEntry {
+  id: string;
+  timestamp: string;
+  timeLabel: string;
+  action: string;
+  status: 'success' | 'error' | 'info';
+  detail: string;
+}
+
+export interface ArcadeShellProps {
   theme: PixelTheme;
   crtScanlines: boolean;
   soundEnabled: boolean;
@@ -119,11 +133,21 @@ interface ArcadeShellProps {
   onToggleSound: () => void;
   onManualSync?: () => void;
   isSyncing?: boolean;
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
+  lastSyncTimeLabel?: string | null;
+  syncLogs?: SyncLogEntry[];
+  onClearSyncLogs?: () => void;
+  unreadNoticeCount?: number;
+  unreadQuestCount?: number;
   onOpenGmDrawer: () => void;
   onLogout: () => void;
   children: React.ReactNode;
 }
 
+/**
+ * Main retro handheld / editorial shell framing navigation, hardware window controls,
+ * cloud sync status indicator, sync history modal, and Guild notification badges.
+ */
 export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   theme,
   crtScanlines,
@@ -140,10 +164,21 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   onToggleSound,
   onManualSync,
   isSyncing = false,
+  syncStatus = 'idle',
+  lastSyncTimeLabel = null,
+  syncLogs = [],
+  onClearSyncLogs,
+  unreadNoticeCount = 0,
+  unreadQuestCount = 0,
   onOpenGmDrawer,
   onLogout,
   children,
 }) => {
+  const [isWindowMinimized, setIsWindowMinimized] = React.useState(false);
+  const [isWindowMaximized, setIsWindowMaximized] = React.useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = React.useState(false);
+  const [syncHistoryOpen, setSyncHistoryOpen] = React.useState(false);
+
   const isGm = role === UserRole.GAME_MASTER;
   const activeTitle = isGm
     ? GM_NAV_ITEMS.find((i) => i.id === gmMenu)?.label || 'HQ / Tavern Hall'
@@ -152,6 +187,18 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   const quickGmTabs: GmMenuId[] = ['hq', 'dungeons', 'active_quests', 'exp_loot'];
 
   const isMinimalPaper = theme === 'gameboy_green';
+  const totalUnreadGuild = unreadNoticeCount + unreadQuestCount;
+
+  const getBadgeCountForGm = (id: GmMenuId): number => {
+    if (id === 'quest_board') return unreadNoticeCount;
+    if (id === 'active_quests') return unreadQuestCount;
+    return 0;
+  };
+
+  const getBadgeCountForHero = (id: HeroMenuId): number => {
+    if (id === 'notice') return totalUnreadGuild;
+    return 0;
+  };
 
   return (
     <div
@@ -161,7 +208,13 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
       <ThemeBackdropIllustration theme={theme} />
 
       {/* Desktop Top Header */}
-      <div className="relative z-10 hidden sm:flex items-center justify-between w-full max-w-[640px] md:max-w-[960px] lg:max-w-[1080px] mb-2.5 px-1 gap-2">
+      <div
+        className={`relative z-10 hidden sm:flex items-center justify-between w-full mb-2.5 px-1 gap-2 transition-all ${
+          isWindowMaximized
+            ? 'max-w-[1380px]'
+            : 'max-w-[640px] md:max-w-[960px] lg:max-w-[1080px]'
+        }`}
+      >
         <div className="flex items-center gap-2.5 min-w-0">
           {!isMinimalPaper && (
             <div className="w-9 h-9 rounded-[var(--btn-radius)] bg-[var(--comic-gold)] border-2 border-[var(--border-pixel)] shadow-[3px_3px_0_var(--shadow-ink)] flex items-center justify-center shrink-0">
@@ -182,7 +235,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           <PWAInstallButton compact />
           <button
             type="button"
-            onClick={onLogout}
+            onClick={() => setLogoutConfirmOpen(true)}
             className="md:hidden pixel-btn min-h-[34px] px-3 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10.5px] flex items-center gap-1.5 cursor-pointer font-bold"
             title="Keluar ke Halaman Login"
           >
@@ -194,7 +247,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
 
       {/* Theme-Adaptive Console / Editorial Frame */}
       <div
-        className={`relative z-10 w-full max-w-[560px] sm:max-w-[640px] md:max-w-[960px] lg:max-w-[1080px] console-bezel transition-all ${
+        className={`relative z-10 w-full console-bezel transition-all ${
+          isWindowMaximized
+            ? 'max-w-[1380px]'
+            : 'max-w-[560px] sm:max-w-[640px] md:max-w-[960px] lg:max-w-[1080px]'
+        } ${
           isMinimalPaper
             ? 'sm:p-0 sm:rounded-xl sm:border sm:border-[#d6d1c7] sm:bg-white'
             : 'sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]'
@@ -215,23 +272,71 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       : 'COMIC-POP ARCADE EDITION'}
               </span>
             </div>
-            <div className="flex items-center gap-1.5" aria-hidden="true">
-              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsWindowMinimized((prev) => !prev)}
+                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[10px] flex items-center justify-center leading-none font-bold hover:bg-[var(--comic-gold)] cursor-pointer"
+                title={isWindowMinimized ? 'Pulihkan Jendela' : 'Minimize Jendela'}
+                aria-label={isWindowMinimized ? 'Pulihkan Jendela' : 'Minimize Jendela'}
+              >
                 −
-              </span>
-              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[8px] flex items-center justify-center leading-none font-bold">
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsWindowMinimized(false);
+                  setIsWindowMaximized((prev) => !prev);
+                }}
+                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold hover:bg-[var(--comic-gold)] cursor-pointer"
+                title={isWindowMaximized ? 'Ukuran Normal' : 'Perbesar Jendela'}
+                aria-label={isWindowMaximized ? 'Ukuran Normal' : 'Perbesar Jendela'}
+              >
                 □
-              </span>
-              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+              </button>
+              <button
+                type="button"
+                onClick={() => setLogoutConfirmOpen(true)}
+                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[10px] flex items-center justify-center leading-none font-bold hover:bg-[#f43f5e] hover:text-white cursor-pointer"
+                title="Keluar / Logout"
+                aria-label="Keluar / Logout"
+              >
                 ×
-              </span>
+              </button>
             </div>
           </div>
         )}
 
-        {/* Screen Viewport: Persistent Left Sidebar (md+) + Main Pane */}
+        {isWindowMinimized ? (
+          <div className="hidden sm:flex items-center justify-between gap-3 p-4 bg-[var(--bg-canvas)] rounded-lg border-2 border-[var(--border-pixel)]">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <PixelAvatar avatar={isGm ? gmAvatar : activeHeroAvatar} size={34} />
+              <div className="min-w-0">
+                <p className="font-pixel-display text-[12px] text-[var(--text-primary)] truncate">
+                  {activeTitle} — Cartridge Minimized
+                </p>
+                <p className="text-[12px] text-[var(--text-secondary)] truncate">
+                  Klik tombol Pulihkan untuk melanjutkan petualangan belajar.
+                </p>
+              </div>
+            </div>
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="warning"
+              onClick={() => setIsWindowMinimized(false)}
+            >
+              Pulihkan Layar
+            </PixelButton>
+          </div>
+        ) : (
+        /* Screen Viewport: Persistent Left Sidebar (md+) + Main Pane */
         <div
-          className={`relative w-full h-[100dvh] sm:h-[calc(100dvh-150px)] sm:min-h-[460px] sm:max-h-[860px] flex flex-col md:flex-row bg-[var(--bg-canvas)] overflow-hidden ${
+          className={`relative w-full h-[100dvh] flex flex-col md:flex-row bg-[var(--bg-canvas)] overflow-hidden ${
+            isWindowMaximized
+              ? 'sm:h-[calc(100dvh-110px)] sm:min-h-[500px]'
+              : 'sm:h-[calc(100dvh-150px)] sm:min-h-[460px] sm:max-h-[860px]'
+          } ${
             isMinimalPaper
               ? 'sm:rounded-xl'
               : theme === 'daylight_rpg'
@@ -305,6 +410,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
                         : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
 
+                    const badgeCount = getBadgeCountForGm(item.id);
                     return (
                       <button
                         key={item.id}
@@ -337,6 +443,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             {item.standardName}
                           </span>
                         </span>
+                        {badgeCount > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums">
+                            {badgeCount}
+                          </span>
+                        )}
                       </button>
                     );
                   })
@@ -358,6 +469,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
                         : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
 
+                    const badgeCount = getBadgeCountForHero(item.id);
                     return (
                       <button
                         key={item.id}
@@ -390,6 +502,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             {item.standardName}
                           </span>
                         </span>
+                        {badgeCount > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums">
+                            {badgeCount}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -405,7 +522,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             >
               <button
                 type="button"
-                onClick={onLogout}
+                onClick={() => setLogoutConfirmOpen(true)}
                 className="w-full pixel-btn min-h-[38px] px-3 py-1.5 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10.5px] flex items-center justify-center gap-2 cursor-pointer font-bold"
               >
                 <LogOut size={14} />
@@ -454,19 +571,67 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 <div className="sm:hidden">
                   <PWAInstallButton compact />
                 </div>
-                {/* Cloud Sync button */}
+                {/* Real Cloud Sync Status Indicator + Sync History Trigger (Items 2.2 & 3.5) */}
                 {onManualSync && (
-                  <button
-                    type="button"
-                    onClick={onManualSync}
-                    disabled={isSyncing}
-                    className="pixel-btn min-w-[36px] min-h-[36px] px-2 flex items-center justify-center gap-1 bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer font-pixel-ui text-[9.5px]"
-                    title="Sinkronkan Data Cloud"
-                    aria-label="Sinkronkan Data Cloud"
-                  >
-                    <RefreshCw size={15} className={isSyncing ? 'animate-spin' : ''} />
-                    <span className="hidden sm:inline">Sync</span>
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={onManualSync}
+                      disabled={isSyncing}
+                      className={`pixel-btn min-w-[36px] min-h-[36px] px-2.5 flex items-center justify-center gap-1 cursor-pointer font-pixel-ui text-[9.5px] font-bold ${
+                        syncStatus === 'error'
+                          ? 'bg-[#fef2f2] text-[var(--accent-danger)]'
+                          : syncStatus === 'synced'
+                            ? 'bg-emerald-50 text-emerald-800'
+                            : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
+                      }`}
+                      title={
+                        isSyncing
+                          ? 'Sedang menyinkronkan data...'
+                          : lastSyncTimeLabel
+                            ? `Terakhir sinkron: ${lastSyncTimeLabel} (klik untuk sync ulang)`
+                            : 'Sinkronkan Data Cloud'
+                      }
+                      aria-label="Sinkronkan Data Cloud"
+                    >
+                      {isSyncing || syncStatus === 'syncing' ? (
+                        <>
+                          <RefreshCw size={14} className="animate-spin shrink-0" />
+                          <span className="hidden sm:inline">Syncing...</span>
+                        </>
+                      ) : syncStatus === 'error' ? (
+                        <>
+                          <AlertCircle size={14} className="shrink-0" />
+                          <span className="hidden sm:inline">Retry</span>
+                        </>
+                      ) : syncStatus === 'synced' && lastSyncTimeLabel ? (
+                        <>
+                          <Check size={14} className="shrink-0 text-emerald-700" />
+                          <span className="hidden sm:inline tabular-nums">
+                            Synced {lastSyncTimeLabel}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw size={14} className="shrink-0" />
+                          <span className="hidden sm:inline">Sync</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSyncHistoryOpen(true)}
+                      className="pixel-btn min-w-[34px] min-h-[36px] px-1.5 flex items-center justify-center bg-[var(--bg-surface)] text-[var(--text-primary)] cursor-pointer relative"
+                      title="Riwayat Sinkronisasi"
+                      aria-label="Riwayat Sinkronisasi"
+                    >
+                      <History size={15} />
+                      {syncLogs.some((l) => l.status === 'error') && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--accent-danger)] border border-white" />
+                      )}
+                    </button>
+                  </div>
                 )}
 
                 {/* Audio toggle button */}
@@ -487,7 +652,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 {/* Exit/Logout Button (mobile <640px — sm uses outer bar, md+ uses sidebar) */}
                 <button
                   type="button"
-                  onClick={onLogout}
+                  onClick={() => setLogoutConfirmOpen(true)}
                   className="sm:hidden pixel-btn min-w-[36px] min-h-[36px] px-2 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10px] flex items-center justify-center gap-1 cursor-pointer font-bold"
                   title="Keluar / Logout"
                   aria-label="Keluar / Logout"
@@ -513,18 +678,24 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   {quickGmTabs.map((tabId) => {
                     const item = GM_NAV_ITEMS.find((i) => i.id === tabId)!;
                     const active = gmMenu === tabId;
+                    const badgeCount = getBadgeCountForGm(tabId);
                     return (
                       <button
                         key={tabId}
                         type="button"
                         onClick={() => onSelectGmMenu(tabId)}
-                        className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
+                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
                           active
                             ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                         }`}
                       >
                         {getGmMenuIcon(tabId, 19)}
+                        {badgeCount > 0 && (
+                          <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                            {badgeCount}
+                          </span>
+                        )}
                         <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
                           {item.shortLabel}
                         </span>
@@ -534,13 +705,18 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   <button
                     type="button"
                     onClick={onOpenGmDrawer}
-                    className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
+                    className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
                       !quickGmTabs.includes(gmMenu)
                         ? 'bg-[var(--comic-gold)] text-[#09090f] font-bold'
                         : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
                     }`}
                   >
                     <Grid size={19} />
+                    {unreadNoticeCount > 0 && (
+                      <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                        {unreadNoticeCount}
+                      </span>
+                    )}
                     <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap">
                       Menu
                     </span>
@@ -550,18 +726,24 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 <div className="grid grid-cols-5 h-full">
                   {HERO_NAV_ITEMS.map((item) => {
                     const active = heroMenu === item.id;
+                    const badgeCount = getBadgeCountForHero(item.id);
                     return (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => onSelectHeroMenu(item.id)}
-                        className={`flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
+                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 last:border-r-0 border-[var(--border-pixel)]/20 ${
                           active
                             ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                             : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                         }`}
                       >
                         {getHeroMenuIcon(item.id, 19)}
+                        {badgeCount > 0 && (
+                          <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                            {badgeCount}
+                          </span>
+                        )}
                         <span className="font-pixel-ui text-[8.5px] sm:text-[9.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
                           {item.shortLabel}
                         </span>
@@ -573,6 +755,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             </nav>
           </div>
         </div>
+        )}
 
         {/* Handheld Console Footer Trim (Desktop only — hidden in Clean Paper Studio) */}
         {!isMinimalPaper && (
@@ -585,6 +768,102 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           </div>
         )}
       </div>
+
+      {/* Window Close Button Logout Confirmation Modal (Item 1.2) */}
+      <PixelConfirmDialog
+        open={logoutConfirmOpen}
+        title="Konfirmasi Keluar"
+        message="Apakah Anda yakin ingin keluar dari sesi saat ini dan kembali ke Layar Login?"
+        confirmLabel="Ya, Keluar"
+        onConfirm={() => {
+          setLogoutConfirmOpen(false);
+          onLogout();
+        }}
+        onCancel={() => setLogoutConfirmOpen(false)}
+      />
+
+      {/* Sync History Log Modal (Item 3.5) */}
+      <PixelModal
+        open={syncHistoryOpen}
+        title="Riwayat Sinkronisasi"
+        onClose={() => setSyncHistoryOpen(false)}
+      >
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[12.5px] text-[var(--text-secondary)]">
+              Catatan sinkronisasi Cloud &amp; penyimpanan lokal terbaru ({syncLogs.length} log).
+            </p>
+            <div className="flex items-center gap-1.5">
+              {onClearSyncLogs && syncLogs.length > 0 && (
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="neutral"
+                  onClick={onClearSyncLogs}
+                >
+                  Bersihkan
+                </PixelButton>
+              )}
+              {onManualSync && (
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  disabled={isSyncing}
+                  onClick={onManualSync}
+                >
+                  <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
+                  Sync Sekarang
+                </PixelButton>
+              )}
+            </div>
+          </div>
+
+          {syncLogs.length === 0 ? (
+            <div className="pixel-box-inset p-4 text-center text-[13px] text-[var(--text-secondary)]">
+              Belum ada aktivitas sinkronisasi tercatat pada sesi ini.
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto pixel-scroll pr-1">
+              {syncLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="pixel-box-inset p-2.5 flex items-start justify-between gap-2.5 text-[12.5px]"
+                >
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`px-1.5 py-0.5 rounded font-pixel-ui text-[9px] font-bold uppercase ${
+                          log.status === 'error'
+                            ? 'bg-rose-100 text-rose-800 border border-rose-700'
+                            : log.status === 'success'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-700'
+                              : 'bg-amber-100 text-amber-900 border border-amber-700'
+                        }`}
+                      >
+                        {log.status === 'error'
+                          ? 'GAGAL'
+                          : log.status === 'success'
+                            ? 'SUKSES'
+                            : 'INFO'}
+                      </span>
+                      <span className="font-bold text-[var(--text-primary)] truncate">
+                        {log.action}
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-[var(--text-secondary)] break-words">
+                      {log.detail}
+                    </p>
+                  </div>
+                  <span className="font-pixel-ui text-[10px] text-[var(--text-muted)] shrink-0 tabular-nums">
+                    {log.timeLabel}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PixelModal>
     </div>
   );
 };
