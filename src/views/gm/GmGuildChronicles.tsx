@@ -2,12 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { Award, CheckCircle2, Download, Users } from 'lucide-react';
 import { AcademyState } from '../../types/lms';
 import {
-  DungeonOptGroupOptions,
+  TierDungeonFilter,
+  resolveTierDungeonScope,
+} from '../../components/TierDungeonFilter';
+import {
   PixelButton,
   PixelEmptyState,
-  PixelFieldLabel,
   PixelSectionTitle,
-  PixelSelect,
 } from '../../components/PixelUI';
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
@@ -27,12 +28,19 @@ interface GmGuildChroniclesProps {
  * Dungeon filter, and one-click CSV export without heavy charts.
  */
 export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) => {
-  const [selectedDungeonId, setSelectedDungeonId] = useState<string>('all');
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
 
-  const selectedDungeon = useMemo(
-    () => state.dungeons.find((d) => d.id === selectedDungeonId) || null,
-    [state.dungeons, selectedDungeonId]
+  const scope = useMemo(
+    () =>
+      resolveTierDungeonScope(state.dungeons, selectedTier, selectedDungeonIds),
+    [state.dungeons, selectedTier, selectedDungeonIds]
   );
+
+  const selectedSingleDungeon =
+    scope.isFiltered && scope.activeDungeons.length === 1
+      ? scope.activeDungeons[0]
+      : null;
 
   const dungeonMap = useMemo(
     () => new Map(state.dungeons.map((d) => [d.id, d])),
@@ -47,9 +55,9 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
     averageExp,
     heroSummaries,
   } = useMemo(() => {
-    const filteredHeroes = state.heroes.filter(
-      (h) => selectedDungeonId === 'all' || h.dungeonId === selectedDungeonId
-    );
+    const filteredHeroes = scope.isFiltered
+      ? state.heroes.filter((h) => scope.activeDungeonIdSet.has(h.dungeonId))
+      : state.heroes;
     const active = filteredHeroes.filter((h) => h.active);
     const activeIds = new Set(active.map((h) => h.id));
 
@@ -60,9 +68,9 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
 
     const relevantQuests = state.quests.filter(
       (q) =>
-        selectedDungeonId === 'all' ||
+        !scope.isFiltered ||
         q.dungeonId === 'all' ||
-        q.dungeonId === selectedDungeonId
+        scope.activeDungeonIdSet.has(q.dungeonId)
     );
     const possibleCompletions = active.length * relevantQuests.length;
     const pct =
@@ -100,7 +108,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
       averageExp: avgExp,
       heroSummaries: summaries,
     };
-  }, [state.heroes, state.grades, state.quests, selectedDungeonId]);
+  }, [state.heroes, state.grades, state.quests, scope]);
 
   const handleExportCsv = () => {
     const header = [
@@ -123,7 +131,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
           idx + 1,
           row.hero.name,
           row.hero.studentCode,
-          dng ? `${dng.guildCode} - ${dng.name}` : 'Tanpa Kelas',
+          dng ? `${dng.guildCode} - ${dng.name} (${dng.tier})` : 'Tanpa Kelas',
           `Lv.${row.level}`,
           row.title,
           row.exp,
@@ -138,9 +146,13 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
     const csvContent = `\uFEFF${lines.join('\r\n')}`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const slug = selectedDungeon
-      ? selectedDungeon.guildCode.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-      : 'semua-kelas';
+    const slug = selectedSingleDungeon
+      ? selectedSingleDungeon.guildCode.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      : scope.activeSelectedDungeonIds.length > 1
+        ? 'multi-kelas'
+        : selectedTier !== 'all'
+          ? selectedTier.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+          : 'semua-kelas';
     const link = document.createElement('a');
     link.href = url;
     link.download = `guild-chronicles-${slug}.csv`;
@@ -169,21 +181,21 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
         }
       />
 
-      {/* Dungeon Filter */}
+      {/* Tingkat & Dungeon Filter */}
       <ThemedPanelCard className="p-3.5">
-        <div className="max-w-md">
-          <PixelFieldLabel htmlFor="chronicles-dungeon">
-            Filter Dungeon (Kelas)
-          </PixelFieldLabel>
-          <PixelSelect
-            id="chronicles-dungeon"
-            value={selectedDungeonId}
-            onChange={(e) => setSelectedDungeonId(e.target.value)}
-          >
-            <option value="all">Semua Dungeon (Seluruh Kelas)</option>
-            <DungeonOptGroupOptions dungeons={state.dungeons} />
-          </PixelSelect>
-        </div>
+        <TierDungeonFilter
+          idPrefix="chronicles"
+          dungeons={state.dungeons}
+          selectedTier={selectedTier}
+          onChangeTier={setSelectedTier}
+          selectedDungeonIds={selectedDungeonIds}
+          onChangeDungeonIds={setSelectedDungeonIds}
+          allTotalCount={state.heroes.length}
+          getTierCount={(tierDungeons) => {
+            const set = new Set(tierDungeons.map((d) => d.id));
+            return state.heroes.filter((h) => set.has(h.dungeonId)).length;
+          }}
+        />
       </ThemedPanelCard>
 
       {/* 3 Big Parchment Stat Cards (No Heavy Charts) */}
@@ -230,7 +242,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
           </p>
           <p className="text-[15px] text-[var(--text-secondary)]">
             Dari {classHeroes.length} terdaftar
-            {selectedDungeon ? ` (Kap. ${selectedDungeon.capacity})` : ''}
+            {selectedSingleDungeon ? ` (Kap. ${selectedSingleDungeon.capacity})` : ''}
           </p>
         </ThemedPanelCard>
       </div>
@@ -260,7 +272,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
                       {idx + 1}. {item.hero.name}
                     </p>
                     <p className="text-[14px] text-[var(--text-secondary)] truncate">
-                      {dng ? dng.name : 'Tanpa Kelas'} · Lv.{item.level} · {item.selesai} Quest Tuntas
+                      {dng ? `${dng.name} (${dng.tier})` : 'Tanpa Kelas'} · Lv.{item.level} · {item.selesai} Quest Tuntas
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

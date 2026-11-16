@@ -15,16 +15,18 @@ import {
   UserRole,
 } from '../../types/lms';
 import {
-  DungeonOptGroupOptions,
+  TierDungeonFilter,
+  resolveTierDungeonScope,
+} from '../../components/TierDungeonFilter';
+import {
   PixelButton,
   PixelEmptyState,
-  PixelFieldLabel,
   PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
-  PixelSelect,
 } from '../../components/PixelUI';
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
+import { WoodenQuestBoard } from '../../components/WoodenQuestBoard';
 import {
   formatRetroDate,
   getDeadlineUrgency,
@@ -96,8 +98,15 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
 }) => {
   const isGm = role === UserRole.GAME_MASTER;
   const [filter, setFilter] = useState<QuestBoardFilter>('all');
-  const [selectedDungeonId, setSelectedDungeonId] = useState<string>('all');
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [detailQuest, setDetailQuest] = useState<ActiveQuest | null>(null);
+
+  const gmScope = useMemo(
+    () =>
+      resolveTierDungeonScope(state.dungeons, selectedTier, selectedDungeonIds),
+    [state.dungeons, selectedTier, selectedDungeonIds]
+  );
 
   const realmMap = useMemo(
     () => new Map(state.realms.map((r) => [r.id, r])),
@@ -115,12 +124,23 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
 
   const rows = useMemo(() => {
     const baseQuests = isGm
-      ? state.quests.filter(
-          (q) =>
-            selectedDungeonId === 'all' ||
-            q.dungeonId === 'all' ||
-            q.dungeonId === selectedDungeonId
-        )
+      ? state.quests.filter((q) => {
+          if (!gmScope.isFiltered) return true;
+          return gmScope.activeDungeons.some((d) => {
+            if (q.dungeonId === d.id) return true;
+            if (q.dungeonId === 'all') {
+              if (q.scheduledAt === '__per_class__') {
+                return Boolean(q.classSchedules?.[d.id]);
+              }
+              return (
+                !d.realmIds ||
+                d.realmIds.length === 0 ||
+                d.realmIds.includes(q.realmId)
+              );
+            }
+            return false;
+          });
+        })
       : hero
         ? state.quests.filter((q) => {
             if (!isContentVisibleToHero(q, hero.dungeonId)) return false;
@@ -165,7 +185,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         (h) =>
           h.active &&
           (quest.dungeonId === 'all' || h.dungeonId === quest.dungeonId) &&
-          (selectedDungeonId === 'all' || h.dungeonId === selectedDungeonId)
+          (!gmScope.isFiltered || gmScope.activeDungeonIdSet.has(h.dungeonId))
       );
 
       let belum = 0;
@@ -204,7 +224,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
     state.quests,
     state.heroes,
     state.grades,
-    selectedDungeonId,
+    gmScope,
     hero,
     heroRealmIds,
   ]);
@@ -264,19 +284,14 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         </div>
 
         {isGm && (
-          <div className="max-w-sm">
-            <PixelFieldLabel htmlFor="qb-dungeon-filter">
-              Filter Kelas (Dungeon)
-            </PixelFieldLabel>
-            <PixelSelect
-              id="qb-dungeon-filter"
-              value={selectedDungeonId}
-              onChange={(e) => setSelectedDungeonId(e.target.value)}
-            >
-              <option value="all">Semua Dungeon (Kelas)</option>
-              <DungeonOptGroupOptions dungeons={state.dungeons} />
-            </PixelSelect>
-          </div>
+          <TierDungeonFilter
+            idPrefix="qb"
+            dungeons={state.dungeons}
+            selectedTier={selectedTier}
+            onChangeTier={setSelectedTier}
+            selectedDungeonIds={selectedDungeonIds}
+            onChangeDungeonIds={setSelectedDungeonIds}
+          />
         )}
       </ThemedPanelCard>
 
@@ -301,76 +316,71 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
               quest.dungeonId === 'all' ? null : dungeonMap.get(quest.dungeonId);
 
             return (
-              <ThemedPanelCard
+              <WoodenQuestBoard
                 key={quest.id}
-                className="p-3.5 sm:p-4 space-y-2.5 transition-transform duration-150"
+                urgent={urgency.isOverdue}
+                bannerTitle={realm ? `${realm.code} · ${realm.name}` : 'QUEST BOARD'}
+                bannerRight={
+                  !isGm && personalStatus ? (
+                    <span
+                      className={`px-2.5 py-0.5 rounded border font-pixel-ui text-[11px] font-bold inline-flex items-center gap-1 ${STATUS_BADGE_MAP[personalStatus].className}`}
+                    >
+                      {personalStatus === 'selesai' && <CheckCircle2 size={13} />}
+                      {personalStatus === 'dikumpulkan' && <Send size={13} />}
+                      {personalStatus === 'terlambat' && <AlertTriangle size={13} />}
+                      {personalStatus === 'belum' && <Sword size={13} />}
+                      {STATUS_BADGE_MAP[personalStatus].label}
+                    </span>
+                  ) : undefined
+                }
+                stats={[
+                  { label: 'EXP', value: `+${quest.maxExp}`, tone: 'warning' },
+                  {
+                    label: 'TENGGAT',
+                    value: urgency.label,
+                    tone: urgency.isOverdue
+                      ? 'danger'
+                      : urgency.isUrgent
+                        ? 'warning'
+                        : 'default',
+                  },
+                  {
+                    label: 'KELAS',
+                    value: dungeon ? dungeon.guildCode : 'Semua Kelas',
+                  },
+                ]}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5">
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-pixel-ui text-[10.5px] px-2 py-0.5 border border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)] font-bold">
-                        {realm ? `${realm.code} · ${realm.name}` : 'Mapel'}
-                      </span>
-                      <span className="text-[12.5px] font-semibold px-2 py-0.5 border border-[var(--border-pixel)]/40 bg-[var(--bg-inset)] text-[var(--text-secondary)]">
-                        {dungeon ? `${dungeon.guildCode} · ${dungeon.name}` : 'Semua Kelas'}
-                      </span>
-                      <span className="text-[12.5px] font-bold text-[var(--accent-warning)]">
-                        +{quest.maxExp} EXP
-                      </span>
-                    </div>
-
-                    <h3 className="text-[16px] font-bold text-[var(--text-primary)] leading-snug break-words">
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setDetailQuest(quest)}
+                      className="text-left text-[16px] sm:text-[17px] font-bold text-[#261006] hover:text-[#7c2d12] leading-snug break-words cursor-pointer block w-full"
+                    >
                       {quest.title}
-                    </h3>
+                    </button>
 
-                    <div className="flex flex-wrap items-center gap-3 text-[14px] text-[var(--text-secondary)]">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Clock
-                          size={15}
-                          className={
-                            urgency.isOverdue
-                              ? 'text-[var(--accent-danger)]'
-                              : urgency.isUrgent
-                                ? 'text-[var(--accent-warning)]'
-                                : 'text-[var(--accent-primary)]'
-                          }
-                        />
-                        <span
-                          className={
-                            urgency.isOverdue
-                              ? 'font-bold text-[var(--accent-danger)]'
-                              : urgency.isUrgent
-                                ? 'font-bold text-[var(--accent-warning)]'
-                                : 'font-medium'
-                          }
-                        >
-                          {urgency.label}
-                        </span>
-                        <span className="text-[13px] text-[var(--text-muted)]">
-                          ({formatRetroDate(quest.deadline)})
-                        </span>
+                    <div className="flex flex-wrap items-center gap-2 text-[14px] text-[#45230e]">
+                      <span className="inline-flex items-center gap-1.5 font-medium">
+                        <Clock size={15} className="shrink-0 text-[#6d2e17]" />
+                        <span>Batas: {formatRetroDate(quest.deadline)}</span>
                       </span>
+                      {dungeon && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="text-[13.5px] font-semibold">
+                            {dungeon.name}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {/* Right Status / Action */}
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    {!isGm && personalStatus && (
-                      <span
-                        className={`px-3 py-1.5 border-2 font-pixel-ui text-[11px] font-bold inline-flex items-center gap-1.5 ${STATUS_BADGE_MAP[personalStatus].className}`}
-                      >
-                        {personalStatus === 'selesai' && <CheckCircle2 size={14} />}
-                        {personalStatus === 'dikumpulkan' && <Send size={14} />}
-                        {personalStatus === 'terlambat' && <AlertTriangle size={14} />}
-                        {personalStatus === 'belum' && <Sword size={14} />}
-                        {STATUS_BADGE_MAP[personalStatus].label}
-                      </span>
-                    )}
-
+                  <div className="shrink-0">
                     <PixelButton
                       type="button"
                       size="sm"
-                      variant="neutral"
+                      variant="primary"
                       onClick={() => setDetailQuest(quest)}
                     >
                       <Eye size={15} />
@@ -381,22 +391,22 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
 
                 {/* Admin submission breakdown strip */}
                 {isGm && counts && (
-                  <div className="pt-2.5 border-t border-[var(--border-pixel)]/30 flex flex-wrap items-center gap-2 text-[13.5px]">
-                    <span className="px-2.5 py-1 border border-amber-700 bg-amber-50 text-amber-950 font-semibold tabular-nums">
+                  <div className="pt-2.5 border-t border-[#3d1b0c]/20 flex flex-wrap items-center gap-2 text-[13.5px]">
+                    <span className="px-2.5 py-1 rounded border border-[#78350f] bg-[#fef3c7] text-[#451a03] font-bold tabular-nums">
                       Belum: {counts.belum}
                     </span>
-                    <span className="px-2.5 py-1 border border-sky-700 bg-sky-50 text-sky-900 font-semibold tabular-nums">
+                    <span className="px-2.5 py-1 rounded border border-[#075985] bg-[#e0f2fe] text-[#0c4a6e] font-bold tabular-nums">
                       Dikumpulkan: {counts.dikumpulkan + counts.selesai}
                     </span>
-                    <span className="px-2.5 py-1 border border-rose-700 bg-rose-50 text-rose-900 font-semibold tabular-nums">
+                    <span className="px-2.5 py-1 rounded border border-[#9f1239] bg-[#ffe4e6] text-[#881337] font-bold tabular-nums">
                       Terlambat: {counts.terlambat}
                     </span>
-                    <span className="text-[13px] text-[var(--text-muted)] ml-auto tabular-nums">
+                    <span className="text-[13px] font-semibold text-[#563018] ml-auto tabular-nums">
                       Total Hero Target: {counts.total}
                     </span>
                   </div>
                 )}
-              </ThemedPanelCard>
+              </WoodenQuestBoard>
             );
           })}
         </div>

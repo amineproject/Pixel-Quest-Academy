@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BookOpen, CalendarClock, Pencil, Plus, Trash2 } from 'lucide-react';
-import { AcademyState, AncientTome } from '../../types/lms';
+import { AcademyState, AncientTome, Dungeon } from '../../types/lms';
 import { BulkDeleteBar } from '../../components/BulkDeleteBar';
+import {
+  TierDungeonFilter,
+  resolveTierDungeonScope,
+} from '../../components/TierDungeonFilter';
 import {
   PixelButton,
   PixelConfirmDialog,
@@ -19,11 +23,26 @@ import {
   ThemedPanelCard,
   ThemedReadingSurface,
 } from '../../components/ThemePrimitives';
+import { WoodenQuestBoard } from '../../components/WoodenQuestBoard';
 import {
   formatChapterLabel,
   formatRetroDate,
   getScheduleStatusSummary,
 } from '../../utils/exp';
+
+function doesTomeApplyToDungeon(tome: AncientTome, dungeon: Dungeon): boolean {
+  const target = tome.targetDungeonId || 'all';
+  if (target === dungeon.id) return true;
+  if (target !== 'all') return false;
+  if (tome.scheduledAt === '__per_class__') {
+    return Boolean(tome.classSchedules?.[dungeon.id]);
+  }
+  return (
+    !dungeon.realmIds ||
+    dungeon.realmIds.length === 0 ||
+    dungeon.realmIds.includes(tome.realmId)
+  );
+}
 
 interface GmScrollsProps {
   state: AcademyState;
@@ -38,6 +57,8 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
   onDeleteTome,
   onDeleteTomesBatch,
 }) => {
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [realmFilter, setRealmFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [previewTome, setPreviewTome] = useState<AncientTome | null>(null);
@@ -45,6 +66,12 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
   const [deleteTarget, setDeleteTarget] = useState<AncientTome | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteMode, setBulkDeleteMode] = useState<'selected' | 'all' | null>(null);
+
+  const scope = useMemo(
+    () =>
+      resolveTierDungeonScope(state.dungeons, selectedTier, selectedDungeonIds),
+    [state.dungeons, selectedTier, selectedDungeonIds]
+  );
 
   useEffect(() => {
     const valid = new Set(state.tomes.map((t) => t.id));
@@ -62,7 +89,16 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
   const [classSchedules, setClassSchedules] = useState<Record<string, string>>({});
 
   const filtered = state.tomes
-    .filter((t) => realmFilter === 'all' || t.realmId === realmFilter)
+    .filter((t) => {
+      if (realmFilter !== 'all' && t.realmId !== realmFilter) return false;
+      if (
+        scope.isFiltered &&
+        !scope.activeDungeons.some((d) => doesTomeApplyToDungeon(t, d))
+      ) {
+        return false;
+      }
+      return true;
+    })
     .sort((a, b) =>
       String(a.chapter || '').localeCompare(String(b.chapter || ''), 'id', {
         numeric: true,
@@ -90,6 +126,10 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
   };
 
   const openCreate = () => {
+    const defaultDungeon =
+      scope.isFiltered && scope.activeDungeons.length === 1
+        ? scope.activeDungeons[0].id
+        : 'all';
     setEditing(null);
     setRealmId(
       realmFilter !== 'all' ? realmFilter : state.realms[0]?.id || ''
@@ -99,7 +139,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     setSummary('');
     setContent('');
     setLinkUrl('');
-    setTargetDungeonId('all');
+    setTargetDungeonId(defaultDungeon);
     setScheduledAt('');
     setClassSchedules({});
     setModalOpen(true);
@@ -152,18 +192,38 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
         }
       />
 
-      <PixelSelect
-        value={realmFilter}
-        onChange={(e) => setRealmFilter(e.target.value)}
-        aria-label="Filter materi per Realm"
-      >
-        <option value="all">All Realms ({state.tomes.length} Tomes)</option>
-        {state.realms.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.code} — {r.name}
-          </option>
-        ))}
-      </PixelSelect>
+      {/* Filter Bar: Tingkat Kelas, Kelas & Mapel */}
+      <ThemedPanelCard className="p-3.5">
+        <TierDungeonFilter
+          idPrefix="scrolls"
+          dungeons={state.dungeons}
+          selectedTier={selectedTier}
+          onChangeTier={setSelectedTier}
+          selectedDungeonIds={selectedDungeonIds}
+          onChangeDungeonIds={setSelectedDungeonIds}
+          highlightedRealmId={realmFilter !== 'all' ? realmFilter : undefined}
+          extraRightSlot={
+            <div>
+              <PixelFieldLabel htmlFor="scrolls-realm-filter">
+                Filter Mapel (Realm)
+              </PixelFieldLabel>
+              <PixelSelect
+                id="scrolls-realm-filter"
+                value={realmFilter}
+                onChange={(e) => setRealmFilter(e.target.value)}
+                aria-label="Filter materi per Realm"
+              >
+                <option value="all">Semua Mapel ({state.tomes.length} Tomes)</option>
+                {state.realms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.code} — {r.name}
+                  </option>
+                ))}
+              </PixelSelect>
+            </div>
+          }
+        />
+      </ThemedPanelCard>
 
       <BulkDeleteBar
         totalCount={state.tomes.length}
@@ -193,87 +253,80 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
             const sched = getScheduleStatusSummary(tome, state.dungeons);
             const isSelected = selectedIds.includes(tome.id);
             return (
-              <ThemedPanelCard
+              <WoodenQuestBoard
                 key={tome.id}
-                className={`space-y-2.5 ${isSelected ? 'ring-2 ring-[var(--accent-danger)]' : ''}`}
+                selected={isSelected}
+                bannerTitle={`${formatChapterLabel(tome.chapter)} · ${realm?.code || 'MODUL'}`}
+                bannerLeft={
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelect(tome.id)}
+                    aria-label={`Pilih materi ${tome.title}`}
+                    className="w-4 h-4 accent-[#f6c445] shrink-0 cursor-pointer"
+                  />
+                }
+                stats={[
+                  { label: 'MAPEL', value: realm?.name || 'General' },
+                  { label: 'RILIS', value: formatRetroDate(tome.publishedDate) },
+                  {
+                    label: 'STATUS',
+                    value: sched.isScheduledFuture ? 'Terjadwal' : 'Tayang',
+                    tone: sched.isScheduledFuture ? 'warning' : 'success',
+                  },
+                ]}
               >
-                <div className="flex items-start justify-between gap-2 min-w-0">
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelect(tome.id)}
-                      aria-label={`Pilih materi ${tome.title}`}
-                      className="w-4 h-4 mt-1 accent-[var(--accent-danger)] shrink-0 cursor-pointer"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
-                        {formatChapterLabel(tome.chapter)} · {realm?.name || 'General'}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewTome(tome)}
-                        className="text-left text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
-                      >
-                        {tome.title}
-                      </button>
-                    </div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewTome(tome)}
+                  className="text-left text-[16px] sm:text-[17px] font-bold text-[#261006] hover:text-[#7c2d12] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
+                >
+                  {tome.title}
+                </button>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                {tome.summary && (
+                  <p className="text-[14.5px] sm:text-[15px] text-[#45230e] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+                    {tome.summary}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#563018]">
+                  <CalendarClock size={14} className="shrink-0" />
+                  <span className="truncate">{sched.label}</span>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#3d1b0c]/20">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => openEdit(tome)}
                       aria-label={`Edit ${tome.title}`}
-                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                      className="pixel-btn min-w-[40px] min-h-[40px] px-2.5 flex items-center justify-center gap-1 bg-[#fff7eb] text-[#261006] text-[12.5px] font-bold cursor-pointer"
                     >
-                      <Pencil size={15} />
+                      <Pencil size={14} />
+                      <span>Edit</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(tome)}
                       aria-label={`Delete ${tome.title}`}
-                      className="pixel-btn min-w-[38px] min-h-[38px] flex items-center justify-center bg-[var(--accent-danger)] text-[var(--text-on-danger)] cursor-pointer"
+                      className="pixel-btn min-w-[40px] min-h-[40px] flex items-center justify-center bg-[var(--accent-danger)] text-[var(--text-on-danger)] cursor-pointer"
                     >
                       <Trash2 size={15} />
                     </button>
                   </div>
-                </div>
 
-                {tome.summary && (
-                  <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
-                    {tome.summary}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 border font-semibold ${
-                      sched.isScheduledFuture
-                        ? 'bg-amber-100 text-amber-900 border-amber-700'
-                        : 'bg-[var(--bg-inset)] text-[var(--text-secondary)] border-[var(--border-pixel)]/50'
-                    }`}
-                  >
-                    <CalendarClock size={11} />
-                    {sched.label}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-pixel)]/40">
-                  <span className="text-[12px] text-[var(--text-muted)] tabular-nums">
-                    Published {formatRetroDate(tome.publishedDate)}
-                  </span>
                   <PixelButton
                     type="button"
                     size="sm"
                     variant="primary"
                     onClick={() => setPreviewTome(tome)}
                   >
-                    <BookOpen size={14} />
+                    <BookOpen size={15} />
                     Baca Materi
                   </PixelButton>
                 </div>
-              </ThemedPanelCard>
+              </WoodenQuestBoard>
             );
           })}
         </div>

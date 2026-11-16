@@ -14,6 +14,7 @@ import {
 import { AcademyState, AvatarClass, HeroStudent } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
 import { BulkDeleteBar } from '../../components/BulkDeleteBar';
+import { MultiDungeonFilter } from '../../components/MultiDungeonFilter';
 import {
   DungeonOptGroupOptions,
   PixelButton,
@@ -31,6 +32,7 @@ import {
   getHeroEffectiveRealmIds,
   getHeroLevelProgress,
   getHeroTotalExp,
+  groupDungeonsByTier,
   sortDungeonsAlphabetically,
 } from '../../utils/exp';
 import {
@@ -67,7 +69,8 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   onDeleteHeroesBatch,
 }) => {
   const [search, setSearch] = useState('');
-  const [dungeonFilter, setDungeonFilter] = useState('all');
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [realmFilter, setRealmFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHero, setEditingHero] = useState<HeroStudent | null>(null);
@@ -81,7 +84,21 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
     setSelectedIds((prev) => prev.filter((id) => valid.has(id)));
   }, [state.heroes]);
 
-  const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+  const sortedDungeons = useMemo(
+    () => sortDungeonsAlphabetically(state.dungeons),
+    [state.dungeons]
+  );
+
+  const tierGroups = useMemo(
+    () => groupDungeonsByTier(sortedDungeons),
+    [sortedDungeons]
+  );
+
+  const dungeonsInSelectedTier = useMemo(() => {
+    if (selectedTier === 'all') return sortedDungeons;
+    const match = tierGroups.find((g) => g.tier === selectedTier);
+    return match ? match.items : sortedDungeons;
+  }, [selectedTier, tierGroups, sortedDungeons]);
 
   // Bulk Excel / CSV Import state
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -177,10 +194,20 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
   const dungeonOrder = new Map(sortedDungeons.map((d, idx) => [d.id, idx]));
 
+  const allowedTierDungeonIds = new Set(dungeonsInSelectedTier.map((d) => d.id));
+  const activeSelectedDungeonIds = selectedDungeonIds.filter((id) =>
+    allowedTierDungeonIds.has(id)
+  );
+  const activeSelectedDungeonSet = new Set(activeSelectedDungeonIds);
+
   const filtered = state.heroes
     .filter((h) => {
       const matchDungeon =
-        dungeonFilter === 'all' || h.dungeonId === dungeonFilter;
+        activeSelectedDungeonSet.size > 0
+          ? activeSelectedDungeonSet.has(h.dungeonId)
+          : selectedTier === 'all'
+            ? true
+            : allowedTierDungeonIds.has(h.dungeonId);
       const heroRealms = getEffectiveRealmsForHero(h);
       const matchRealm =
         realmFilter === 'all'
@@ -381,34 +408,99 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
           aria-label="Cari siswa"
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <PixelSelect
-            value={dungeonFilter}
-            onChange={(e) => setDungeonFilter(e.target.value)}
-            aria-label="Filter berdasarkan Kelas"
-          >
-            <option value="all">Semua Kelas ({state.heroes.length} Heroes)</option>
-            <DungeonOptGroupOptions dungeons={sortedDungeons} />
-          </PixelSelect>
+        {tierGroups.length > 0 && (
+          <div className="space-y-1.5">
+            <PixelFieldLabel>Filter Tingkat Kelas</PixelFieldLabel>
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="Filter siswa berdasarkan tingkat kelas"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedTier('all');
+                  setSelectedDungeonIds([]);
+                }}
+                className={`pixel-btn min-h-[36px] px-3 py-1 text-[12.5px] font-semibold cursor-pointer ${
+                  selectedTier === 'all'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
+                }`}
+              >
+                Semua Tingkat ({state.heroes.length})
+              </button>
+              {tierGroups.map((group) => {
+                const tierDungeonSet = new Set(group.items.map((d) => d.id));
+                const heroCountInTier = state.heroes.filter((h) =>
+                  tierDungeonSet.has(h.dungeonId)
+                ).length;
+                const active = selectedTier === group.tier;
+                return (
+                  <button
+                    key={group.tier}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTier(group.tier);
+                      setSelectedDungeonIds([]);
+                    }}
+                    className={`pixel-btn min-h-[36px] px-3 py-1 text-[12.5px] font-semibold cursor-pointer ${
+                      active
+                        ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {group.tier} ({heroCountInTier})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-          <PixelSelect
-            value={realmFilter}
-            onChange={(e) => setRealmFilter(e.target.value)}
-            aria-label="Filter berdasarkan Mapel"
-          >
-            <option value="all">Semua Mapel / Realms</option>
-            {state.realms.map((r) => {
-              const count = state.heroes.filter((h) =>
-                getEffectiveRealmsForHero(h).includes(r.id)
-              ).length;
-              return (
-                <option key={r.id} value={r.id}>
-                  {r.name} ({count} siswa)
-                </option>
-              );
-            })}
-            <option value="unassigned">Belum Pilih Mapel</option>
-          </PixelSelect>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <PixelFieldLabel htmlFor="hero-dungeon-filter">
+              Filter Kelas (Dungeon)
+            </PixelFieldLabel>
+            <MultiDungeonFilter
+              id="hero-dungeon-filter"
+              dungeons={dungeonsInSelectedTier}
+              selectedIds={selectedDungeonIds}
+              onChange={setSelectedDungeonIds}
+              allLabel={
+                selectedTier === 'all'
+                  ? 'Semua Kelas'
+                  : `Semua ${selectedTier}`
+              }
+              ariaLabel="Filter siswa berdasarkan Kelas"
+            />
+          </div>
+
+          <div>
+            <PixelFieldLabel htmlFor="hero-realm-filter">
+              Filter Mapel (Realm)
+            </PixelFieldLabel>
+            <PixelSelect
+              id="hero-realm-filter"
+              value={realmFilter}
+              onChange={(e) => setRealmFilter(e.target.value)}
+              aria-label="Filter berdasarkan Mapel"
+            >
+              <option value="all">Semua Mapel / Realms</option>
+              {state.realms.map((r) => {
+                const count = state.heroes.filter((h) =>
+                  getEffectiveRealmsForHero(h).includes(r.id)
+                ).length;
+                return (
+                  <option key={r.id} value={r.id}>
+                    {r.name} ({count} siswa)
+                  </option>
+                );
+              })}
+              <option value="unassigned">Belum Pilih Mapel</option>
+            </PixelSelect>
+          </div>
         </div>
 
         {/* Quick Mapel Filter Chips */}
@@ -517,7 +609,10 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                         )}
                       </p>
                       <p className="text-[12px] font-semibold text-[var(--accent-warning)] tabular-nums truncate">
-                        LV.{lvl.level} ({exp} EXP) · {dungeon ? `${dungeon.name} (${dungeon.guildCode})` : 'Belum ada kelas'}
+                        LV.{lvl.level} ({exp} EXP) ·{' '}
+                        {dungeon
+                          ? `${dungeon.name} (${dungeon.guildCode}${dungeon.tier ? ` · ${dungeon.tier}` : ''})`
+                          : 'Belum ada kelas'}
                       </p>
                     </div>
                   </div>

@@ -1,9 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertCircle,
-  AlertTriangle,
   BookOpen,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Download,
@@ -12,9 +9,12 @@ import {
   GraduationCap,
   Save,
   Upload,
-  XCircle,
 } from 'lucide-react';
 import { AcademyState, Dungeon, ExpGrade, GradeStatus } from '../../types/lms';
+import {
+  TierDungeonFilter,
+  resolveTierDungeonScope,
+} from '../../components/TierDungeonFilter';
 import { PixelAvatar } from '../../components/PixelArt';
 import {
   DungeonOptGroupOptions,
@@ -31,8 +31,6 @@ import {
   calculateExpEarned,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
-  getRankFromScore,
-  sortDungeonsAlphabetically,
 } from '../../utils/exp';
 import {
   buildClassRecapData,
@@ -50,35 +48,30 @@ interface GmExpLootProps {
   onSaveGradesBatch?: (grades: ExpGrade[]) => void | Promise<void>;
 }
 
-const STATUS_OPTIONS: {
+const STATUS_SELECT_OPTIONS: {
   id: GradeStatus;
   label: string;
-  activeClass: string;
-  icon: React.ReactNode;
+  selectClass: string;
 }[] = [
   {
     id: 'tuntas',
     label: 'Tuntas',
-    activeClass: 'bg-emerald-600 text-white border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
-    icon: <CheckCircle2 size={14} />,
+    selectClass: 'bg-emerald-600 text-white border-[var(--border-pixel)]',
   },
   {
     id: 'proses',
     label: 'Proses Dinilai',
-    activeClass: 'bg-teal-600 text-white border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
-    icon: <AlertCircle size={14} />,
+    selectClass: 'bg-teal-600 text-white border-[var(--border-pixel)]',
   },
   {
     id: 'remidial',
     label: 'Remidial',
-    activeClass: 'bg-amber-400 text-[#18181b] border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
-    icon: <AlertTriangle size={14} />,
+    selectClass: 'bg-amber-400 text-[#18181b] border-[var(--border-pixel)]',
   },
   {
     id: 'belum',
-    label: 'Belum Dikerjakan',
-    activeClass: 'bg-rose-600 text-white border-[var(--border-pixel)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]',
-    icon: <XCircle size={14} />,
+    label: 'Belum',
+    selectClass: 'bg-rose-600 text-white border-[var(--border-pixel)]',
   },
 ];
 
@@ -90,26 +83,40 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const [selectedRealmId, setSelectedRealmId] = useState(
     state.realms[0]?.id || ''
   );
-  const [selectedDungeonId, setSelectedDungeonId] = useState('all');
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [collapsedClasses, setCollapsedClasses] = useState<Record<string, boolean>>({});
+  const [expandedPortraitHeroId, setExpandedPortraitHeroId] = useState<string | null>(null);
 
-  const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
+  const scope = useMemo(
+    () =>
+      resolveTierDungeonScope(state.dungeons, selectedTier, selectedDungeonIds),
+    [state.dungeons, selectedTier, selectedDungeonIds]
+  );
+  const sortedDungeons = scope.sortedDungeons;
 
-  const doesDungeonTeachRealm = (d: Dungeon, rId: string) =>
-    !d.realmIds || d.realmIds.length === 0 || d.realmIds.includes(rId);
-
-  const questsForRealm = state.quests.filter((q) => {
-    if (q.realmId !== selectedRealmId) return false;
-    if (selectedDungeonId === 'all') return true;
-    if (q.dungeonId === selectedDungeonId) return true;
-    if (q.dungeonId === 'all') {
-      if (q.scheduledAt === '__per_class__') {
-        return Boolean(q.classSchedules?.[selectedDungeonId]);
-      }
-      return true;
-    }
-    return false;
-  });
+  const questsForRealm = useMemo(
+    () =>
+      state.quests.filter((q) => {
+        if (q.realmId !== selectedRealmId) return false;
+        if (!scope.isFiltered) return true;
+        return scope.activeDungeons.some((d) => {
+          if (q.dungeonId === d.id) return true;
+          if (q.dungeonId === 'all') {
+            if (q.scheduledAt === '__per_class__') {
+              return Boolean(q.classSchedules?.[d.id]);
+            }
+            return (
+              !d.realmIds ||
+              d.realmIds.length === 0 ||
+              d.realmIds.includes(q.realmId)
+            );
+          }
+          return false;
+        });
+      }),
+    [state.quests, selectedRealmId, scope]
+  );
 
   const [selectedQuestId, setSelectedQuestId] = useState(
     questsForRealm[0]?.id || ''
@@ -129,37 +136,21 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const excelInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    const nextQuests = state.quests.filter((q) => {
-      if (q.realmId !== selectedRealmId) return false;
-      if (selectedDungeonId === 'all') return true;
-      if (q.dungeonId === selectedDungeonId) return true;
-      if (q.dungeonId === 'all') {
-        if (q.scheduledAt === '__per_class__') {
-          return Boolean(q.classSchedules?.[selectedDungeonId]);
-        }
-        return true;
-      }
-      return false;
-    });
-    if (!nextQuests.some((q) => q.id === selectedQuestId)) {
-      setSelectedQuestId(nextQuests[0]?.id || '');
+    if (!questsForRealm.some((q) => q.id === selectedQuestId)) {
+      setSelectedQuestId(questsForRealm[0]?.id || '');
     }
-  }, [selectedRealmId, selectedDungeonId, selectedQuestId, state.quests]);
+  }, [questsForRealm, selectedQuestId]);
 
   const activeQuest = state.quests.find((q) => q.id === selectedQuestId);
   const activeRealm = state.realms.find((r) => r.id === selectedRealmId);
-  const teachingDungeons = sortedDungeons.filter((d) =>
-    doesDungeonTeachRealm(d, selectedRealmId)
-  );
-  const otherDungeons = sortedDungeons.filter(
-    (d) => !doesDungeonTeachRealm(d, selectedRealmId)
-  );
 
   const openRecapModal = () => {
     const defaultDungeon =
-      selectedDungeonId !== 'all'
-        ? selectedDungeonId
-        : sortedDungeons[0]?.id || 'all';
+      scope.isFiltered && scope.activeDungeons.length === 1
+        ? scope.activeDungeons[0].id
+        : scope.isFiltered && scope.activeDungeons.length > 0
+          ? scope.activeDungeons[0].id
+          : sortedDungeons[0]?.id || 'all';
     setRecapDungeonId(defaultDungeon);
     setRecapRealmId('all');
     setDownloadNotice(null);
@@ -208,13 +199,15 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const eligibleHeroes = state.heroes
     .filter((h) => {
       if (!h.active) return false;
-      if (selectedDungeonId !== 'all' && h.dungeonId !== selectedDungeonId) {
+      if (
+        scope.isFiltered &&
+        !scope.activeDungeonIdSet.has(h.dungeonId)
+      ) {
         return false;
       }
       if (
         activeQuest &&
         activeQuest.dungeonId !== 'all' &&
-        selectedDungeonId === 'all' &&
         h.dungeonId !== activeQuest.dungeonId
       ) {
         return false;
@@ -328,11 +321,28 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     return groups;
   })();
 
+  const handleStatusChange = (heroId: string, nextStatus: GradeStatus) => {
+    setDraftStatuses((prev) => ({ ...prev, [heroId]: nextStatus }));
+    if (nextStatus === 'belum') {
+      setDraftScores((prev) => ({ ...prev, [heroId]: 0 }));
+    } else if ((draftScores[heroId] ?? 0) === 0 && nextStatus === 'tuntas') {
+      setDraftScores((prev) => ({ ...prev, [heroId]: 80 }));
+    }
+  };
+
+  const handleScoreChange = (heroId: string, rawValue: string) => {
+    const nextScore = Math.max(0, Math.min(100, Number(rawValue) || 0));
+    setDraftScores((prev) => ({ ...prev, [heroId]: nextScore }));
+    setDraftStatuses((prev) => ({
+      ...prev,
+      [heroId]: nextScore >= 70 ? 'tuntas' : 'remidial',
+    }));
+  };
+
   const renderHeroGradeCard = (hero: (typeof eligibleHeroes)[number]) => {
     if (!activeQuest) return null;
     const status = draftStatuses[hero.id] ?? 'tuntas';
     const score = status === 'belum' ? 0 : (draftScores[hero.id] ?? 80);
-    const rank = getRankFromScore(score);
     const expEarned =
       status === 'belum'
         ? 0
@@ -340,139 +350,172 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     const existingGrade = state.grades.find(
       (g) => g.heroId === hero.id && g.questId === activeQuest.id
     );
-    const savedStatus = getEffectiveGradeStatus(existingGrade);
+    const activeStatusMeta =
+      STATUS_SELECT_OPTIONS.find((opt) => opt.id === status) ||
+      STATUS_SELECT_OPTIONS[0];
+    const isPortraitExpanded = expandedPortraitHeroId === hero.id;
 
     return (
       <div
         key={hero.id}
-        className="pixel-box-inset p-3 space-y-2.5 bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60"
+        className="pixel-box-inset bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60"
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <PixelAvatar avatar={hero.avatar} size={40} className="shrink-0" />
+        {/* PORTRAIT MODE: strictly Avatar, Status Nilai, and Nilai (compact single row) */}
+        <div className="hidden portrait:block px-2.5 py-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={() =>
+                setExpandedPortraitHeroId(isPortraitExpanded ? null : hero.id)
+              }
+              title={`${hero.name} (NIS ${hero.studentCode})`}
+              aria-label={hero.name}
+              aria-expanded={isPortraitExpanded}
+              className="shrink-0 cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-[var(--comic-gold)]"
+            >
+              <PixelAvatar avatar={hero.avatar} size={36} />
+            </button>
+
+            <select
+              aria-label={`Status nilai ${hero.name}`}
+              value={status}
+              onChange={(e) =>
+                handleStatusChange(hero.id, e.target.value as GradeStatus)
+              }
+              className={`min-w-0 flex-1 min-h-[42px] px-2.5 py-1.5 border-2 rounded-[var(--inset-radius)] text-[13px] font-bold cursor-pointer outline-none ${activeStatusMeta.selectClass}`}
+            >
+              {STATUS_SELECT_OPTIONS.map((opt) => (
+                <option
+                  key={opt.id}
+                  value={opt.id}
+                  className="bg-[var(--bg-surface)] text-[var(--text-primary)]"
+                >
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            <PixelInput
+              type="number"
+              min={0}
+              max={100}
+              aria-label={`Nilai ${hero.name}`}
+              value={score}
+              onChange={(e) => handleScoreChange(hero.id, e.target.value)}
+              className="!w-[70px] !min-h-[42px] shrink-0 text-center font-bold tabular-nums"
+            />
+          </div>
+
+          {isPortraitExpanded && (
+            <div className="mt-2 pt-2 border-t border-[var(--border-pixel)]/30 space-y-2">
+              <div className="flex items-center justify-between gap-2 text-[12px]">
+                <span className="font-bold text-[var(--text-primary)] truncate">
+                  {hero.name} (NIS {hero.studentCode})
+                </span>
+                <span className="font-bold text-[var(--accent-success)] shrink-0 tabular-nums">
+                  +{expEarned} EXP
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <PixelInput
+                  placeholder="Catatan guru (opsional)..."
+                  value={draftNotes[hero.id] ?? ''}
+                  onChange={(e) =>
+                    setDraftNotes((prev) => ({
+                      ...prev,
+                      [hero.id]: e.target.value,
+                    }))
+                  }
+                  className="flex-1 !min-h-[38px] text-[13px]"
+                />
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="success"
+                  onClick={() => handleSaveHeroGrade(hero.id)}
+                >
+                  <Save size={14} />
+                  Save
+                </PixelButton>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* LANDSCAPE / DESKTOP MODE: clean single compact horizontal row */}
+        <div className="portrait:hidden p-2.5 flex flex-wrap lg:flex-nowrap items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 basis-[210px]">
+            <PixelAvatar avatar={hero.avatar} size={34} className="shrink-0" />
             <div className="min-w-0 flex-1">
-              <h4 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
-                {hero.name}
-              </h4>
-              <p className="text-[12px] text-[var(--text-secondary)] break-words">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h4 className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
+                  {hero.name}
+                </h4>
+                <span className="text-[11px] font-bold text-[var(--accent-success)] shrink-0 tabular-nums">
+                  +{expEarned} EXP
+                </span>
+              </div>
+              <p className="text-[11.5px] text-[var(--text-secondary)] truncate tabular-nums">
                 NIS {hero.studentCode} ·{' '}
-                {existingGrade
-                  ? `Tersimpan: ${existingGrade.score}/100 · ${savedStatus.toUpperCase()}`
-                  : 'Belum dinilai'}
+                {existingGrade ? `Tersimpan ${existingGrade.score}` : 'Belum dinilai'}
               </p>
             </div>
           </div>
-          <div className="text-right shrink-0 tabular-nums">
-            <p className="font-pixel-display text-[12px] text-[var(--accent-warning)]">
-              RANK {rank}
-            </p>
-            <p className="text-[12.5px] font-bold text-[var(--accent-success)]">
-              +{expEarned} EXP
-            </p>
-          </div>
-        </div>
 
-        {/* Status Symbol Selector for Student View */}
-        <div className="space-y-1.5">
-          <span className="font-pixel-ui text-[9px] text-[var(--text-muted)] block uppercase">
-            Status di Akun Siswa (Simbol):
-          </span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-            {STATUS_OPTIONS.map((opt) => {
-              const isSelected = status === opt.id;
-              return (
-                <button
+          <div className="flex items-center gap-2 shrink-0">
+            <select
+              aria-label={`Status nilai ${hero.name}`}
+              value={status}
+              onChange={(e) =>
+                handleStatusChange(hero.id, e.target.value as GradeStatus)
+              }
+              className={`min-h-[40px] w-[142px] px-2.5 py-1 border-2 rounded-[var(--inset-radius)] text-[12.5px] font-bold cursor-pointer outline-none ${activeStatusMeta.selectClass}`}
+            >
+              {STATUS_SELECT_OPTIONS.map((opt) => (
+                <option
                   key={opt.id}
-                  type="button"
-                  onClick={() => {
-                    setDraftStatuses({ ...draftStatuses, [hero.id]: opt.id });
-                    if (opt.id === 'belum') {
-                      setDraftScores({ ...draftScores, [hero.id]: 0 });
-                    } else if ((draftScores[hero.id] ?? 0) === 0 && opt.id === 'tuntas') {
-                      setDraftScores({ ...draftScores, [hero.id]: 80 });
-                    }
-                  }}
-                  className={`min-h-[36px] px-2 py-1 border-2 flex items-center justify-center gap-1.5 text-[11px] cursor-pointer transition-all ${
-                    isSelected
-                      ? opt.activeClass
-                      : 'border-[var(--border-pixel)]/50 bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  }`}
+                  value={opt.id}
+                  className="bg-[var(--bg-surface)] text-[var(--text-primary)]"
                 >
-                  {opt.icon}
-                  <span className="truncate">{opt.label}</span>
-                </button>
-              );
-            })}
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
+            <PixelInput
+              type="number"
+              min={0}
+              max={100}
+              aria-label={`Input nilai angka ${hero.name}`}
+              value={score}
+              onChange={(e) => handleScoreChange(hero.id, e.target.value)}
+              className="!w-[68px] !min-h-[40px] shrink-0 text-center font-bold tabular-nums"
+            />
           </div>
-        </div>
 
-        {/* Score slider & numeric input */}
-        <div className="flex items-center gap-2.5">
-          <input
-            type="range"
-            min={0}
-            max={100}
-            aria-label={`Skor ${hero.name}`}
-            value={score}
-            onChange={(e) => {
-              const nextScore = Number(e.target.value);
-              setDraftScores({
-                ...draftScores,
-                [hero.id]: nextScore,
-              });
-              setDraftStatuses({
-                ...draftStatuses,
-                [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
-              });
-            }}
-            className="min-w-0 flex-1 accent-[var(--accent-warning)] min-h-[36px] cursor-pointer"
-          />
-          <PixelInput
-            type="number"
-            min={0}
-            max={100}
-            aria-label={`Input nilai angka ${hero.name}`}
-            value={score}
-            onChange={(e) => {
-              const nextScore = Math.max(
-                0,
-                Math.min(100, Number(e.target.value) || 0)
-              );
-              setDraftScores({
-                ...draftScores,
-                [hero.id]: nextScore,
-              });
-              setDraftStatuses({
-                ...draftStatuses,
-                [hero.id]: nextScore >= 70 ? 'tuntas' : 'remidial',
-              });
-            }}
-            className="!w-16 sm:!w-20 shrink-0 text-center tabular-nums"
-          />
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <PixelInput
-            placeholder="Catatan Loot / feedback guru..."
-            value={draftNotes[hero.id] ?? ''}
-            onChange={(e) =>
-              setDraftNotes({
-                ...draftNotes,
-                [hero.id]: e.target.value,
-              })
-            }
-            className="flex-1"
-          />
-          <PixelButton
-            type="button"
-            size="sm"
-            variant="success"
-            onClick={() => handleSaveHeroGrade(hero.id)}
-            className="shrink-0"
-          >
-            <Save size={14} />
-            Save
-          </PixelButton>
+          <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+            <PixelInput
+              placeholder="Catatan guru..."
+              value={draftNotes[hero.id] ?? ''}
+              onChange={(e) =>
+                setDraftNotes((prev) => ({
+                  ...prev,
+                  [hero.id]: e.target.value,
+                }))
+              }
+              className="flex-1 !min-h-[40px] text-[13px]"
+            />
+            <PixelButton
+              type="button"
+              size="sm"
+              variant="success"
+              onClick={() => handleSaveHeroGrade(hero.id)}
+              className="shrink-0 !min-h-[40px]"
+            >
+              <Save size={14} />
+              Save
+            </PixelButton>
+          </div>
         </div>
       </div>
     );
@@ -508,56 +551,36 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       />
 
       <ThemedPanelCard className="p-3.5 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div>
-            <PixelFieldLabel htmlFor="grd-realm">1. Pilih Mapel (Realm)</PixelFieldLabel>
-            <PixelSelect
-              id="grd-realm"
-              value={selectedRealmId}
-              onChange={(e) => setSelectedRealmId(e.target.value)}
-            >
-              {state.realms.map((r) => {
-                const qCount = state.quests.filter((q) => q.realmId === r.id).length;
-                return (
-                  <option key={r.id} value={r.id}>
-                    {r.code} — {r.name} ({qCount} Tugas)
-                  </option>
-                );
-              })}
-            </PixelSelect>
-          </div>
-
-          <div>
-            <PixelFieldLabel htmlFor="grd-dng">2. Filter Kelas / Guild</PixelFieldLabel>
-            <PixelSelect
-              id="grd-dng"
-              value={selectedDungeonId}
-              onChange={(e) => setSelectedDungeonId(e.target.value)}
-            >
-              <option value="all">
-                Semua Kelas Pengampu ({teachingDungeons.length} Kelas)
-              </option>
-              {teachingDungeons.length > 0 && (
-                <optgroup label={`Kelas Pengajar ${activeRealm?.code || 'Mapel'}`}>
-                  {teachingDungeons.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.guildCode} — {d.name}
+        <TierDungeonFilter
+          idPrefix="grd"
+          dungeons={state.dungeons}
+          selectedTier={selectedTier}
+          onChangeTier={setSelectedTier}
+          selectedDungeonIds={selectedDungeonIds}
+          onChangeDungeonIds={setSelectedDungeonIds}
+          dungeonLabel="2. Filter Kelas / Guild"
+          allClassesLabel="Semua Kelas Pengampu"
+          highlightedRealmId={selectedRealmId}
+          extraLeftSlot={
+            <div>
+              <PixelFieldLabel htmlFor="grd-realm">1. Pilih Mapel (Realm)</PixelFieldLabel>
+              <PixelSelect
+                id="grd-realm"
+                value={selectedRealmId}
+                onChange={(e) => setSelectedRealmId(e.target.value)}
+              >
+                {state.realms.map((r) => {
+                  const qCount = state.quests.filter((q) => q.realmId === r.id).length;
+                  return (
+                    <option key={r.id} value={r.id}>
+                      {r.code} — {r.name} ({qCount} Tugas)
                     </option>
-                  ))}
-                </optgroup>
-              )}
-              {otherDungeons.length > 0 && (
-                <optgroup label="Kelas Lainnya">
-                  {otherDungeons.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.guildCode} — {d.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </PixelSelect>
-          </div>
-        </div>
+                  );
+                })}
+              </PixelSelect>
+            </div>
+          }
+        />
 
         <div>
           <PixelFieldLabel htmlFor="grd-quest">
@@ -857,7 +880,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               variant="neutral"
               onClick={() => {
                 const targetDng =
-                  selectedDungeonId !== 'all' ? selectedDungeonId : 'all';
+                  selectedDungeonIds.length === 1 ? selectedDungeonIds[0] : 'all';
                 const targetRlm = selectedRealmId || 'all';
                 const recap = buildClassRecapData(state, targetDng, targetRlm);
                 downloadAssessmentExcel(state, recap);
