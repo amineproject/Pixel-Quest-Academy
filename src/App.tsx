@@ -546,7 +546,8 @@ export default function App() {
           window.location.hash = `#/hero/${heroMenu}`;
           return;
         }
-        const slug = hash.replace('#/gm/', '').split('/')[0] as GmMenuId;
+        const rawSlug = hash.replace('#/gm/', '').split('/')[0];
+        const slug = (rawSlug === 'quest_list' ? 'active_quests' : rawSlug) as GmMenuId;
         if (GM_NAV_ITEMS.some((i) => i.id === slug)) {
           setGmMenu(slug);
         }
@@ -1966,12 +1967,6 @@ export default function App() {
                   onSaveQuest={handleSaveQuest}
                   onDeleteQuest={handleDeleteQuest}
                   onDeleteQuestsBatch={handleDeleteQuestsBatch}
-                />
-              )}
-              {gmMenu === 'quest_list' && (
-                <QuestBoardView
-                  state={eraFilteredState}
-                  role={UserRole.GAME_MASTER}
                   onNavigateGm={handleSelectGmMenu}
                 />
               )}

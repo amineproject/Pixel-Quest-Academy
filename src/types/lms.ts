@@ -11,7 +11,6 @@ export type GmMenuId =
   | 'realms'
   | 'scrolls'
   | 'active_quests'
-  | 'quest_list'
   | 'exp_loot'
   | 'guild_chronicles'
   | 'hall_of_fame'

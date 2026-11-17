@@ -11,6 +11,8 @@ import {
   AcademyState,
   ActiveQuest,
   Dungeon,
+  GmMenuId,
+  HeroStudent,
   QuestCategory,
   QuestDifficulty,
   Realm,
@@ -25,7 +27,6 @@ import {
   resolveTierDungeonScope,
 } from '../../components/TierDungeonFilter';
 import {
-  DungeonOptGroupOptions,
   PixelButton,
   PixelConfirmDialog,
   PixelEmptyChest,
@@ -46,21 +47,68 @@ import {
 import { WoodenQuestBoard } from '../../components/WoodenQuestBoard';
 import {
   QUEST_CATEGORIES,
+  doesTargetMatchDungeon,
   formatChapterLabel,
   formatRetroDate,
+  formatTargetDungeonsSummary,
+  getDeadlineUrgency,
+  getEffectiveGradeStatus,
   getQuestCategoryMeta,
   getScheduleStatusSummary,
   normalizeQuestCategory,
-  formatTargetDungeonsSummary,
   parseTargetDungeonIds,
   serializeTargetDungeonIds,
 } from '../../utils/exp';
+
+type QuestStatusFilter = 'all' | 'pending' | 'done';
+type SubmissionBadgeStatus = 'belum' | 'dikumpulkan' | 'terlambat' | 'selesai';
+
+const STATUS_BADGE_MAP: Record<
+  SubmissionBadgeStatus,
+  { label: string; className: string }
+> = {
+  selesai: {
+    label: 'Selesai',
+    className: 'bg-emerald-100 text-emerald-900 border-emerald-800',
+  },
+  dikumpulkan: {
+    label: 'Dikumpulkan',
+    className: 'bg-sky-100 text-sky-900 border-sky-800',
+  },
+  terlambat: {
+    label: 'Terlambat',
+    className: 'bg-rose-100 text-rose-900 border-rose-800',
+  },
+  belum: {
+    label: 'Belum',
+    className: 'bg-amber-100 text-amber-950 border-amber-800',
+  },
+};
+
+function resolveHeroQuestSubmissionStatus(
+  heroId: string,
+  quest: ActiveQuest,
+  grades: AcademyState['grades']
+): SubmissionBadgeStatus {
+  const grade = grades.find((g) => g.heroId === heroId && g.questId === quest.id);
+  const urgency = getDeadlineUrgency(quest.deadline);
+
+  if (!grade) {
+    return urgency.isOverdue ? 'terlambat' : 'belum';
+  }
+
+  const eff = getEffectiveGradeStatus(grade);
+  if (eff === 'tuntas') return 'selesai';
+  if (eff === 'proses' || eff === 'remidial') return 'dikumpulkan';
+  return urgency.isOverdue ? 'terlambat' : 'belum';
+}
 
 interface GmActiveQuestsProps {
   state: AcademyState;
   onSaveQuest: (quest: ActiveQuest) => void;
   onDeleteQuest: (id: string) => void;
   onDeleteQuestsBatch?: (ids: string[]) => void | Promise<void>;
+  onNavigateGm?: (menu: GmMenuId) => void;
 }
 
 function doesDungeonTeachRealm(dungeon: Dungeon, realmId: string): boolean {
@@ -92,11 +140,13 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   onSaveQuest,
   onDeleteQuest,
   onDeleteQuestsBatch,
+  onNavigateGm,
 }) => {
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [realmFilter, setRealmFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | QuestCategory>('all');
+  const [statusFilter, setStatusFilter] = useState<QuestStatusFilter>('all');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [previewQuest, setPreviewQuest] = useState<ActiveQuest | null>(null);
@@ -153,25 +203,118 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     sortedDungeons.length,
   ]);
 
+  const dungeonMap = useMemo(
+    () => new Map(state.dungeons.map((d) => [d.id, d])),
+    [state.dungeons]
+  );
+
   // Filtered quests matching active Tingkat, Kelas, Mapel & Kategori filters
-  const filteredQuests = useMemo(() => {
-    return state.quests.filter((q) => {
-      if (realmFilter !== 'all' && q.realmId !== realmFilter) return false;
-      if (
-        categoryFilter !== 'all' &&
-        normalizeQuestCategory(q.category) !== categoryFilter
-      ) {
-        return false;
-      }
-      if (
-        scope.isFiltered &&
-        !scope.activeDungeons.some((d) => doesQuestApplyToDungeon(q, d))
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [state.quests, scope, realmFilter, categoryFilter]);
+  const scopedQuestEntries = useMemo(() => {
+    return state.quests
+      .filter((q) => {
+        if (realmFilter !== 'all' && q.realmId !== realmFilter) return false;
+        if (
+          categoryFilter !== 'all' &&
+          normalizeQuestCategory(q.category) !== categoryFilter
+        ) {
+          return false;
+        }
+        if (
+          scope.isFiltered &&
+          !scope.activeDungeons.some((d) => doesQuestApplyToDungeon(q, d))
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .map((quest) => {
+        const urgency = getDeadlineUrgency(quest.deadline);
+        const targetHeroes: HeroStudent[] = state.heroes.filter(
+          (h) =>
+            h.active &&
+            doesTargetMatchDungeon(quest.dungeonId, h.dungeonId) &&
+            (!scope.isFiltered || scope.activeDungeonIdSet.has(h.dungeonId))
+        );
+
+        let belum = 0;
+        let dikumpulkan = 0;
+        let terlambat = 0;
+        let selesai = 0;
+
+        targetHeroes.forEach((h) => {
+          const st = resolveHeroQuestSubmissionStatus(h.id, quest, state.grades);
+          if (st === 'belum') belum++;
+          else if (st === 'dikumpulkan') dikumpulkan++;
+          else if (st === 'terlambat') terlambat++;
+          else if (st === 'selesai') selesai++;
+        });
+
+        const isDone =
+          targetHeroes.length > 0 && belum === 0 && terlambat === 0;
+
+        return {
+          quest,
+          urgency,
+          isDone,
+          targetHeroes,
+          counts: {
+            total: targetHeroes.length,
+            belum,
+            dikumpulkan,
+            terlambat,
+            selesai,
+          },
+        };
+      });
+  }, [
+    state.quests,
+    state.heroes,
+    state.grades,
+    scope,
+    realmFilter,
+    categoryFilter,
+  ]);
+
+  const statusFilterOptions: {
+    id: QuestStatusFilter;
+    label: string;
+    count: number;
+  }[] = useMemo(
+    () => [
+      { id: 'all', label: 'Semua', count: scopedQuestEntries.length },
+      {
+        id: 'pending',
+        label: 'Belum',
+        count: scopedQuestEntries.filter((e) => !e.isDone).length,
+      },
+      {
+        id: 'done',
+        label: 'Selesai',
+        count: scopedQuestEntries.filter((e) => e.isDone).length,
+      },
+    ],
+    [scopedQuestEntries]
+  );
+
+  const filteredQuestEntries = useMemo(() => {
+    if (statusFilter === 'pending') {
+      return scopedQuestEntries.filter((e) => !e.isDone);
+    }
+    if (statusFilter === 'done') {
+      return scopedQuestEntries.filter((e) => e.isDone);
+    }
+    return scopedQuestEntries;
+  }, [scopedQuestEntries, statusFilter]);
+
+  const filteredQuests = useMemo(
+    () => filteredQuestEntries.map((e) => e.quest),
+    [filteredQuestEntries]
+  );
+
+  const entryByQuestId = useMemo(
+    () => new Map(scopedQuestEntries.map((e) => [e.quest.id, e])),
+    [scopedQuestEntries]
+  );
 
   const visibleIds = useMemo(
     () => filteredQuests.map((q) => q.id),
@@ -389,11 +532,15 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     const chapterText = quest.chapter?.trim()
       ? formatChapterLabel(quest.chapter)
       : '';
+    const entry = entryByQuestId.get(quest.id);
+    const urgency = entry?.urgency || getDeadlineUrgency(quest.deadline);
+    const counts = entry?.counts;
 
     return (
       <WoodenQuestBoard
         key={`${keyPrefix}::${quest.id}`}
         selected={isSelected}
+        urgent={urgency.isOverdue && !entry?.isDone}
         bannerTitle={`${chapterText ? `${chapterText} · ` : ''}${catMeta.shortLabel} · ${quest.difficulty.toUpperCase()} · ${realm?.code || 'MAPEL'}`}
         bannerLeft={
           <input
@@ -406,7 +553,15 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
         }
         stats={[
           { label: 'EXP', value: `+${quest.maxExp}`, tone: 'warning' },
-          { label: 'TENGGAT', value: formatRetroDate(quest.deadline) },
+          {
+            label: 'TENGGAT',
+            value: `${formatRetroDate(quest.deadline)} (${urgency.label})`,
+            tone: urgency.isOverdue
+              ? 'danger'
+              : urgency.isUrgent
+                ? 'warning'
+                : 'default',
+          },
           {
             label: 'KELAS',
             value: targetSummary,
@@ -466,6 +621,24 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           <span>{scopeLabel}</span>
         </div>
 
+        {/* Submission breakdown strip */}
+        {counts && (
+          <div className="pt-2 border-t border-[#3d1b0c]/20 flex flex-wrap items-center gap-2 text-[12.5px]">
+            <span className="px-2 py-0.5 rounded border border-[#78350f] bg-[#fef3c7] text-[#451a03] font-bold tabular-nums">
+              Belum: {counts.belum}
+            </span>
+            <span className="px-2 py-0.5 rounded border border-[#075985] bg-[#e0f2fe] text-[#0c4a6e] font-bold tabular-nums">
+              Dikumpulkan: {counts.dikumpulkan + counts.selesai}
+            </span>
+            <span className="px-2 py-0.5 rounded border border-[#9f1239] bg-[#ffe4e6] text-[#881337] font-bold tabular-nums">
+              Terlambat: {counts.terlambat}
+            </span>
+            <span className="text-[12px] font-semibold text-[#563018] ml-auto tabular-nums">
+              Total Hero Target: {counts.total}
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#3d1b0c]/20">
           <div className="flex items-center gap-1.5">
             <button
@@ -494,7 +667,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
             onClick={() => setPreviewQuest(quest)}
           >
             <Eye size={15} />
-            Lihat Detail
+            Detail &amp; Cek Status
           </PixelButton>
         </div>
       </WoodenQuestBoard>
@@ -504,8 +677,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   return (
     <div className="space-y-4">
       <PixelSectionTitle
-        title="Active Quests / Tugas"
-        subtitle="Kelompokkan & berikan tugas berdasarkan kelas serta mapel yang diajarkan"
+        title="Active Quests / Tugas & Papan Pantau"
+        subtitle="Buat, kelompokkan, dan pantau status pengumpulan tugas per kelas serta mapel"
         action={
           <PixelButton
             type="button"
@@ -609,40 +782,74 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           }
         />
 
-        {/* RPG Quest Category Filter */}
-        <div className="mt-3 pt-3 border-t border-[var(--border-pixel)]/30 space-y-1.5">
-          <PixelFieldLabel>Filter Kategori Quest (RPG)</PixelFieldLabel>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll">
-            <button
-              type="button"
-              onClick={() => setCategoryFilter('all')}
-              className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
-                categoryFilter === 'all'
-                  ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
-              }`}
+        {/* Status Pengumpulan & RPG Quest Category Filter */}
+        <div className="mt-3 pt-3 border-t border-[var(--border-pixel)]/30 space-y-3">
+          <div className="space-y-1.5">
+            <PixelFieldLabel>Status Pengumpulan Quest</PixelFieldLabel>
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Filter status pengumpulan quest"
             >
-              Semua Kategori
-            </button>
-            {QUEST_CATEGORIES.map((cat) => {
-              const active = categoryFilter === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setCategoryFilter(cat.id)}
-                  title={cat.description}
-                  className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
-                    active
-                      ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
-                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {getQuestCategoryIcon(cat.id, 13)}
-                  <span>{cat.label}</span>
-                </button>
-              );
-            })}
+              {statusFilterOptions.map((opt) => {
+                const active = statusFilter === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setStatusFilter(opt.id)}
+                    className={`pixel-btn min-h-[38px] px-3.5 text-[13px] font-semibold inline-flex items-center gap-2 cursor-pointer ${
+                      active
+                        ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                    }`}
+                  >
+                    <span>{opt.label}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/15 text-[11.5px] tabular-nums">
+                      {opt.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <PixelFieldLabel>Filter Kategori Quest (RPG)</PixelFieldLabel>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll">
+              <button
+                type="button"
+                onClick={() => setCategoryFilter('all')}
+                className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                  categoryFilter === 'all'
+                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                }`}
+              >
+                Semua Kategori
+              </button>
+              {QUEST_CATEGORIES.map((cat) => {
+                const active = categoryFilter === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategoryFilter(cat.id)}
+                    title={cat.description}
+                    className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                      active
+                        ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {getQuestCategoryIcon(cat.id, 13)}
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </ThemedPanelCard>
@@ -687,6 +894,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           const chapterLabel = previewQuest.chapter?.trim()
             ? formatChapterLabel(previewQuest.chapter)
             : '';
+          const detailEntry = entryByQuestId.get(previewQuest.id);
+          const targetHeroes = detailEntry?.targetHeroes || [];
           return (
             <div className="space-y-3 min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -695,7 +904,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                   {previewQuest.difficulty.toUpperCase()}] · +{previewQuest.maxExp} EXP
                 </p>
                 <span className="text-[11.5px] font-semibold text-[var(--text-muted)] tabular-nums">
-                  Due: {formatRetroDate(previewQuest.deadline)}
+                  Due: {formatRetroDate(previewQuest.deadline)} (
+                  {getDeadlineUrgency(previewQuest.deadline).label})
                 </span>
               </div>
 
@@ -743,6 +953,65 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                   />
                 </div>
               )}
+
+              {/* Status Pengumpulan Heroes */}
+              <div className="space-y-2 pt-2 border-t border-[var(--border-pixel)]/30">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="font-pixel-ui text-[11px] uppercase text-[var(--text-primary)]">
+                    Status Pengumpulan Heroes ({targetHeroes.length})
+                  </h4>
+                  {onNavigateGm && (
+                    <PixelButton
+                      type="button"
+                      size="sm"
+                      variant="primary"
+                      onClick={() => {
+                        setPreviewQuest(null);
+                        onNavigateGm('exp_loot');
+                      }}
+                    >
+                      Nilai di Penilaian
+                    </PixelButton>
+                  )}
+                </div>
+
+                {targetHeroes.length === 0 ? (
+                  <p className="text-[13.5px] text-[var(--text-secondary)]">
+                    Tidak ada Hero aktif pada kelas target.
+                  </p>
+                ) : (
+                  <div className="max-h-[34vh] overflow-y-auto pixel-scroll space-y-1.5 pr-1">
+                    {targetHeroes.map((h) => {
+                      const st = resolveHeroQuestSubmissionStatus(
+                        h.id,
+                        previewQuest,
+                        state.grades
+                      );
+                      const dng = dungeonMap.get(h.dungeonId);
+                      return (
+                        <div
+                          key={h.id}
+                          className="pixel-box-inset p-2 flex items-center justify-between gap-2 text-[14px]"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-bold text-[var(--text-primary)] truncate">
+                              {h.name}
+                            </p>
+                            <p className="text-[12px] text-[var(--text-secondary)] truncate">
+                              {dng ? `${dng.guildCode} — ${dng.name}` : 'Tanpa Kelas'}
+                            </p>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 border font-pixel-ui text-[10px] font-bold shrink-0 ${STATUS_BADGE_MAP[st].className}`}
+                          >
+                            {STATUS_BADGE_MAP[st].label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-2.5 pt-1">
                 <PixelButton

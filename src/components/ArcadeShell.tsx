@@ -56,7 +56,6 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'realms', label: 'Realms / Skill Trees', shortLabel: 'Realms', standardName: 'Mapel' },
   { id: 'scrolls', label: 'Ancient Tomes', shortLabel: 'Tomes', standardName: 'Materi' },
   { id: 'active_quests', label: 'Active Quests', shortLabel: 'Quests', standardName: 'Tugas' },
-  { id: 'quest_list', label: 'Quest Board', shortLabel: 'Board', standardName: 'Papan Tugas' },
   { id: 'exp_loot', label: 'EXP & Loot', shortLabel: 'EXP', standardName: 'Penilaian' },
   { id: 'guild_chronicles', label: 'Guild Chronicles', shortLabel: 'Chronicles', standardName: 'Statistik' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
@@ -95,8 +94,6 @@ export function getGmMenuIcon(id: GmMenuId, size = 18) {
       return <BookOpen size={size} />;
     case 'active_quests':
       return <Sword size={size} />;
-    case 'quest_list':
-      return <ClipboardList size={size} />;
     case 'exp_loot':
       return <Trophy size={size} />;
     case 'guild_chronicles':
