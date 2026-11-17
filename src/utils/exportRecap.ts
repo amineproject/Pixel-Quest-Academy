@@ -346,13 +346,14 @@ export function downloadAssessmentExcel(
     ['4. Sel kosong atau "-" tidak akan menimpa nilai yang sudah ada saat diunggah kembali.'],
     [],
     ['DAFTAR TUGAS (ACTIVE QUESTS)'],
-    ['Judul Tugas (Nama Kolom)', 'Bab / Chapter / Teks', 'Mapel', 'Kategori', 'Max EXP', 'Tenggat', 'Tingkat'],
+    ['Judul Tugas (Nama Kolom)', 'Bab / Chapter / Teks', 'Deskripsi Misi', 'Mapel', 'Kategori', 'Max EXP', 'Tenggat', 'Tingkat'],
     ...recap.quests.map((q) => {
       const realm = state.realms.find((r) => r.id === q.realmId);
       const catMeta = getQuestCategoryMeta(q.category);
       return [
         q.title,
         q.chapter?.trim() ? formatChapterLabel(q.chapter) : '-',
+        q.description?.trim() || '-',
         realm ? `${realm.code} — ${realm.name}` : '-',
         catMeta.label,
         q.maxExp,
@@ -362,7 +363,7 @@ export function downloadAssessmentExcel(
     }),
   ];
   const infoWs = XLSX.utils.aoa_to_sheet(infoRows);
-  infoWs['!cols'] = [{ wch: 42 }, { wch: 24 }, { wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 12 }];
+  infoWs['!cols'] = [{ wch: 42 }, { wch: 24 }, { wch: 36 }, { wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, infoWs, 'Info_&_Panduan');
 
   const slug = sanitizeFileName(recap.classLabel || 'semua-kelas');

@@ -516,8 +516,8 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                 urgent={urgency.isOverdue}
                 bannerTitle={
                   realm
-                    ? `${chapterText ? `${chapterText} · ` : ''}${realm.code} · ${realm.name}`
-                    : `${chapterText ? `${chapterText} · ` : ''}QUEST BOARD`
+                    ? `${chapterText ? `${chapterText} · ` : ''}${getQuestCategoryMeta(quest.category).shortLabel} · ${realm.code} · ${realm.name}`
+                    : `${chapterText ? `${chapterText} · ` : ''}${getQuestCategoryMeta(quest.category).shortLabel} · QUEST BOARD`
                 }
                 bannerRight={
                   !isGm && personalStatus ? (
@@ -569,6 +569,12 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                     >
                       {quest.title}
                     </button>
+
+                    {quest.description?.trim() && (
+                      <p className="text-[13.5px] text-[#563018] leading-snug line-clamp-2 break-words">
+                        {quest.description}
+                      </p>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-2 text-[14px] text-[#45230e]">
                       <span className="inline-flex items-center gap-1.5 font-medium">
@@ -651,9 +657,24 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                   Max +{detailQuest.maxExp} EXP
                 </span>
               </div>
-              <p className="text-[16px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
-                {detailDetailText(detailQuest)}
-              </p>
+              {detailQuest.description?.trim() && (
+                <div className="pt-1 border-t border-[var(--border-pixel)]/30 space-y-0.5">
+                  <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-primary)]">
+                    Deskripsi Misi
+                  </p>
+                  <p className="text-[14.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words">
+                    {detailQuest.description}
+                  </p>
+                </div>
+              )}
+              <div className="pt-1 border-t border-[var(--border-pixel)]/30 space-y-1">
+                <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-warning)]">
+                  Objek Misi / Instruksi Tugas
+                </p>
+                <p className="text-[15.5px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
+                  {detailDetailText(detailQuest)}
+                </p>
+              </div>
               {detailQuest.linkUrl && (
                 <div className="pt-2">
                   <PixelLinkButton

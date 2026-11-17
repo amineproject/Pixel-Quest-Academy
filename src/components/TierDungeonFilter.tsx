@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Dungeon } from '../types/lms';
 import { groupDungeonsByTier, sortDungeonsAlphabetically } from '../utils/exp';
 import { MultiDungeonFilter } from './MultiDungeonFilter';
-import { PixelFieldLabel } from './PixelUI';
+import { PixelFieldLabel, PixelSelect } from './PixelUI';
 
 export interface TierDungeonScope {
   sortedDungeons: Dungeon[];
@@ -99,6 +99,36 @@ export const TierDungeonFilter: React.FC<TierDungeonFilterProps> = ({
   const effectiveAllClassesLabel =
     selectedTier === 'all' ? allClassesLabel : `Semua ${selectedTier}`;
 
+  const tierSelector =
+    scope.tierGroups.length > 0 ? (
+      <div>
+        <PixelFieldLabel htmlFor={`${idPrefix}-tier`}>
+          {tierLabel}
+        </PixelFieldLabel>
+        <PixelSelect
+          id={`${idPrefix}-tier`}
+          value={selectedTier}
+          onChange={(e) => {
+            onChangeTier(e.target.value);
+            onChangeDungeonIds([]);
+          }}
+          aria-label={tierLabel}
+        >
+          <option value="all">Semua Tingkat ({effectiveAllCount})</option>
+          {scope.tierGroups.map((group) => {
+            const count = getTierCount
+              ? getTierCount(group.items)
+              : group.items.length;
+            return (
+              <option key={group.tier} value={group.tier}>
+                {group.tier} ({count})
+              </option>
+            );
+          })}
+        </PixelSelect>
+      </div>
+    ) : null;
+
   const classSelector = (
     <div>
       <PixelFieldLabel htmlFor={`${idPrefix}-dungeon`}>
@@ -116,70 +146,42 @@ export const TierDungeonFilter: React.FC<TierDungeonFilterProps> = ({
     </div>
   );
 
-  return (
-    <div className="space-y-3">
-      {scope.tierGroups.length > 0 && (
-        <div className="space-y-1.5">
-          <PixelFieldLabel>{tierLabel}</PixelFieldLabel>
-          <div
-            className="flex flex-wrap gap-1.5"
-            role="group"
-            aria-label={tierLabel}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                onChangeTier('all');
-                onChangeDungeonIds([]);
-              }}
-              className={`pixel-btn min-h-[36px] px-3 py-1 text-[12.5px] font-semibold cursor-pointer ${
-                selectedTier === 'all'
-                  ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                  : 'bg-[var(--bg-inset)] text-[var(--text-primary)]'
-              }`}
-            >
-              Semua Tingkat ({effectiveAllCount})
-            </button>
-            {scope.tierGroups.map((group) => {
-              const active = selectedTier === group.tier;
-              const count = getTierCount
-                ? getTierCount(group.items)
-                : group.items.length;
-              return (
-                <button
-                  key={group.tier}
-                  type="button"
-                  onClick={() => {
-                    onChangeTier(group.tier);
-                    onChangeDungeonIds([]);
-                  }}
-                  className={`pixel-btn min-h-[36px] px-3 py-1 text-[12.5px] font-semibold cursor-pointer ${
-                    active
-                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                      : 'bg-[var(--bg-inset)] text-[var(--text-primary)]'
-                  }`}
-                >
-                  {group.tier} ({count})
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+  if (extraLeftSlot) {
+    return (
+      <div
+        className={`grid grid-cols-1 gap-2.5 ${
+          tierSelector ? 'md:grid-cols-3' : 'sm:grid-cols-2'
+        }`}
+      >
+        <div>{extraLeftSlot}</div>
+        {tierSelector}
+        {classSelector}
+      </div>
+    );
+  }
 
-      {extraLeftSlot ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div>{extraLeftSlot}</div>
-          {classSelector}
-        </div>
-      ) : extraRightSlot ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {classSelector}
-          <div>{extraRightSlot}</div>
-        </div>
-      ) : (
-        <div className="max-w-md">{classSelector}</div>
-      )}
-    </div>
-  );
+  if (extraRightSlot) {
+    return (
+      <div
+        className={`grid grid-cols-1 gap-2.5 ${
+          tierSelector ? 'md:grid-cols-3' : 'sm:grid-cols-2'
+        }`}
+      >
+        {tierSelector}
+        {classSelector}
+        <div>{extraRightSlot}</div>
+      </div>
+    );
+  }
+
+  if (tierSelector) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {tierSelector}
+        {classSelector}
+      </div>
+    );
+  }
+
+  return <div className="max-w-md">{classSelector}</div>;
 };

@@ -51,8 +51,10 @@ import {
   getEffectiveGradeStatus,
   getHeroLevelProgress,
   getHeroTotalExp,
+  getQuestCategoryMeta,
   getSeasonLabel,
   isContentVisibleToHero,
+  normalizeQuestCategory,
 } from './utils/exp';
 import {
   loadOfflineContentSnapshot,
@@ -1595,6 +1597,8 @@ export default function App() {
     playRetroSound('sword', stateRef.current.settings.soundEnabled);
     const taggedQuest: ActiveQuest = {
       ...quest,
+      category: normalizeQuestCategory(quest.category),
+      description: (quest.description || '').trim(),
       academicYearId: quest.academicYearId || activeEraId,
       season: quest.season || activeSeason,
     };
@@ -1610,7 +1614,9 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(taggedQuest),
     }).catch(() => {});
-    showToast(`Quest "${taggedQuest.title}" saved!`);
+    showToast(
+      `Quest "${taggedQuest.title}" (${getQuestCategoryMeta(taggedQuest.category).label}) saved!`
+    );
   };
 
   const handleDeleteQuest = (id: string) => {

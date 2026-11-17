@@ -31,9 +31,10 @@ import {
 } from '../types/lms.ts';
 
 function normalizeQuestCategory(raw?: string | null): QuestCategory {
-  if (raw === 'Party' || raw === 'Special' || raw === 'Knowledge') {
-    return raw;
-  }
+  const clean = String(raw || '').trim().toLowerCase();
+  if (clean === 'party' || clean === 'party quest') return 'Party';
+  if (clean === 'special' || clean === 'special quest') return 'Special';
+  if (clean === 'knowledge' || clean === 'knowledge quest') return 'Knowledge';
   return 'Main';
 }
 
@@ -127,6 +128,7 @@ export async function seedInitialDataIfEmpty() {
           dungeonId: q.dungeonId,
           title: q.title,
           chapter: String(q.chapter || ''),
+          description: String(q.description || ''),
           instructions: q.instructions,
           linkUrl: q.linkUrl || '',
           deadline: q.deadline,
@@ -356,6 +358,7 @@ export async function getAllAcademyData() {
           dungeonId: q.dungeonId,
           title: q.title,
           chapter: (q as any).chapter ? String((q as any).chapter) : '',
+          description: (q as any).description ? String((q as any).description) : '',
           instructions: q.instructions,
           linkUrl: q.linkUrl || '',
           deadline: q.deadline,
@@ -819,6 +822,7 @@ export async function upsertQuest(q: ActiveQuest) {
         dungeonId: q.dungeonId,
         title: q.title,
         chapter: String(q.chapter || '').trim(),
+        description: String(q.description || '').trim(),
         instructions: q.instructions,
         linkUrl: cleanLink,
         deadline: q.deadline,
@@ -837,6 +841,7 @@ export async function upsertQuest(q: ActiveQuest) {
           dungeonId: q.dungeonId,
           title: q.title,
           chapter: String(q.chapter || '').trim(),
+          description: String(q.description || '').trim(),
           instructions: q.instructions,
           linkUrl: cleanLink,
           deadline: q.deadline,

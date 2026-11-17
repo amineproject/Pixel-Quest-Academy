@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS public.quests (
     dungeon_id TEXT NOT NULL DEFAULT 'all',
     title TEXT NOT NULL,
     chapter TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
     instructions TEXT NOT NULL,
     link_url TEXT DEFAULT '',
     deadline TEXT NOT NULL,
@@ -118,14 +119,17 @@ CREATE TABLE IF NOT EXISTS public.quests (
     scheduled_at TEXT NOT NULL DEFAULT '',
     class_schedules TEXT NOT NULL DEFAULT '{}',
     academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL,
+    season TEXT NOT NULL DEFAULT 'ganjil',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS chapter TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Main';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL;
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS season TEXT NOT NULL DEFAULT 'ganjil';
 
 -- ----------------------------------------------------------------------------
 -- 6. Quest Notices table (Papan Pengumuman)
@@ -142,12 +146,14 @@ CREATE TABLE IF NOT EXISTS public.notices (
     class_schedules TEXT NOT NULL DEFAULT '{}',
     author TEXT NOT NULL DEFAULT 'Guild Master',
     academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL,
+    season TEXT NOT NULL DEFAULT 'ganjil',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
 ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL;
+ALTER TABLE public.notices ADD COLUMN IF NOT EXISTS season TEXT NOT NULL DEFAULT 'ganjil';
 
 -- ----------------------------------------------------------------------------
 -- 7. EXP & Loot Grades table (Nilai Rahasia — Terkunci RLS dari akses publik)
@@ -175,6 +181,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
     crt_scanlines BOOLEAN NOT NULL DEFAULT false,
     sound_enabled BOOLEAN NOT NULL DEFAULT true,
     academic_term TEXT NOT NULL DEFAULT 'Semester Ganjil 2026/2027',
+    active_season TEXT NOT NULL DEFAULT 'ganjil',
     gm_name TEXT NOT NULL DEFAULT 'Pak Budi Santoso',
     gm_title TEXT NOT NULL DEFAULT 'Guild Master of Science',
     gm_specialty TEXT NOT NULL DEFAULT 'Guru IPA & Pembina Sains',
@@ -183,6 +190,7 @@ CREATE TABLE IF NOT EXISTS public.settings (
     gm_password TEXT NOT NULL DEFAULT '[PROTECTED]',
     gm_require_password BOOLEAN NOT NULL DEFAULT true
 );
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS active_season TEXT NOT NULL DEFAULT 'ganjil';
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS gm_username TEXT DEFAULT 'admin';
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS gm_password TEXT DEFAULT '[PROTECTED]';
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS gm_require_password BOOLEAN DEFAULT true;
@@ -776,7 +784,7 @@ BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.notices (id, title, description, link_url, priority, target_dungeon_id, release_date, scheduled_at, class_schedules, author, academic_year_id)
+  INSERT INTO public.notices (id, title, description, link_url, priority, target_dungeon_id, release_date, scheduled_at, class_schedules, author, academic_year_id, season)
   VALUES (
     p_data->>'id', p_data->>'title', p_data->>'description', COALESCE(p_data->>'link_url', ''),
     COALESCE(p_data->>'priority', 'Medium'), COALESCE(p_data->>'target_dungeon_id', 'all'),
@@ -784,14 +792,16 @@ BEGIN
     COALESCE(p_data->>'scheduled_at', ''),
     COALESCE(p_data->>'class_schedules', '{}'),
     COALESCE(p_data->>'author', 'Guild Master'),
-    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), '')
+    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), ''),
+    COALESCE(NULLIF(TRIM(COALESCE(p_data->>'season', '')), ''), 'ganjil')
   )
   ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title, description = EXCLUDED.description, link_url = EXCLUDED.link_url,
     priority = EXCLUDED.priority, target_dungeon_id = EXCLUDED.target_dungeon_id,
     release_date = EXCLUDED.release_date, scheduled_at = EXCLUDED.scheduled_at,
     class_schedules = EXCLUDED.class_schedules, author = EXCLUDED.author,
-    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.notices.academic_year_id);
+    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.notices.academic_year_id),
+    season = EXCLUDED.season;
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -884,26 +894,30 @@ BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.quests (id, realm_id, dungeon_id, title, chapter, instructions, link_url, deadline, max_exp, difficulty, category, scheduled_at, class_schedules, academic_year_id)
+  INSERT INTO public.quests (id, realm_id, dungeon_id, title, chapter, description, instructions, link_url, deadline, max_exp, difficulty, category, scheduled_at, class_schedules, academic_year_id, season)
   VALUES (
     p_data->>'id', NULLIF(TRIM(COALESCE(p_data->>'realm_id', '')), ''),
     COALESCE(p_data->>'dungeon_id', 'all'), p_data->>'title',
     COALESCE(TRIM(COALESCE(p_data->>'chapter', '')), ''),
+    COALESCE(TRIM(COALESCE(p_data->>'description', '')), ''),
     COALESCE(p_data->>'instructions', ''), COALESCE(p_data->>'link_url', ''),
     COALESCE(p_data->>'deadline', to_char(now(), 'YYYY-MM-DD')),
     COALESCE((p_data->>'max_exp')::int, 200), COALESCE(p_data->>'difficulty', 'Normal'),
     COALESCE(NULLIF(TRIM(COALESCE(p_data->>'category', '')), ''), 'Main'),
     COALESCE(p_data->>'scheduled_at', ''),
     COALESCE(p_data->>'class_schedules', '{}'),
-    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), '')
+    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), ''),
+    COALESCE(NULLIF(TRIM(COALESCE(p_data->>'season', '')), ''), 'ganjil')
   )
   ON CONFLICT (id) DO UPDATE SET
     realm_id = EXCLUDED.realm_id, dungeon_id = EXCLUDED.dungeon_id, title = EXCLUDED.title,
     chapter = EXCLUDED.chapter,
+    description = EXCLUDED.description,
     instructions = EXCLUDED.instructions, link_url = EXCLUDED.link_url, deadline = EXCLUDED.deadline,
     max_exp = EXCLUDED.max_exp, difficulty = EXCLUDED.difficulty, category = EXCLUDED.category,
     scheduled_at = EXCLUDED.scheduled_at, class_schedules = EXCLUDED.class_schedules,
-    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.quests.academic_year_id);
+    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.quests.academic_year_id),
+    season = EXCLUDED.season;
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -959,7 +973,7 @@ BEGIN
   END;
 
   INSERT INTO public.settings (
-    id, theme, crt_scanlines, sound_enabled, academic_term,
+    id, theme, crt_scanlines, sound_enabled, academic_term, active_season,
     gm_name, gm_title, gm_specialty, gm_avatar, gm_username, gm_password, gm_require_password
   ) VALUES (
     'global',
@@ -967,6 +981,7 @@ BEGIN
     COALESCE((p_data->>'crt_scanlines')::boolean, false),
     COALESCE((p_data->>'sound_enabled')::boolean, true),
     COALESCE(p_data->>'academic_term', 'Semester Ganjil 2026/2027'),
+    COALESCE(NULLIF(TRIM(COALESCE(p_data->>'active_season', '')), ''), 'ganjil'),
     COALESCE(p_data->>'gm_name', 'Pak Budi Santoso'),
     COALESCE(p_data->>'gm_title', 'Guild Master of Science'),
     COALESCE(p_data->>'gm_specialty', 'Guru IPA & Pembina Sains'),
@@ -980,6 +995,7 @@ BEGIN
     crt_scanlines = EXCLUDED.crt_scanlines,
     sound_enabled = EXCLUDED.sound_enabled,
     academic_term = EXCLUDED.academic_term,
+    active_season = EXCLUDED.active_season,
     gm_name = EXCLUDED.gm_name,
     gm_title = EXCLUDED.gm_title,
     gm_specialty = EXCLUDED.gm_specialty,

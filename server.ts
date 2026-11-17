@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer as createHttpServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as dotenv from 'dotenv';
@@ -59,6 +60,34 @@ if (isSupabaseConfigured) {
   console.log('✓ Connected to Supabase backend:', supabaseUrl);
 } else {
   console.log('✓ Connected to Cloud SQL PostgreSQL backend');
+}
+
+function extractMissingSupabaseColumn(err: any): string | null {
+  const msg = String(err?.message || '');
+  const pgrstMatch = msg.match(/Could not find the '([^']+)' column/i);
+  if (pgrstMatch?.[1]) return pgrstMatch[1];
+  const pgMatch = msg.match(/column "([^"]+)"(?: of relation "[^"]+")? does not exist/i);
+  if (pgMatch?.[1]) return pgMatch[1];
+  return null;
+}
+
+async function upsertSupabaseResilient(
+  table: string,
+  payload: Record<string, any>
+) {
+  if (!supabaseAdmin) return null;
+  const working: Record<string, any> = { ...payload };
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const { error } = await supabaseAdmin.from(table).upsert(working);
+    if (!error) return null;
+    const missingCol = extractMissingSupabaseColumn(error);
+    if (missingCol && missingCol in working) {
+      delete working[missingCol];
+      continue;
+    }
+    return error;
+  }
+  return null;
 }
 
 // Seed initial data once
@@ -210,17 +239,20 @@ app.get('/api/academy', async (req, res) => {
               dungeonId: q.dungeon_id || q.dungeonId,
               title: q.title,
               chapter: q.chapter ? String(q.chapter) : '',
+              description: q.description ? String(q.description) : '',
               instructions: q.instructions,
               linkUrl: q.link_url || q.linkUrl || '',
               deadline: q.deadline,
               maxExp: q.max_exp || q.maxExp,
               difficulty: q.difficulty,
               category:
-                q.category === 'Party' ||
-                q.category === 'Special' ||
-                q.category === 'Knowledge'
-                  ? q.category
-                  : 'Main',
+                String(q.category || '').trim().toLowerCase() === 'party'
+                  ? 'Party'
+                  : String(q.category || '').trim().toLowerCase() === 'special'
+                    ? 'Special'
+                    : String(q.category || '').trim().toLowerCase() === 'knowledge'
+                      ? 'Knowledge'
+                      : 'Main',
               scheduledAt: q.scheduled_at || q.scheduledAt || '',
               classSchedules: cs,
               academicYearId: q.academic_year_id || q.academicYearId || undefined,
@@ -434,7 +466,7 @@ app.post('/api/notices', async (req, res) => {
   try {
     await upsertNotice(req.body);
     if (supabaseAdmin) {
-      const { error } = await supabaseAdmin.from('notices').upsert({
+      await upsertSupabaseResilient('notices', {
         id: req.body.id,
         title: req.body.title,
         description: req.body.description,
@@ -448,17 +480,6 @@ app.post('/api/notices', async (req, res) => {
         academic_year_id: req.body.academicYearId || null,
         season: req.body.season || 'ganjil',
       });
-      if (error) {
-        await supabaseAdmin.from('notices').upsert({
-          id: req.body.id,
-          title: req.body.title,
-          description: req.body.description,
-          priority: req.body.priority,
-          target_dungeon_id: req.body.targetDungeonId,
-          release_date: req.body.releaseDate,
-          author: req.body.author,
-        });
-      }
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -518,7 +539,7 @@ app.post('/api/tomes', async (req, res) => {
   try {
     await upsertTome(req.body);
     if (supabaseAdmin) {
-      const { error } = await supabaseAdmin.from('tomes').upsert({
+      await upsertSupabaseResilient('tomes', {
         id: req.body.id,
         realm_id: req.body.realmId,
         title: req.body.title,
@@ -532,18 +553,6 @@ app.post('/api/tomes', async (req, res) => {
         class_schedules: JSON.stringify(req.body.classSchedules || {}),
         published_date: req.body.publishedDate,
       });
-      if (error) {
-        await supabaseAdmin.from('tomes').upsert({
-          id: req.body.id,
-          realm_id: req.body.realmId,
-          title: req.body.title,
-          chapter: String(req.body.chapter || 'Bab 1'),
-          read_minutes: req.body.readMinutes ?? 0,
-          summary: req.body.summary,
-          content: req.body.content,
-          published_date: req.body.publishedDate,
-        });
-      }
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -568,12 +577,13 @@ app.post('/api/quests', async (req, res) => {
   try {
     await upsertQuest(req.body);
     if (supabaseAdmin) {
-      const { error } = await supabaseAdmin.from('quests').upsert({
+      await upsertSupabaseResilient('quests', {
         id: req.body.id,
         realm_id: req.body.realmId,
         dungeon_id: req.body.dungeonId,
         title: req.body.title,
         chapter: String(req.body.chapter || '').trim(),
+        description: String(req.body.description || '').trim(),
         instructions: req.body.instructions,
         link_url: req.body.linkUrl || '',
         deadline: req.body.deadline,
@@ -585,18 +595,6 @@ app.post('/api/quests', async (req, res) => {
         academic_year_id: req.body.academicYearId || null,
         season: req.body.season || 'ganjil',
       });
-      if (error) {
-        await supabaseAdmin.from('quests').upsert({
-          id: req.body.id,
-          realm_id: req.body.realmId,
-          dungeon_id: req.body.dungeonId,
-          title: req.body.title,
-          instructions: req.body.instructions,
-          deadline: req.body.deadline,
-          max_exp: req.body.maxExp,
-          difficulty: req.body.difficulty,
-        });
-      }
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -658,7 +656,7 @@ app.post('/api/settings', async (req, res) => {
     const { settings: newSettings, gmProfile } = req.body;
     await updateSystemSettings(newSettings || {}, gmProfile || {});
     if (supabaseAdmin) {
-      const { error } = await supabaseAdmin.from('settings').upsert({
+      await upsertSupabaseResilient('settings', {
         id: 'global',
         theme: newSettings?.theme || 'sunny_quest',
         crt_scanlines: newSettings?.crtScanlines ?? false,
@@ -673,19 +671,6 @@ app.post('/api/settings', async (req, res) => {
         gm_password: gmProfile?.password || 'admin',
         gm_require_password: gmProfile?.requirePassword ?? true,
       });
-      if (error) {
-        await supabaseAdmin.from('settings').upsert({
-          id: 'global',
-          theme: newSettings?.theme || 'sunny_quest',
-          crt_scanlines: newSettings?.crtScanlines ?? false,
-          sound_enabled: newSettings?.soundEnabled ?? true,
-          academic_term: newSettings?.academicTerm || 'Semester Ganjil 2026/2027',
-          gm_name: gmProfile?.name || 'Pak Budi Santoso',
-          gm_title: gmProfile?.title || 'Guild Master of Science',
-          gm_specialty: gmProfile?.specialty || 'Guru IPA & Pembina Sains',
-          gm_avatar: gmProfile?.avatar || 'guild_master',
-        });
-      }
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -694,12 +679,16 @@ app.post('/api/settings', async (req, res) => {
 });
 
 async function startServer() {
+  const httpServer = createHttpServer(app);
+
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
         hmr: false,
+        allowedHosts: true,
+        ws: { server: httpServer },
       },
       appType: 'spa',
     });
@@ -711,7 +700,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on http://0.0.0.0:${PORT}`);
   });
 }

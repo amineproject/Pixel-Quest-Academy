@@ -133,6 +133,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
   const [maxExp, setMaxExp] = useState(200);
   const [difficulty, setDifficulty] = useState<QuestDifficulty>('Normal');
   const [category, setCategory] = useState<QuestCategory>('Main');
+  const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -236,6 +237,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     setMaxExp(200);
     setDifficulty('Normal');
     setCategory(categoryFilter !== 'all' ? categoryFilter : 'Main');
+    setDescription('');
     setInstructions('');
     setLinkUrl('');
     setScheduledAt('');
@@ -263,6 +265,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
     setMaxExp(q.maxExp);
     setDifficulty(q.difficulty);
     setCategory(normalizeQuestCategory(q.category));
+    setDescription(q.description || '');
     setInstructions(q.instructions);
     setLinkUrl(q.linkUrl || '');
     setScheduledAt(q.scheduledAt || '');
@@ -308,7 +311,8 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
       deadline,
       maxExp: Math.max(50, Number(maxExp) || 200),
       difficulty,
-      category,
+      category: normalizeQuestCategory(category),
+      description: description.trim(),
       instructions: instructions.trim(),
       linkUrl: linkUrl.trim(),
       scheduledAt,
@@ -429,7 +433,14 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           {quest.title}
         </button>
 
-        <p className="text-[14.5px] sm:text-[15px] text-[#45230e] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+        {quest.description?.trim() && (
+          <p className="text-[13.5px] font-semibold text-[#563018] leading-snug line-clamp-2 break-words [overflow-wrap:anywhere]">
+            {quest.description}
+          </p>
+        )}
+
+        <p className="text-[14px] sm:text-[14.5px] text-[#45230e] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+          <strong className="text-[#261006]">Objek Misi / Instruksi:</strong>{' '}
           {quest.instructions}
         </p>
 
@@ -483,7 +494,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
             onClick={() => setPreviewQuest(quest)}
           >
             <Eye size={15} />
-            Lihat Instruksi
+            Lihat Detail
           </PixelButton>
         </div>
       </WoodenQuestBoard>
@@ -704,9 +715,25 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                 </span>
               </div>
 
-              <ThemedReadingSurface>
-                {previewQuest.instructions}
-              </ThemedReadingSurface>
+              {previewQuest.description?.trim() && (
+                <div className="pixel-box-inset p-3 space-y-1 bg-[var(--bg-inset)]">
+                  <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-primary)]">
+                    Deskripsi Misi
+                  </p>
+                  <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
+                    {previewQuest.description}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-warning)]">
+                  Objek Misi / Instruksi Tugas
+                </p>
+                <ThemedReadingSurface>
+                  {previewQuest.instructions}
+                </ThemedReadingSurface>
+              </div>
 
               {previewQuest.linkUrl && (
                 <div>
@@ -906,6 +933,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                   <button
                     key={cat.id}
                     type="button"
+                    aria-pressed={selected}
                     onClick={() => setCategory(cat.id)}
                     className={`p-2.5 border-2 text-left flex items-start gap-2 cursor-pointer transition-all ${
                       selected
@@ -991,12 +1019,27 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           />
 
           <div>
-            <PixelFieldLabel htmlFor="qst-inst">Instruksi Tugas</PixelFieldLabel>
+            <PixelFieldLabel htmlFor="qst-desc">
+              Deskripsi Misi (Opsional)
+            </PixelFieldLabel>
+            <PixelTextarea
+              id="qst-desc"
+              rows={2}
+              placeholder="Tuliskan latar cerita, tujuan singkat, atau ringkasan misi..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <PixelFieldLabel htmlFor="qst-inst">
+              Objek Misi / Instruksi Tugas
+            </PixelFieldLabel>
             <PixelTextarea
               id="qst-inst"
               rows={4}
               required
-              placeholder="Tuliskan rincian langkah pengerjaan untuk siswa..."
+              placeholder="Tuliskan objek misi dan rincian langkah pengerjaan untuk siswa..."
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
             />

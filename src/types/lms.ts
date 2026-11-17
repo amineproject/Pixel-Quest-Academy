@@ -155,6 +155,7 @@ export interface ActiveQuest {
   dungeonId: string; // 'all', single dungeonId, or comma-separated dungeonIds
   title: string;
   chapter?: string; // Bab / Chapter / Teks
+  description?: string; // Deskripsi Misi
   instructions: string;
   linkUrl?: string;
   deadline: string;

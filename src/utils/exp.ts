@@ -944,9 +944,10 @@ export const QUEST_CATEGORIES: QuestCategoryMeta[] = [
 ];
 
 export function normalizeQuestCategory(raw?: string | null): QuestCategory {
-  if (raw === 'Party' || raw === 'Special' || raw === 'Knowledge') {
-    return raw;
-  }
+  const clean = String(raw || '').trim().toLowerCase();
+  if (clean === 'party' || clean === 'party quest') return 'Party';
+  if (clean === 'special' || clean === 'special quest') return 'Special';
+  if (clean === 'knowledge' || clean === 'knowledge quest') return 'Knowledge';
   return 'Main';
 }
 

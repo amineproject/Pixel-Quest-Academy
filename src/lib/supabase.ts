@@ -13,6 +13,7 @@ import {
   Realm,
   SystemSettings,
 } from '../types/lms';
+import { normalizeQuestCategory } from '../utils/exp';
 
 export const SUPABASE_URL_KEY = 'pixel_quest_supabase_url';
 export const SUPABASE_KEY_KEY = 'pixel_quest_supabase_anon_key';
@@ -40,6 +41,42 @@ function isMissingRpcError(err: any): boolean {
     msg.includes('Could not find the function') ||
     msg.includes('does not exist')
   );
+}
+
+function extractMissingColumnName(err: any): string | null {
+  const msg = String(err?.message || '');
+  const pgrstMatch = msg.match(/Could not find the '([^']+)' column/i);
+  if (pgrstMatch?.[1]) return pgrstMatch[1];
+  const pgMatch = msg.match(/column "([^"]+)"(?: of relation "[^"]+")? does not exist/i);
+  if (pgMatch?.[1]) return pgMatch[1];
+  return null;
+}
+
+async function upsertWithColumnPruning(
+  client: SupabaseClient,
+  table: string,
+  payload: Record<string, any> | Record<string, any>[]
+): Promise<{ error: any }> {
+  const isBatch = Array.isArray(payload);
+  let working: Record<string, any>[] = (isBatch ? payload : [payload]).map((row) => ({
+    ...row,
+  }));
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const res = await client.from(table).upsert(isBatch ? working : working[0]);
+    if (!res.error) return { error: null };
+    const missingCol = extractMissingColumnName(res.error);
+    if (missingCol && working.some((row) => missingCol in row)) {
+      working = working.map((row) => {
+        const clone = { ...row };
+        delete clone[missingCol];
+        return clone;
+      });
+      continue;
+    }
+    return { error: res.error };
+  }
+  return { error: new Error(`Upsert ${table} melebihi batas penyesuaian kolom.`) };
 }
 
 /**
@@ -680,17 +717,13 @@ export async function fetchAcademyFromSupabase(
         dungeonId: q.dungeon_id || 'all',
         title: q.title,
         chapter: q.chapter ? String(q.chapter) : '',
+        description: q.description ? String(q.description) : '',
         instructions: q.instructions || '',
         linkUrl: q.link_url || '',
         deadline: q.deadline || '',
         maxExp: Number(q.max_exp) || 200,
         difficulty: q.difficulty || 'Normal',
-        category:
-          q.category === 'Party' ||
-          q.category === 'Special' ||
-          q.category === 'Knowledge'
-            ? q.category
-            : 'Main',
+        category: normalizeQuestCategory(q.category),
         scheduledAt: q.scheduled_at || '',
         classSchedules: parseClassSchedules(q.class_schedules),
         ...(q.academic_year_id ? { academicYearId: q.academic_year_id } : {}),
@@ -997,19 +1030,8 @@ export async function cloudSyncNotice(
     const rpc = await runGmRpc(client, 'gm_upsert_notice', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
 
-    const { error } = await client.from('notices').upsert(payload);
-    if (error) {
-      const { error: fallbackErr } = await client.from('notices').upsert({
-        id: notice.id,
-        title: notice.title,
-        description: notice.description,
-        priority: notice.priority,
-        target_dungeon_id: notice.targetDungeonId,
-        release_date: notice.releaseDate,
-        author: notice.author,
-      });
-      if (fallbackErr) return { ok: false, error: fallbackErr.message };
-    }
+    const { error } = await upsertWithColumnPruning(client, 'notices', payload);
+    if (error) return { ok: false, error: error.message };
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message };
@@ -1105,20 +1127,8 @@ export async function cloudSyncTome(
     const rpc = await runGmRpc(client, 'gm_upsert_tome', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
 
-    const { error } = await client.from('tomes').upsert(payload);
-    if (error) {
-      const { error: fallbackErr } = await client.from('tomes').upsert({
-        id: tome.id,
-        realm_id: tome.realmId || null,
-        title: tome.title,
-        chapter: String(tome.chapter || 'Bab 1'),
-        read_minutes: tome.readMinutes ?? 0,
-        summary: tome.summary,
-        content: tome.content,
-        published_date: tome.publishedDate,
-      });
-      if (fallbackErr) return { ok: false, error: fallbackErr.message };
-    }
+    const { error } = await upsertWithColumnPruning(client, 'tomes', payload);
+    if (error) return { ok: false, error: error.message };
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message };
@@ -1156,12 +1166,13 @@ export async function cloudSyncQuest(
       dungeon_id: quest.dungeonId,
       title: quest.title,
       chapter: String(quest.chapter || '').trim(),
+      description: String(quest.description || '').trim(),
       instructions: quest.instructions,
       link_url: quest.linkUrl || '',
       deadline: quest.deadline,
       max_exp: quest.maxExp,
       difficulty: quest.difficulty,
-      category: quest.category || 'Main',
+      category: normalizeQuestCategory(quest.category),
       scheduled_at: quest.scheduledAt || '',
       class_schedules: JSON.stringify(quest.classSchedules || {}),
       academic_year_id: quest.academicYearId || null,
@@ -1170,20 +1181,8 @@ export async function cloudSyncQuest(
     const rpc = await runGmRpc(client, 'gm_upsert_quest', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
 
-    const { error } = await client.from('quests').upsert(payload);
-    if (error) {
-      const { error: fallbackErr } = await client.from('quests').upsert({
-        id: quest.id,
-        realm_id: quest.realmId || null,
-        dungeon_id: quest.dungeonId,
-        title: quest.title,
-        instructions: quest.instructions,
-        deadline: quest.deadline,
-        max_exp: quest.maxExp,
-        difficulty: quest.difficulty,
-      });
-      if (fallbackErr) return { ok: false, error: fallbackErr.message };
-    }
+    const { error } = await upsertWithColumnPruning(client, 'quests', payload);
+    if (error) return { ok: false, error: error.message };
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message };
@@ -1282,7 +1281,7 @@ export async function cloudSyncSettings(
     const rpc = await runGmRpc(client, 'gm_update_settings', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
 
-    const { error } = await client.from('settings').upsert({
+    const { error } = await upsertWithColumnPruning(client, 'settings', {
       id: 'global',
       theme: settings.theme,
       crt_scanlines: settings.crtScanlines,
@@ -1297,20 +1296,7 @@ export async function cloudSyncSettings(
       gm_require_password: true,
       gm_password: gmProfile.password || gmAuth?.password || 'admin',
     });
-    if (error) {
-      const { error: fallbackErr } = await client.from('settings').upsert({
-        id: 'global',
-        theme: settings.theme,
-        crt_scanlines: settings.crtScanlines,
-        sound_enabled: settings.soundEnabled,
-        academic_term: settings.academicTerm,
-        gm_name: gmProfile.name,
-        gm_title: gmProfile.title,
-        gm_specialty: gmProfile.specialty,
-        gm_avatar: gmProfile.avatar,
-      });
-      if (fallbackErr) return { ok: false, error: fallbackErr.message };
-    }
+    if (error) return { ok: false, error: error.message };
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message };
@@ -1387,12 +1373,13 @@ export async function uploadAllLocalToSupabase(
         dungeon_id: q.dungeonId,
         title: q.title,
         chapter: String(q.chapter || '').trim(),
+        description: String(q.description || '').trim(),
         instructions: q.instructions,
         link_url: q.linkUrl || '',
         deadline: q.deadline,
         max_exp: q.maxExp,
         difficulty: q.difficulty,
-        category: q.category || 'Main',
+        category: normalizeQuestCategory(q.category),
         scheduled_at: q.scheduledAt || '',
         class_schedules: JSON.stringify(q.classSchedules || {}),
         academic_year_id: q.academicYearId || null,
@@ -1468,18 +1455,18 @@ export async function uploadAllLocalToSupabase(
       if (error) throw new Error(`Tabel tomes: ${error.message}`);
     }
     if (bulkPayload.quests.length > 0) {
-      const { error } = await client.from('quests').upsert(bulkPayload.quests);
+      const { error } = await upsertWithColumnPruning(client, 'quests', bulkPayload.quests);
       if (error) throw new Error(`Tabel quests: ${error.message}`);
     }
     if (bulkPayload.notices.length > 0) {
-      const { error } = await client.from('notices').upsert(bulkPayload.notices);
+      const { error } = await upsertWithColumnPruning(client, 'notices', bulkPayload.notices);
       if (error) throw new Error(`Tabel notices: ${error.message}`);
     }
     if (bulkPayload.grades.length > 0) {
-      const { error } = await client.from('grades').upsert(bulkPayload.grades);
+      const { error } = await upsertWithColumnPruning(client, 'grades', bulkPayload.grades);
       if (error) throw new Error(`Tabel grades: ${error.message}`);
     }
-    const { error: settingsErr } = await client.from('settings').upsert({
+    const { error: settingsErr } = await upsertWithColumnPruning(client, 'settings', {
       id: 'global',
       ...bulkPayload.settings,
       gm_password: state.gmProfile.password || gmAuth?.password || 'admin',

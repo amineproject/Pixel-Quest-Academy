@@ -437,8 +437,12 @@ describe('RPG Quest Categories', () => {
     assert.equal(QUEST_CATEGORIES.length, 4);
     assert.equal(normalizeQuestCategory(undefined), 'Main');
     assert.equal(normalizeQuestCategory('Party'), 'Party');
+    assert.equal(normalizeQuestCategory('  party  '), 'Party');
+    assert.equal(normalizeQuestCategory('Party Quest'), 'Party');
     assert.equal(normalizeQuestCategory('Special'), 'Special');
+    assert.equal(normalizeQuestCategory('SPECIAL QUEST'), 'Special');
     assert.equal(normalizeQuestCategory('Knowledge'), 'Knowledge');
+    assert.equal(normalizeQuestCategory('knowledge quest'), 'Knowledge');
     assert.equal(getQuestCategoryMeta('Party').label, 'Party Quest');
     assert.equal(
       getQuestCategoryMeta('Knowledge').description,

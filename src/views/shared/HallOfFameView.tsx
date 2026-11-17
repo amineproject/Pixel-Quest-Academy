@@ -13,8 +13,8 @@ import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
   getScopedHeroLeaderboardInputs,
   getWeeklyGuildLeaderboard,
-  groupDungeonsByTier,
   maskHeroName,
+  sortDungeonsAlphabetically,
 } from '../../utils/exp';
 
 interface HallOfFameViewProps {
@@ -36,25 +36,18 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
 }) => {
   const isGm = role === UserRole.GAME_MASTER;
   const [hideNames, setHideNames] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<string>('all');
   const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [selectedRealmId, setSelectedRealmId] = useState<string>('all');
+
+  const sortedDungeons = useMemo(
+    () => sortDungeonsAlphabetically(state.dungeons),
+    [state.dungeons]
+  );
 
   const dungeonMap = useMemo(
     () => new Map(state.dungeons.map((d) => [d.id, d])),
     [state.dungeons]
   );
-
-  const tierGroups = useMemo(
-    () => groupDungeonsByTier(state.dungeons),
-    [state.dungeons]
-  );
-
-  const dungeonsInSelectedTier = useMemo(() => {
-    if (selectedTier === 'all') return state.dungeons;
-    const match = tierGroups.find((g) => g.tier === selectedTier);
-    return match ? match.items : state.dungeons;
-  }, [selectedTier, tierGroups, state.dungeons]);
 
   const studentRealms = useMemo(() => {
     if (isGm || !hero) return [];
@@ -77,15 +70,13 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
     let gradesPool = state.grades;
 
     if (isGm) {
-      const allowedDungeonIds = new Set(dungeonsInSelectedTier.map((d) => d.id));
+      const validDungeonIds = new Set(sortedDungeons.map((d) => d.id));
       const activeSelectedIds = selectedDungeonIds.filter((id) =>
-        allowedDungeonIds.has(id)
+        validDungeonIds.has(id)
       );
       if (activeSelectedIds.length > 0) {
         const selectedSet = new Set(activeSelectedIds);
         pool = state.heroes.filter((h) => selectedSet.has(h.dungeonId));
-      } else if (selectedTier !== 'all') {
-        pool = state.heroes.filter((h) => allowedDungeonIds.has(h.dungeonId));
       }
     } else if (hero) {
       const scoped = getScopedHeroLeaderboardInputs(
@@ -113,8 +104,7 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
     };
   }, [
     isGm,
-    selectedTier,
-    dungeonsInSelectedTier,
+    sortedDungeons,
     selectedDungeonIds,
     selectedRealmId,
     state.heroes,
@@ -253,63 +243,17 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
 
       {/* Filter Card: Admin filters by Class, Student filters by their enrolled Mapel */}
       {isGm ? (
-        <ThemedPanelCard className="p-3 space-y-2.5">
-          {tierGroups.length > 0 && (
-            <div className="space-y-1">
-              <PixelFieldLabel>1. Pilih Tingkat Kelas</PixelFieldLabel>
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter tingkat kelas">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedTier('all');
-                    setSelectedDungeonIds([]);
-                  }}
-                  className={`pixel-btn min-h-[34px] px-2.5 py-1 text-[12px] font-semibold cursor-pointer ${
-                    selectedTier === 'all'
-                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                      : 'bg-[var(--bg-inset)] text-[var(--text-primary)]'
-                  }`}
-                >
-                  Semua Tingkat ({state.dungeons.length})
-                </button>
-                {tierGroups.map((group) => {
-                  const active = selectedTier === group.tier;
-                  return (
-                    <button
-                      key={group.tier}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTier(group.tier);
-                        setSelectedDungeonIds([]);
-                      }}
-                      className={`pixel-btn min-h-[34px] px-2.5 py-1 text-[12px] font-semibold cursor-pointer ${
-                        active
-                          ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                          : 'bg-[var(--bg-inset)] text-[var(--text-primary)]'
-                      }`}
-                    >
-                      {group.tier} ({group.items.length})
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
+        <ThemedPanelCard className="p-3">
           <div className="max-w-md">
             <PixelFieldLabel htmlFor="hof-dungeon">
-              {tierGroups.length > 0 ? '2. Filter Per Kelas (Dungeon)' : 'Filter Kelas (Dungeon)'}
+              Filter Per Kelas (Dungeon)
             </PixelFieldLabel>
             <MultiDungeonFilter
               id="hof-dungeon"
-              dungeons={dungeonsInSelectedTier}
+              dungeons={sortedDungeons}
               selectedIds={selectedDungeonIds}
               onChange={setSelectedDungeonIds}
-              allLabel={
-                selectedTier === 'all'
-                  ? 'Semua Kelas (Global)'
-                  : `Semua ${selectedTier}`
-              }
+              allLabel="Semua Kelas (Global)"
               ariaLabel="Filter peringkat berdasarkan kelas spesifik"
             />
           </div>

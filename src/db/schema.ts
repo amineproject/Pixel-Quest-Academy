@@ -102,6 +102,7 @@ export const quests = pgTable('quests', {
   dungeonId: text('dungeon_id').notNull().default('all'),
   title: text('title').notNull(),
   chapter: text('chapter').notNull().default(''),
+  description: text('description').notNull().default(''),
   instructions: text('instructions').notNull(),
   linkUrl: text('link_url'),
   deadline: text('deadline').notNull(),

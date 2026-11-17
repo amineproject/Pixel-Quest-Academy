@@ -294,6 +294,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       dungeonId: 'dng-x-ipa-1',
       title: 'Quest 01: Peta Konfigurasi 10 Unsur',
       chapter: 'Bab 1',
+      description: 'Misi pemetaan dasar posisi elektron dan karakter unsur di tabel periodik.',
       instructions:
         'Tuliskan konfigurasi elektron kulit dan subkulit untuk unsur nomor atom 6, 11, 17, dan 20. Tentukan letak golongan serta periodenya secara tepat di buku tugas.',
       deadline: '2026-11-18',
@@ -309,6 +310,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       dungeonId: 'dng-x-ipa-1',
       title: 'Boss Quest: Struktur Lewis Senyawa Kovalen',
       chapter: 'Bab 2',
+      description: 'Tantangan tingkat lanjut menggambar distribusi pasangan elektron ikatan antaratom.',
       instructions:
         'Gambarkan struktur dot Lewis untuk molekul NH₃, CO₂, dan H₂SO₄. Identifikasi mana ikatan kovalen tunggal, rangkap dua, dan kovalen koordinasi.',
       deadline: '2026-11-22',
@@ -324,6 +326,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       dungeonId: 'all',
       title: 'Quest 02: Pembuktian Identitas Logaritma',
       chapter: 'Bab 1',
+      description: 'Eksplorasi sifat transformasi basis logaritma untuk menyederhanakan persamaan.',
       instructions:
         'Selesaikan 8 soal penyederhanaan logaritma berbasis 2, 3, dan 5 dengan menuliskan langkah substitusi secara berurutan.',
       deadline: '2026-11-20',
@@ -339,6 +342,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       dungeonId: 'dng-x-ipa-1',
       title: 'Quest 03: Diagram Komparasi Sel Mikroskop',
       chapter: 'Bab 1',
+      description: 'Misi kolaborasi kelompok mengamati dan membandingkan struktur sel lewat mikroskop.',
       instructions:
         'Buat tabel perbandingan minimal 6 organel antara sel epitel hewan dan sel daun Elodea berdasarkan hasil pengamatan praktikum.',
       deadline: '2026-11-25',

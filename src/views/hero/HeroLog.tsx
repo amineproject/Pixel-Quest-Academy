@@ -974,9 +974,24 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <p className="text-[12px] text-[var(--text-muted)] tabular-nums">
                 Tenggat: {formatRetroDate(detailQuest.deadline)} ({urgency.label})
               </p>
-              <ThemedReadingSurface>
-                {detailQuest.instructions}
-              </ThemedReadingSurface>
+              {detailQuest.description?.trim() && (
+                <div className="pixel-box-inset p-2.5 space-y-1 bg-[var(--bg-inset)]">
+                  <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-primary)]">
+                    Deskripsi Misi
+                  </p>
+                  <p className="text-[13.5px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
+                    {detailQuest.description}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-1">
+                <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-warning)]">
+                  Objek Misi / Instruksi Tugas
+                </p>
+                <ThemedReadingSurface>
+                  {detailQuest.instructions}
+                </ThemedReadingSurface>
+              </div>
               {grade?.feedback && (
                 <div className="pixel-box-inset p-2.5 text-[12.5px] text-[var(--text-primary)]">
                   <strong>Catatan Guru:</strong> {grade.feedback}
