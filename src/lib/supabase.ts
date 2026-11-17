@@ -651,6 +651,7 @@ export async function fetchAcademyFromSupabase(
         classSchedules: parseClassSchedules(n.class_schedules),
         author: n.author || 'Guild Master',
         ...(n.academic_year_id ? { academicYearId: n.academic_year_id } : {}),
+        ...(n.season === 'genap' || n.season === 'ganjil' ? { season: n.season } : {}),
       })),
       realms: rList.map((r: any) => ({
         id: r.id,
@@ -686,6 +687,7 @@ export async function fetchAcademyFromSupabase(
         scheduledAt: q.scheduled_at || '',
         classSchedules: parseClassSchedules(q.class_schedules),
         ...(q.academic_year_id ? { academicYearId: q.academic_year_id } : {}),
+        ...(q.season === 'genap' || q.season === 'ganjil' ? { season: q.season } : {}),
       })),
       grades: gradesList,
       settings: sRow
@@ -693,7 +695,8 @@ export async function fetchAcademyFromSupabase(
             theme: sRow.theme as PixelTheme,
             crtScanlines: Boolean(sRow.crt_scanlines),
             soundEnabled: Boolean(sRow.sound_enabled),
-            academicTerm: sRow.academic_term || 'Semester Ganjil 2026/2027',
+            academicTerm: sRow.academic_term || 'Era 2026/2027 — Season 1 (Ganjil)',
+            activeSeason: sRow.active_season === 'genap' ? 'genap' : 'ganjil',
           }
         : undefined,
       gmProfile: sRow
@@ -982,6 +985,7 @@ export async function cloudSyncNotice(
       class_schedules: JSON.stringify(notice.classSchedules || {}),
       author: notice.author,
       academic_year_id: notice.academicYearId || null,
+      season: notice.season || 'ganjil',
     };
     const rpc = await runGmRpc(client, 'gm_upsert_notice', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
@@ -1152,6 +1156,7 @@ export async function cloudSyncQuest(
       scheduled_at: quest.scheduledAt || '',
       class_schedules: JSON.stringify(quest.classSchedules || {}),
       academic_year_id: quest.academicYearId || null,
+      season: quest.season || 'ganjil',
     };
     const rpc = await runGmRpc(client, 'gm_upsert_quest', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
@@ -1250,6 +1255,7 @@ export async function cloudSyncSettings(
       crt_scanlines: settings.crtScanlines,
       sound_enabled: settings.soundEnabled,
       academic_term: settings.academicTerm,
+      active_season: settings.activeSeason || 'ganjil',
       gm_name: gmProfile.name,
       gm_title: gmProfile.title,
       gm_specialty: gmProfile.specialty,
@@ -1273,6 +1279,7 @@ export async function cloudSyncSettings(
       crt_scanlines: settings.crtScanlines,
       sound_enabled: settings.soundEnabled,
       academic_term: settings.academicTerm,
+      active_season: settings.activeSeason || 'ganjil',
       gm_name: gmProfile.name,
       gm_title: gmProfile.title,
       gm_specialty: gmProfile.specialty,
@@ -1378,6 +1385,7 @@ export async function uploadAllLocalToSupabase(
         scheduled_at: q.scheduledAt || '',
         class_schedules: JSON.stringify(q.classSchedules || {}),
         academic_year_id: q.academicYearId || null,
+        season: q.season || 'ganjil',
       })),
       notices: state.notices.map((n) => ({
         id: n.id,
@@ -1391,6 +1399,7 @@ export async function uploadAllLocalToSupabase(
         class_schedules: JSON.stringify(n.classSchedules || {}),
         author: n.author,
         academic_year_id: n.academicYearId || null,
+        season: n.season || 'ganjil',
       })),
       grades: state.grades.map((g) => ({
         id: g.id,
@@ -1408,6 +1417,7 @@ export async function uploadAllLocalToSupabase(
         crt_scanlines: state.settings.crtScanlines,
         sound_enabled: state.settings.soundEnabled,
         academic_term: state.settings.academicTerm,
+        active_season: state.settings.activeSeason || 'ganjil',
         gm_name: state.gmProfile.name,
         gm_title: state.gmProfile.title,
         gm_specialty: state.gmProfile.specialty,

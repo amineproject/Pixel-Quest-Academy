@@ -8,6 +8,7 @@ import {
   HeroStudent,
 } from '../types/lms';
 import {
+  buildAcademicPeriodLabel,
   calculateExpEarned,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
@@ -89,7 +90,8 @@ export function formatStatusLabel(status: GradeStatus): string {
 export function buildClassRecapData(
   state: AcademyState,
   dungeonId: string,
-  realmId: string
+  realmId: string,
+  options?: { periodLabel?: string }
 ): ClassRecapData {
   const sortedDungeons = sortDungeonsAlphabetically(state.dungeons);
   const selectedDungeon: Dungeon | undefined =
@@ -215,6 +217,15 @@ export function buildClassRecapData(
     };
   });
 
+  const activeEra =
+    state.academicYears?.find((y) => y.isActive) || state.academicYears?.[0];
+  const activeSeason = state.settings.activeSeason || 'ganjil';
+  const resolvedAcademicTerm =
+    options?.periodLabel ||
+    (activeEra
+      ? buildAcademicPeriodLabel(activeEra.name, activeSeason)
+      : state.settings.academicTerm);
+
   return {
     title: 'Rekap Penilaian Kelas',
     classLabel: selectedDungeon
@@ -223,7 +234,7 @@ export function buildClassRecapData(
     realmLabel: selectedRealm
       ? `${selectedRealm.code} - ${selectedRealm.name}`
       : 'Semua Mata Pelajaran',
-    academicTerm: state.settings.academicTerm,
+    academicTerm: resolvedAcademicTerm,
     gmName: state.gmProfile.name,
     generatedAt: new Date().toLocaleDateString('id-ID', {
       day: '2-digit',
@@ -350,8 +361,12 @@ export function downloadAssessmentExcel(
   XLSX.utils.book_append_sheet(wb, infoWs, 'Info_&_Panduan');
 
   const slug = sanitizeFileName(recap.classLabel || 'semua-kelas');
+  const termSlug = sanitizeFileName(recap.academicTerm || '');
   const datePart = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `penilaian-${slug}-${datePart}.xlsx`);
+  XLSX.writeFile(
+    wb,
+    `penilaian-${slug}${termSlug ? `-${termSlug}` : ''}-${datePart}.xlsx`
+  );
 }
 
 function normalizeColTitle(raw: string): string {
@@ -699,6 +714,10 @@ export function downloadRecapHtmlReport(state: AcademyState, recap: ClassRecapDa
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
   const slug = sanitizeFileName(recap.classLabel || 'semua-kelas');
+  const termSlug = sanitizeFileName(recap.academicTerm || '');
   const datePart = new Date().toISOString().slice(0, 10);
-  triggerBlobDownload(blob, `laporan-penilaian-${slug}-${datePart}.html`);
+  triggerBlobDownload(
+    blob,
+    `laporan-penilaian-${slug}${termSlug ? `-${termSlug}` : ''}-${datePart}.html`
+  );
 }

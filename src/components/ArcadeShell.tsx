@@ -31,9 +31,11 @@ import {
   GmMenuId,
   HeroMenuId,
   PixelTheme,
+  SeasonId,
   UserRole,
 } from '../types/lms';
 import { EraSelector } from './EraSelector';
+import { SeasonSelector } from './SeasonSelector';
 import { PixelAvatar, PixelCoin, PixelStar } from './PixelArt';
 import { PixelButton, PixelConfirmDialog, PixelModal } from './PixelUI';
 import { PWAInstallButton } from './PWAInstallBanner';
@@ -161,8 +163,10 @@ export interface ArcadeShellProps {
   unreadQuestCount?: number;
   academicYears?: AcademicYear[];
   activeEraId?: string;
+  activeSeason?: SeasonId;
   onSwitchEra?: (eraId: string) => void;
   onCreateEra?: (era: AcademicYear) => void;
+  onSwitchSeason?: (season: SeasonId) => void;
   onOpenGmDrawer: () => void;
   onOpenHeroDrawer?: () => void;
   onLogout: () => void;
@@ -197,8 +201,10 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   unreadQuestCount = 0,
   academicYears = [],
   activeEraId = '',
+  activeSeason = 'ganjil',
   onSwitchEra,
   onCreateEra,
+  onSwitchSeason,
   onOpenGmDrawer,
   onOpenHeroDrawer,
   onLogout,
@@ -607,6 +613,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         onCreateEra={onCreateEra}
                       />
                     )}
+                    <SeasonSelector
+                      activeSeason={activeSeason}
+                      canManage={isGm}
+                      onSwitchSeason={onSwitchSeason}
+                    />
                   </div>
                 </div>
               </div>

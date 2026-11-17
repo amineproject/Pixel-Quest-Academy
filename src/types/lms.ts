@@ -72,6 +72,8 @@ export interface GameMasterProfile {
   requirePassword?: boolean;
 }
 
+export type SeasonId = 'ganjil' | 'genap';
+
 export interface AcademicYear {
   id: string;
   name: string;
@@ -112,12 +114,13 @@ export interface QuestNotice {
   description: string;
   linkUrl?: string;
   priority: NoticePriority;
-  targetDungeonId: string; // 'all' or specific dungeonId
+  targetDungeonId: string; // 'all', single dungeonId, or comma-separated dungeonIds
   releaseDate: string; // YYYY-MM-DD
   author: string;
   scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
   classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
   academicYearId?: string;
+  season?: SeasonId;
 }
 
 export interface Realm {
@@ -157,6 +160,7 @@ export interface ActiveQuest {
   scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
   classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
   academicYearId?: string;
+  season?: SeasonId;
 }
 
 export type GradeStatus = 'tuntas' | 'belum' | 'proses' | 'remidial';
@@ -178,6 +182,7 @@ export interface SystemSettings {
   crtScanlines: boolean;
   soundEnabled: boolean;
   academicTerm: string;
+  activeSeason?: SeasonId;
 }
 
 export interface AcademyState {

@@ -121,7 +121,8 @@ app.get('/api/academy', async (req, res) => {
             theme: s.theme || 'sunny_quest',
             crtScanlines: s.crt_scanlines || false,
             soundEnabled: s.sound_enabled ?? true,
-            academicTerm: s.academic_term || 'Semester Ganjil 2026/2027',
+            academicTerm: s.academic_term || 'Era 2026/2027 — Season 1 (Ganjil)',
+            activeSeason: (s.active_season === 'genap' ? 'genap' : 'ganjil') as 'ganjil' | 'genap',
           },
           ...(eData && eData.length > 0
             ? {
@@ -216,6 +217,7 @@ app.get('/api/academy', async (req, res) => {
               scheduledAt: q.scheduled_at || q.scheduledAt || '',
               classSchedules: cs,
               academicYearId: q.academic_year_id || q.academicYearId || undefined,
+              season: (q.season === 'genap' ? 'genap' : 'ganjil') as 'ganjil' | 'genap',
             };
           }),
           notices: (nData || []).map((n: any) => {
@@ -236,6 +238,7 @@ app.get('/api/academy', async (req, res) => {
               classSchedules: cs,
               author: n.author,
               academicYearId: n.academic_year_id || n.academicYearId || undefined,
+              season: (n.season === 'genap' ? 'genap' : 'ganjil') as 'ganjil' | 'genap',
             };
           }),
           grades: (gData || []).map((g: any) => ({
@@ -436,6 +439,7 @@ app.post('/api/notices', async (req, res) => {
         class_schedules: JSON.stringify(req.body.classSchedules || {}),
         author: req.body.author,
         academic_year_id: req.body.academicYearId || null,
+        season: req.body.season || 'ganjil',
       });
       if (error) {
         await supabaseAdmin.from('notices').upsert({
@@ -570,6 +574,7 @@ app.post('/api/quests', async (req, res) => {
         scheduled_at: req.body.scheduledAt || '',
         class_schedules: JSON.stringify(req.body.classSchedules || {}),
         academic_year_id: req.body.academicYearId || null,
+        season: req.body.season || 'ganjil',
       });
       if (error) {
         await supabaseAdmin.from('quests').upsert({
@@ -649,7 +654,8 @@ app.post('/api/settings', async (req, res) => {
         theme: newSettings?.theme || 'sunny_quest',
         crt_scanlines: newSettings?.crtScanlines ?? false,
         sound_enabled: newSettings?.soundEnabled ?? true,
-        academic_term: newSettings?.academicTerm || 'Semester Ganjil 2026/2027',
+        academic_term: newSettings?.academicTerm || 'Era 2026/2027 — Season 1 (Ganjil)',
+        active_season: newSettings?.activeSeason || 'ganjil',
         gm_name: gmProfile?.name || 'Pak Budi Santoso',
         gm_title: gmProfile?.title || 'Guild Master of Science',
         gm_specialty: gmProfile?.specialty || 'Guru IPA & Pembina Sains',

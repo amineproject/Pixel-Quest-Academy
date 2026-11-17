@@ -15,10 +15,16 @@ import {
   PixelTheme,
   QuestNotice,
   Realm,
+  SeasonId,
   SystemSettings,
   UserRole,
 } from './types/lms';
-import { DEFAULT_ERA_ID, INITIAL_ACADEMY_STATE, STORAGE_KEY } from './data/seedData';
+import {
+  DEFAULT_ERA_ID,
+  DEFAULT_SEASON_ID,
+  INITIAL_ACADEMY_STATE,
+  STORAGE_KEY,
+} from './data/seedData';
 import {
   ArcadeShell,
   GM_NAV_ITEMS,
@@ -41,9 +47,11 @@ import { PixelCardSkeleton } from './components/PixelSkeleton';
 import { OfflineIndicator } from './components/PWAInstallBanner';
 import { ThemeProvider } from './context/ThemeContext';
 import {
+  buildAcademicPeriodLabel,
   getEffectiveGradeStatus,
   getHeroLevelProgress,
   getHeroTotalExp,
+  getSeasonLabel,
   isContentVisibleToHero,
 } from './utils/exp';
 import {
@@ -432,23 +440,54 @@ export default function App() {
   );
 
   const activeEraId = activeEra?.id || DEFAULT_ERA_ID;
+  const activeSeason: SeasonId =
+    state.settings.activeSeason === 'genap' ? 'genap' : DEFAULT_SEASON_ID;
 
-  const eraFilteredState = useMemo<AcademyState>(() => {
+  const { eraFilteredState, eraAllSeasonsState } = useMemo(() => {
     const fallbackLegacyEraId =
       academicYears.some((y) => y.id === DEFAULT_ERA_ID)
         ? DEFAULT_ERA_ID
         : academicYears[0]?.id || DEFAULT_ERA_ID;
     const isInActiveEra = (itemEraId?: string) =>
       (itemEraId || fallbackLegacyEraId) === activeEraId;
+    const isInActiveSeason = (itemSeason?: SeasonId) =>
+      (itemSeason || DEFAULT_SEASON_ID) === activeSeason;
 
-    return {
+    const eraDungeons = state.dungeons.filter((d) => isInActiveEra(d.academicYearId));
+    const eraAllQuests = state.quests.filter((q) => isInActiveEra(q.academicYearId));
+    const seasonQuests = eraAllQuests.filter((q) => isInActiveSeason(q.season));
+    const eraAllNotices = state.notices.filter((n) => isInActiveEra(n.academicYearId));
+    const seasonNotices = eraAllNotices.filter((n) => isInActiveSeason(n.season));
+
+    const seasonQuestIdSet = new Set(seasonQuests.map((q) => q.id));
+    const eraAllQuestIdSet = new Set(eraAllQuests.map((q) => q.id));
+
+    const seasonGrades = state.grades.filter((g) => seasonQuestIdSet.has(g.questId));
+    const eraAllGrades = state.grades.filter((g) => eraAllQuestIdSet.has(g.questId));
+
+    const filtered: AcademyState = {
       ...state,
       academicYears,
-      dungeons: state.dungeons.filter((d) => isInActiveEra(d.academicYearId)),
-      quests: state.quests.filter((q) => isInActiveEra(q.academicYearId)),
-      notices: state.notices.filter((n) => isInActiveEra(n.academicYearId)),
+      dungeons: eraDungeons,
+      quests: seasonQuests,
+      notices: seasonNotices,
+      grades: seasonGrades,
     };
-  }, [state, academicYears, activeEraId]);
+
+    const allSeasonsInEra: AcademyState = {
+      ...state,
+      academicYears,
+      dungeons: eraDungeons,
+      quests: eraAllQuests,
+      notices: eraAllNotices,
+      grades: eraAllGrades,
+    };
+
+    return {
+      eraFilteredState: filtered,
+      eraAllSeasonsState: allSeasonsInEra,
+    };
+  }, [state, academicYears, activeEraId, activeSeason]);
 
   const { unreadNoticeCount, unreadQuestCount } = useMemo(() => {
     if (!authSession.isLoggedIn) {
@@ -923,17 +962,37 @@ export default function App() {
 
     playRetroSound('confirm', stateRef.current.settings.soundEnabled);
     const nextYears = currentYears.map((y) => ({ ...y, isActive: y.id === eraId }));
-    const next = { ...stateRef.current, academicYears: nextYears };
+    const updatedSettings: SystemSettings = {
+      ...stateRef.current.settings,
+      activeSeason,
+      academicTerm: buildAcademicPeriodLabel(targetEra.name, activeSeason),
+    };
+    const next = {
+      ...stateRef.current,
+      academicYears: nextYears,
+      settings: updatedSettings,
+    };
     stateRef.current = next;
     setState(next);
 
     reportCloudSync(cloudSetActiveEra(eraId, getGmAuth()));
+    reportCloudSync(
+      cloudSyncSettings(updatedSettings, next.gmProfile, getGmAuth(), false)
+    );
     fetch(`/api/eras/${encodeURIComponent(eraId)}/activate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-pqa-role': 'admin',
       },
+    }).catch(() => {});
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        settings: updatedSettings,
+        gmProfile: next.gmProfile,
+      }),
     }).catch(() => {});
     showToast(`Era aktif dialihkan ke Era ${targetEra.name}!`, 'success');
   };
@@ -963,11 +1022,23 @@ export default function App() {
       canonicalEra,
       ...currentYears.map((y) => ({ ...y, isActive: false })),
     ];
-    const next = { ...stateRef.current, academicYears: nextYears };
+    const updatedSettings: SystemSettings = {
+      ...stateRef.current.settings,
+      activeSeason,
+      academicTerm: buildAcademicPeriodLabel(canonicalEra.name, activeSeason),
+    };
+    const next = {
+      ...stateRef.current,
+      academicYears: nextYears,
+      settings: updatedSettings,
+    };
     stateRef.current = next;
     setState(next);
 
     reportCloudSync(cloudSyncAcademicYear(canonicalEra, getGmAuth()));
+    reportCloudSync(
+      cloudSyncSettings(updatedSettings, next.gmProfile, getGmAuth(), false)
+    );
     fetch('/api/eras', {
       method: 'POST',
       headers: {
@@ -976,7 +1047,53 @@ export default function App() {
       },
       body: JSON.stringify(canonicalEra),
     }).catch(() => {});
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        settings: updatedSettings,
+        gmProfile: next.gmProfile,
+      }),
+    }).catch(() => {});
     showToast(`Era ${canonicalEra.name} dibuat & diaktifkan!`, 'success');
+  };
+
+  const handleSwitchSeason = (nextSeason: SeasonId) => {
+    if (
+      role !== UserRole.GAME_MASTER ||
+      authSessionRef.current.role !== UserRole.GAME_MASTER
+    ) {
+      playRetroSound('error', stateRef.current.settings.soundEnabled);
+      setDeniedRoute('#/gm/season/switch');
+      showToast('Akses ditolak: Hanya Super Admin yang dapat mengganti Season.', 'danger');
+      return;
+    }
+
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const updatedSettings: SystemSettings = {
+      ...stateRef.current.settings,
+      activeSeason: nextSeason,
+      academicTerm: buildAcademicPeriodLabel(activeEra?.name, nextSeason),
+    };
+    const next: AcademyState = {
+      ...stateRef.current,
+      settings: updatedSettings,
+    };
+    stateRef.current = next;
+    setState(next);
+
+    reportCloudSync(
+      cloudSyncSettings(updatedSettings, next.gmProfile, getGmAuth(), false)
+    );
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        settings: updatedSettings,
+        gmProfile: next.gmProfile,
+      }),
+    }).catch(() => {});
+    showToast(`Season aktif dialihkan ke ${getSeasonLabel(nextSeason)}!`, 'success');
   };
 
   // CRUD Upsert & Delete Handlers
@@ -1323,6 +1440,7 @@ export default function App() {
     const taggedNotice: QuestNotice = {
       ...notice,
       academicYearId: notice.academicYearId || activeEraId,
+      season: notice.season || activeSeason,
     };
     const next = {
       ...stateRef.current,
@@ -1478,6 +1596,7 @@ export default function App() {
     const taggedQuest: ActiveQuest = {
       ...quest,
       academicYearId: quest.academicYearId || activeEraId,
+      season: quest.season || activeSeason,
     };
     const next = {
       ...stateRef.current,
@@ -1760,8 +1879,10 @@ export default function App() {
       unreadQuestCount={unreadQuestCount}
       academicYears={academicYears}
       activeEraId={activeEraId}
+      activeSeason={activeSeason}
       onSwitchEra={handleSwitchEra}
       onCreateEra={handleCreateEra}
+      onSwitchSeason={handleSwitchSeason}
       onLogout={handleLogout}
       onOpenGmDrawer={() => {
         playRetroSound('blip', state.settings.soundEnabled);
@@ -1851,6 +1972,7 @@ export default function App() {
               {gmMenu === 'exp_loot' && (
                 <GmExpLoot
                   state={eraFilteredState}
+                  eraAllSeasonsState={eraAllSeasonsState}
                   onSaveGrade={handleSaveGrade}
                   onSaveGradesBatch={handleSaveGradesBatch}
                 />

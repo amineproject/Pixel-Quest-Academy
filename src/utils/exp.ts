@@ -5,6 +5,7 @@ import {
   GradeStatus,
   HeroStudent,
   Realm,
+  SeasonId,
 } from '../types/lms';
 
 export type LetterRank = 'S' | 'A' | 'B' | 'C' | 'D';
@@ -616,6 +617,70 @@ export function formatScheduleDateTime(value?: string): string {
   return `${dd} ${mm} ${yyyy}, ${hh}:${min}`;
 }
 
+export function parseTargetDungeonIds(targetDungeonId?: string): string[] {
+  const raw = (targetDungeonId || '').trim();
+  if (!raw || raw === 'all') return [];
+  const parts = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => Boolean(s) && s !== 'all');
+  return Array.from(new Set(parts));
+}
+
+export function serializeTargetDungeonIds(
+  selectedIds: string[],
+  totalDungeonsCount?: number
+): string {
+  const unique = Array.from(
+    new Set(
+      (selectedIds || [])
+        .map((s) => s.trim())
+        .filter((s) => Boolean(s) && s !== 'all')
+    )
+  );
+  if (
+    unique.length === 0 ||
+    (typeof totalDungeonsCount === 'number' &&
+      totalDungeonsCount > 0 &&
+      unique.length >= totalDungeonsCount)
+  ) {
+    return 'all';
+  }
+  return unique.join(',');
+}
+
+export function doesTargetMatchDungeon(
+  targetDungeonId: string | undefined,
+  dungeonId?: string
+): boolean {
+  const targetIds = parseTargetDungeonIds(targetDungeonId);
+  if (targetIds.length === 0) return true;
+  if (!dungeonId) return false;
+  return targetIds.includes(dungeonId);
+}
+
+export function formatTargetDungeonsSummary(
+  targetDungeonId: string | undefined,
+  dungeons: Dungeon[],
+  allLabel = 'Semua Kelas'
+): string {
+  const targetIds = parseTargetDungeonIds(targetDungeonId);
+  if (targetIds.length === 0) return allLabel;
+  if (targetIds.length === 1) {
+    const found = dungeons.find((d) => d.id === targetIds[0]);
+    return found ? `${found.guildCode} — ${found.name}` : targetIds[0];
+  }
+  const codes = targetIds.map((id) => {
+    const found = dungeons.find((d) => d.id === id);
+    return found?.guildCode || id;
+  });
+  const preview =
+    codes.length <= 3
+      ? codes.join(', ')
+      : `${codes.slice(0, 3).join(', ')} +${codes.length - 3}`;
+  return `${targetIds.length} Kelas (${preview})`;
+}
+
 export interface SchedulableItem {
   targetDungeonId?: string;
   dungeonId?: string;
@@ -628,10 +693,11 @@ export function getEffectiveScheduleForClass(
   heroDungeonId?: string
 ): { targeted: boolean; releaseTime: Date | null; rawSchedule: string } {
   const target = item.targetDungeonId || item.dungeonId || 'all';
+  const targetIds = parseTargetDungeonIds(target);
   const perClassOnly = item.scheduledAt === '__per_class__';
   const classSchedules = item.classSchedules || {};
 
-  if (target !== 'all' && heroDungeonId !== target) {
+  if (targetIds.length > 0 && (!heroDungeonId || !targetIds.includes(heroDungeonId))) {
     return { targeted: false, releaseTime: null, rawSchedule: '' };
   }
 
@@ -816,4 +882,23 @@ export function formatLinkDisplay(raw?: string): string {
   } catch {
     return safe.length > 44 ? `${safe.slice(0, 41)}...` : safe;
   }
+}
+
+export function getSeasonLabel(season?: SeasonId | 'all'): string {
+  if (season === 'all') return 'Semua Season (1 Tahun)';
+  return season === 'genap' ? 'Season 2 (Genap)' : 'Season 1 (Ganjil)';
+}
+
+export function getShortSeasonLabel(season?: SeasonId | 'all'): string {
+  if (season === 'all') return 'Semua Season';
+  return season === 'genap' ? 'Season 2 · Genap' : 'Season 1 · Ganjil';
+}
+
+export function buildAcademicPeriodLabel(
+  eraName?: string,
+  season?: SeasonId | 'all'
+): string {
+  const cleanEra = (eraName || '').trim();
+  const seasonLabel = getSeasonLabel(season);
+  return cleanEra ? `Era ${cleanEra} — ${seasonLabel}` : seasonLabel;
 }

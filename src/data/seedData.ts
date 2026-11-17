@@ -1,7 +1,8 @@
-import { AcademyState } from '../types/lms';
+import { AcademyState, SeasonId } from '../types/lms';
 
 export const STORAGE_KEY = 'pixel_quest_academy_state_v2';
 export const DEFAULT_ERA_ID = 'era-2026-2027';
+export const DEFAULT_SEASON_ID: SeasonId = 'ganjil';
 
 export const INITIAL_ACADEMY_STATE: AcademyState = {
   gmProfile: {
@@ -17,7 +18,8 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
     theme: 'sunny_quest',
     crtScanlines: false,
     soundEnabled: true,
-    academicTerm: 'Semester Ganjil 2026/2027',
+    academicTerm: 'Era 2026/2027 — Season 1 (Ganjil)',
+    activeSeason: DEFAULT_SEASON_ID,
   },
   academicYears: [
     {
@@ -145,6 +147,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       releaseDate: '2026-11-11',
       author: 'Pak Budi Santoso',
       academicYearId: DEFAULT_ERA_ID,
+      season: DEFAULT_SEASON_ID,
     },
     {
       id: 'ntc-2',
@@ -156,6 +159,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       releaseDate: '2026-11-09',
       author: 'Pak Budi Santoso',
       academicYearId: DEFAULT_ERA_ID,
+      season: DEFAULT_SEASON_ID,
     },
     {
       id: 'ntc-3',
@@ -167,6 +171,7 @@ export const INITIAL_ACADEMY_STATE: AcademyState = {
       releaseDate: '2026-11-05',
       author: 'Pak Budi Santoso',
       academicYearId: DEFAULT_ERA_ID,
+      season: DEFAULT_SEASON_ID,
     },
   ],
   realms: [
@@ -294,6 +299,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       maxExp: 200,
       difficulty: 'Normal',
       academicYearId: DEFAULT_ERA_ID,
+      season: DEFAULT_SEASON_ID,
     },
     {
       id: 'qst-2',
@@ -306,6 +312,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       maxExp: 300,
       difficulty: 'Boss',
       academicYearId: DEFAULT_ERA_ID,
+      season: DEFAULT_SEASON_ID,
     },
     {
       id: 'qst-3',
@@ -318,6 +325,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       maxExp: 250,
       difficulty: 'Elite',
       academicYearId: DEFAULT_ERA_ID,
+      season: DEFAULT_SEASON_ID,
     },
     {
       id: 'qst-4',
@@ -330,6 +338,7 @@ Selalu ubah basis bilangan ke faktor prima terkecil sebelum menyederhanakan eksp
       maxExp: 200,
       difficulty: 'Normal',
       academicYearId: DEFAULT_ERA_ID,
+      season: DEFAULT_SEASON_ID,
     },
   ],
   grades: [

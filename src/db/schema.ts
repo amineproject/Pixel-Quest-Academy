@@ -63,6 +63,7 @@ export const notices = pgTable('notices', {
   classSchedules: text('class_schedules').default('{}'),
   author: text('author').notNull().default('Guild Master'),
   academicYearId: text('academic_year_id').references(() => academicYears.id, { onDelete: 'set null' }),
+  season: text('season').notNull().default('ganjil'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -108,6 +109,7 @@ export const quests = pgTable('quests', {
   scheduledAt: text('scheduled_at').default(''),
   classSchedules: text('class_schedules').default('{}'),
   academicYearId: text('academic_year_id').references(() => academicYears.id, { onDelete: 'set null' }),
+  season: text('season').notNull().default('ganjil'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -131,7 +133,8 @@ export const settings = pgTable('settings', {
   theme: text('theme').notNull().default('sunny_quest'),
   crtScanlines: boolean('crt_scanlines').notNull().default(false),
   soundEnabled: boolean('sound_enabled').notNull().default(true),
-  academicTerm: text('academic_term').notNull().default('Semester Ganjil 2026/2027'),
+  academicTerm: text('academic_term').notNull().default('Era 2026/2027 — Season 1 (Ganjil)'),
+  activeSeason: text('active_season').notNull().default('ganjil'),
   gmName: text('gm_name').notNull().default('Pak Budi Santoso'),
   gmTitle: text('gm_title').notNull().default('Guild Master of Science'),
   gmSpecialty: text('gm_specialty').notNull().default('Guru IPA & Pembina Sains'),

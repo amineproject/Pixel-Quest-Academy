@@ -415,10 +415,10 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           </div>
 
           <div>
-            <PixelFieldLabel htmlFor="gm-term">Periode Akademik</PixelFieldLabel>
+            <PixelFieldLabel htmlFor="gm-term">Periode Akademik (Era &amp; Season)</PixelFieldLabel>
             <PixelInput
               id="gm-term"
-              placeholder="Contoh: Semester Ganjil 2026/2027"
+              placeholder="Contoh: Era 2026/2027 — Season 1 (Ganjil)"
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />

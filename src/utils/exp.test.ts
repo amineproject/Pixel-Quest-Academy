@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildAcademicPeriodLabel,
   calculateExpEarned,
   escapeCsvCell,
   getGmLevelProgress,
@@ -9,9 +10,13 @@ import {
   getHeroLevelProgress,
   getHeroTotalExp,
   getScopedHeroLeaderboardInputs,
+  getSeasonLabel,
+  getShortSeasonLabel,
   getWeeklyGuildLeaderboard,
   isContentVisibleToHero,
   maskHeroName,
+  parseTargetDungeonIds,
+  serializeTargetDungeonIds,
 } from './exp';
 import {
   loadOfflineContentSnapshot,
@@ -376,4 +381,50 @@ describe('Hall of Fame Weekly XP, Privacy Mask & CSV Export', () => {
     );
   });
 });
+
+describe('Academic Era & Season Formatting', () => {
+  it('formats Season labels and Era + Season report periods consistently', () => {
+    assert.equal(getSeasonLabel('ganjil'), 'Season 1 (Ganjil)');
+    assert.equal(getSeasonLabel('genap'), 'Season 2 (Genap)');
+    assert.equal(getShortSeasonLabel('ganjil'), 'Season 1 · Ganjil');
+    assert.equal(getShortSeasonLabel('genap'), 'Season 2 · Genap');
+    assert.equal(
+      buildAcademicPeriodLabel('2026/2027', 'ganjil'),
+      'Era 2026/2027 — Season 1 (Ganjil)'
+    );
+    assert.equal(
+      buildAcademicPeriodLabel('2026/2027', 'all'),
+      'Era 2026/2027 — Semua Season (1 Tahun)'
+    );
+  });
+});
+
+describe('Multi-Class Notice Targeting & Exclusion', () => {
+  it('serializes and parses all, single, and multiple target dungeon IDs cleanly', () => {
+    assert.deepEqual(parseTargetDungeonIds('all'), []);
+    assert.deepEqual(parseTargetDungeonIds('d1'), ['d1']);
+    assert.deepEqual(parseTargetDungeonIds('d1, d2, d1'), ['d1', 'd2']);
+    assert.equal(serializeTargetDungeonIds([], 5), 'all');
+    assert.equal(serializeTargetDungeonIds(['d1'], 5), 'd1');
+    assert.equal(serializeTargetDungeonIds(['d1', 'd3'], 5), 'd1,d3');
+    assert.equal(serializeTargetDungeonIds(['d1', 'd2', 'd3'], 3), 'all');
+  });
+
+  it('shows all-class notices to every class and hides targeted notices from unselected classes', () => {
+    const now = new Date(2026, 2, 10, 10, 0, 0);
+    const allClassNotice = { targetDungeonId: 'all', scheduledAt: '' };
+    const multiClassNotice = { targetDungeonId: 'd1,d3', scheduledAt: '' };
+
+    assert.equal(isContentVisibleToHero(allClassNotice, 'd1', now), true);
+    assert.equal(isContentVisibleToHero(allClassNotice, 'd2', now), true);
+    assert.equal(isContentVisibleToHero(allClassNotice, '', now), true);
+
+    assert.equal(isContentVisibleToHero(multiClassNotice, 'd1', now), true);
+    assert.equal(isContentVisibleToHero(multiClassNotice, 'd3', now), true);
+    assert.equal(isContentVisibleToHero(multiClassNotice, 'd2', now), false);
+    assert.equal(isContentVisibleToHero(multiClassNotice, '', now), false);
+  });
+});
+
+
 

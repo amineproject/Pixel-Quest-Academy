@@ -128,9 +128,9 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
       return (
         <span
           aria-label="Juara 1"
-          className="w-10 h-10 rounded-[var(--btn-radius)] border-2 border-[#09090f] bg-[#ffd000] text-[#09090f] flex items-center justify-center shrink-0 shadow-[2px_2px_0_#09090f]"
+          className="w-8 h-8 rounded-[var(--btn-radius)] border-2 border-[#09090f] bg-[#ffd000] text-[#09090f] flex items-center justify-center shrink-0 shadow-[2px_2px_0_#09090f]"
         >
-          <Crown size={20} />
+          <Crown size={16} />
         </span>
       );
     }
@@ -138,9 +138,9 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
       return (
         <span
           aria-label="Juara 2"
-          className="w-10 h-10 rounded-[var(--btn-radius)] border-2 border-slate-700 bg-slate-200 text-slate-900 flex items-center justify-center shrink-0"
+          className="w-8 h-8 rounded-[var(--btn-radius)] border-2 border-slate-700 bg-slate-200 text-slate-900 flex items-center justify-center shrink-0"
         >
-          <Medal size={20} />
+          <Medal size={16} />
         </span>
       );
     }
@@ -148,16 +148,80 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
       return (
         <span
           aria-label="Juara 3"
-          className="w-10 h-10 rounded-[var(--btn-radius)] border-2 border-amber-800 bg-amber-200 text-amber-950 flex items-center justify-center shrink-0"
+          className="w-8 h-8 rounded-[var(--btn-radius)] border-2 border-amber-800 bg-amber-200 text-amber-950 flex items-center justify-center shrink-0"
         >
-          <Trophy size={19} />
+          <Trophy size={15} />
         </span>
       );
     }
     return (
-      <span className="w-10 h-10 rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] text-[var(--text-primary)] font-pixel-display text-[12px] flex items-center justify-center shrink-0 tabular-nums">
+      <span className="w-8 h-8 rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)]/60 bg-[var(--bg-inset)] text-[var(--text-primary)] font-pixel-display text-[10.5px] flex items-center justify-center shrink-0 tabular-nums">
         #{rank}
       </span>
+    );
+  };
+
+  const splitIndex = Math.ceil(topTen.length / 2);
+  const leftColumn = topTen.slice(0, splitIndex);
+  const rightColumn = topTen.slice(splitIndex);
+
+  const renderRankCard = (entry: (typeof topTen)[number]) => {
+    const isMe = Boolean(hero && entry.hero.id === hero.id);
+    const dng = dungeonMap.get(entry.hero.dungeonId);
+    const displayName =
+      hideNames && !isMe
+        ? maskHeroName(entry.hero.name, entry.rank)
+        : entry.hero.name;
+
+    return (
+      <ThemedPanelCard
+        key={entry.hero.id}
+        className={`p-2.5 flex items-center justify-between gap-2 ${
+          isMe ? 'ring-2 ring-[var(--accent-warning)] bg-[var(--surface-tint)]' : ''
+        }`}
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {renderPixelMedal(entry.rank)}
+          <PixelAvatar
+            avatar={entry.hero.avatar}
+            size={32}
+            className="shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1">
+              <p className="text-[13.5px] font-bold text-[var(--text-primary)] leading-tight truncate">
+                {displayName}
+              </p>
+              {isMe && (
+                <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[9px] font-bold text-[#09090f] leading-none">
+                  KAMU
+                </span>
+              )}
+              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[9.5px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
+                Lv.{entry.level}
+              </span>
+            </div>
+            <p className="text-[11.5px] text-[var(--text-secondary)] leading-tight truncate mt-0.5">
+              {dng
+                ? `${dng.name}${dng.tier ? ` (${dng.tier})` : ''}`
+                : 'Guild'}{' '}
+              · {entry.totalExp} EXP
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end shrink-0">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/50">
+            <PixelCoin size={12} />
+            <span className="font-pixel-display text-[11px] text-[var(--accent-warning)] tabular-nums">
+              +{entry.weeklyExp} EXP
+            </span>
+          </div>
+          <span className="text-[10.5px] text-[var(--text-muted)] mt-0.5 leading-none">
+            Minggu Ini
+          </span>
+        </div>
+      </ThemedPanelCard>
     );
   };
 
@@ -189,9 +253,9 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
 
       {/* Filter Card: Admin filters by Class, Student filters by their enrolled Mapel */}
       {isGm ? (
-        <ThemedPanelCard className="p-3.5 space-y-3">
+        <ThemedPanelCard className="p-3 space-y-2.5">
           {tierGroups.length > 0 && (
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <PixelFieldLabel>1. Pilih Tingkat Kelas</PixelFieldLabel>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter tingkat kelas">
                 <button
@@ -200,7 +264,7 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
                     setSelectedTier('all');
                     setSelectedDungeonIds([]);
                   }}
-                  className={`pixel-btn min-h-[38px] px-3 py-1.5 text-[13px] font-semibold cursor-pointer ${
+                  className={`pixel-btn min-h-[34px] px-2.5 py-1 text-[12px] font-semibold cursor-pointer ${
                     selectedTier === 'all'
                       ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                       : 'bg-[var(--bg-inset)] text-[var(--text-primary)]'
@@ -218,7 +282,7 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
                         setSelectedTier(group.tier);
                         setSelectedDungeonIds([]);
                       }}
-                      className={`pixel-btn min-h-[38px] px-3 py-1.5 text-[13px] font-semibold cursor-pointer ${
+                      className={`pixel-btn min-h-[34px] px-2.5 py-1 text-[12px] font-semibold cursor-pointer ${
                         active
                           ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                           : 'bg-[var(--bg-inset)] text-[var(--text-primary)]'
@@ -252,7 +316,7 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
         </ThemedPanelCard>
       ) : (
         studentRealms.length > 0 && (
-          <ThemedPanelCard className="p-3.5">
+          <ThemedPanelCard className="p-3">
             <div className="max-w-md">
               <PixelFieldLabel htmlFor="hof-realm">
                 Filter Mapel yang Diikuti
@@ -276,96 +340,47 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
 
       {/* Student Personal Rank Highlight */}
       {!isGm && myEntry && (
-        <ThemedPanelCard className="p-4 bg-[var(--surface-tint)] ring-2 ring-[var(--accent-warning)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="w-10 h-10 rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)] bg-[var(--comic-gold)] text-[#09090f] flex items-center justify-center shrink-0">
-              <Award size={20} />
+        <ThemedPanelCard className="p-3 bg-[var(--surface-tint)] ring-2 ring-[var(--accent-warning)] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-8 h-8 rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)] bg-[var(--comic-gold)] text-[#09090f] flex items-center justify-center shrink-0">
+              <Award size={17} />
             </span>
             <div className="min-w-0">
-              <p className="font-pixel-display text-[13px] sm:text-[14px] text-[var(--text-primary)]">
+              <p className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)]">
                 Kamu di Rank #{myEntry.rank}
               </p>
-              <p className="text-[15px] text-[var(--text-secondary)]">
+              <p className="text-[13px] text-[var(--text-secondary)]">
                 {myEntry.rank <= 10
                   ? 'Masuk Top 10 minggu ini — pertahankan!'
                   : 'Terus selesaikan Quest untuk menembus Top 10!'}
               </p>
             </div>
           </div>
-          <div className="px-3 py-1.5 bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60 font-pixel-display text-[13px] text-[var(--accent-warning)] tabular-nums shrink-0">
+          <div className="px-2.5 py-1 bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60 font-pixel-display text-[12px] text-[var(--accent-warning)] tabular-nums shrink-0">
             +{myEntry.weeklyExp} EXP Minggu Ini
           </div>
         </ThemedPanelCard>
       )}
 
-      {/* Top 10 List */}
+      {/* Top 10 List — 2 compact side-by-side parts (1-5 & 6-10) */}
       {topTen.length === 0 ? (
         <PixelEmptyState
           title="Papan Peringkat Masih Kosong"
           description="Belum ada Hero aktif yang tercatat untuk ditampilkan di Hall of Fame."
           compact
         />
+      ) : rightColumn.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-start">
+          <div className="space-y-2">
+            {leftColumn.map((entry) => renderRankCard(entry))}
+          </div>
+          <div className="space-y-2">
+            {rightColumn.map((entry) => renderRankCard(entry))}
+          </div>
+        </div>
       ) : (
-        <div className="space-y-2.5">
-          {topTen.map((entry) => {
-            const isMe = Boolean(hero && entry.hero.id === hero.id);
-            const dng = dungeonMap.get(entry.hero.dungeonId);
-            const displayName =
-              hideNames && !isMe
-                ? maskHeroName(entry.hero.name, entry.rank)
-                : entry.hero.name;
-
-            return (
-              <ThemedPanelCard
-                key={entry.hero.id}
-                className={`p-3.5 flex items-center justify-between gap-3 ${
-                  isMe ? 'ring-2 ring-[var(--accent-warning)] bg-[var(--surface-tint)]' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {renderPixelMedal(entry.rank)}
-                  <PixelAvatar
-                    avatar={entry.hero.avatar}
-                    size={40}
-                    className="shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="text-[16px] font-bold text-[var(--text-primary)] truncate">
-                        {displayName}
-                      </p>
-                      {isMe && (
-                        <span className="px-2 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10px] font-bold text-[#09090f]">
-                          KAMU
-                        </span>
-                      )}
-                      <span className="px-2 py-0.5 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[10px] font-bold text-[var(--text-primary)] tabular-nums">
-                        Lv.{entry.level}
-                      </span>
-                    </div>
-                    <p className="text-[14px] text-[var(--text-secondary)] truncate">
-                      {dng
-                        ? `${dng.name}${dng.tier ? ` (${dng.tier})` : ''}`
-                        : 'Guild'}{' '}
-                      · Total {entry.totalExp} EXP
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end shrink-0">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/50">
-                    <PixelCoin size={14} />
-                    <span className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--accent-warning)] tabular-nums">
-                      +{entry.weeklyExp} EXP
-                    </span>
-                  </div>
-                  <span className="text-[12px] text-[var(--text-muted)] mt-0.5">
-                    Minggu Ini
-                  </span>
-                </div>
-              </ThemedPanelCard>
-            );
-          })}
+        <div className="space-y-2 max-w-2xl">
+          {leftColumn.map((entry) => renderRankCard(entry))}
         </div>
       )}
     </div>

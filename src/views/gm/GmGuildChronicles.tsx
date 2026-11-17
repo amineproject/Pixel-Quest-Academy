@@ -12,6 +12,7 @@ import {
 } from '../../components/PixelUI';
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
+  buildAcademicPeriodLabel,
   escapeCsvCell,
   getEffectiveGradeStatus,
   getHeroLevelProgress,
@@ -110,12 +111,18 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
     };
   }, [state.heroes, state.grades, state.quests, scope]);
 
+  const activeEra =
+    state.academicYears?.find((y) => y.isActive) || state.academicYears?.[0];
+  const activeSeason = state.settings.activeSeason || 'ganjil';
+  const periodLabel = buildAcademicPeriodLabel(activeEra?.name, activeSeason);
+
   const handleExportCsv = () => {
     const header = [
       'No',
       'Nama Hero',
       'Kode Siswa / NIM',
       'Kelas (Dungeon)',
+      'Periode (Era & Season)',
       'Level',
       'Gelar',
       'Total EXP',
@@ -132,6 +139,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
           row.hero.name,
           row.hero.studentCode,
           dng ? `${dng.guildCode} - ${dng.name} (${dng.tier})` : 'Tanpa Kelas',
+          periodLabel,
           `Lv.${row.level}`,
           row.title,
           row.exp,
@@ -153,9 +161,12 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
         : selectedTier !== 'all'
           ? selectedTier.toLowerCase().replace(/[^a-z0-9]+/g, '-')
           : 'semua-kelas';
+    const eraSlug = activeEra?.name
+      ? `-${activeEra.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+      : '';
     const link = document.createElement('a');
     link.href = url;
-    link.download = `guild-chronicles-${slug}.csv`;
+    link.download = `guild-chronicles-${slug}${eraSlug}-season-${activeSeason}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -166,7 +177,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
     <div className="space-y-4">
       <PixelSectionTitle
         title="Guild Chronicles"
-        subtitle="Ringkasan statistik kelas bergaya parchment & ekspor CSV"
+        subtitle={`Statistik & ekspor CSV untuk ${periodLabel}`}
         action={
           <PixelButton
             type="button"

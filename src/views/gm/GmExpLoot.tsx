@@ -28,9 +28,11 @@ import {
 } from '../../components/PixelUI';
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
+  buildAcademicPeriodLabel,
   calculateExpEarned,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
+  getSeasonLabel,
 } from '../../utils/exp';
 import {
   buildClassRecapData,
@@ -44,6 +46,7 @@ import {
 
 interface GmExpLootProps {
   state: AcademyState;
+  eraAllSeasonsState?: AcademyState;
   onSaveGrade: (grade: ExpGrade) => void;
   onSaveGradesBatch?: (grades: ExpGrade[]) => void | Promise<void>;
 }
@@ -77,6 +80,7 @@ const STATUS_SELECT_OPTIONS: {
 
 export const GmExpLoot: React.FC<GmExpLootProps> = ({
   state,
+  eraAllSeasonsState,
   onSaveGrade,
   onSaveGradesBatch,
 }) => {
@@ -126,6 +130,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const [recapModalOpen, setRecapModalOpen] = useState(false);
   const [recapDungeonId, setRecapDungeonId] = useState('all');
   const [recapRealmId, setRecapRealmId] = useState('all');
+  const [recapSeasonScope, setRecapSeasonScope] = useState<'active' | 'all_era'>('active');
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
 
   // Upload Assessment Excel Modal State
@@ -153,6 +158,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
           : sortedDungeons[0]?.id || 'all';
     setRecapDungeonId(defaultDungeon);
     setRecapRealmId('all');
+    setRecapSeasonScope('active');
     setDownloadNotice(null);
     setRecapModalOpen(true);
   };
@@ -190,8 +196,22 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     setUploadModalOpen(false);
   };
 
+  const activeEra =
+    state.academicYears?.find((y) => y.isActive) || state.academicYears?.[0];
+  const activeSeason = state.settings.activeSeason || 'ganjil';
+  const recapSourceState =
+    recapSeasonScope === 'all_era' && eraAllSeasonsState
+      ? eraAllSeasonsState
+      : state;
+  const recapPeriodLabel = buildAcademicPeriodLabel(
+    activeEra?.name,
+    recapSeasonScope === 'all_era' ? 'all' : activeSeason
+  );
+
   const recapPreview = recapModalOpen
-    ? buildClassRecapData(state, recapDungeonId, recapRealmId)
+    ? buildClassRecapData(recapSourceState, recapDungeonId, recapRealmId, {
+        periodLabel: recapPeriodLabel,
+      })
     : null;
 
   const dungeonOrder = new Map(sortedDungeons.map((d, idx) => [d.id, idx]));
@@ -762,12 +782,42 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             </div>
           </div>
 
+          {eraAllSeasonsState && (
+            <div>
+              <PixelFieldLabel htmlFor="recap-season-scope">
+                Cakupan Season Laporan
+              </PixelFieldLabel>
+              <PixelSelect
+                id="recap-season-scope"
+                value={recapSeasonScope}
+                onChange={(e) => {
+                  setRecapSeasonScope(
+                    e.target.value === 'all_era' ? 'all_era' : 'active'
+                  );
+                  setDownloadNotice(null);
+                }}
+              >
+                <option value="active">
+                  Season Aktif ({getSeasonLabel(activeSeason)})
+                </option>
+                <option value="all_era">
+                  Gabungan Semua Season (Era {activeEra?.name || ''} — Ganjil &amp; Genap)
+                </option>
+              </PixelSelect>
+            </div>
+          )}
+
           {recapPreview && (
             <div className="pixel-box-inset p-3 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
-                <span className="font-semibold text-[var(--accent-warning)]">
-                  {recapPreview.classLabel}
-                </span>
+                <div className="min-w-0">
+                  <span className="font-semibold text-[var(--accent-warning)] block">
+                    {recapPreview.classLabel}
+                  </span>
+                  <span className="text-[11px] text-[var(--text-secondary)]">
+                    {recapPreview.academicTerm}
+                  </span>
+                </div>
                 <span className="text-[var(--text-muted)] tabular-nums">
                   {recapPreview.rows.length} Siswa · {recapPreview.quests.length} Tugas
                 </span>
@@ -824,7 +874,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               disabled={!recapPreview || recapPreview.rows.length === 0}
               onClick={() => {
                 if (!recapPreview) return;
-                downloadAssessmentExcel(state, recapPreview);
+                downloadAssessmentExcel(recapSourceState, recapPreview);
                 setDownloadNotice(
                   `File Excel penilaian "${recapPreview.classLabel}" berhasil diunduh!`
                 );
@@ -840,7 +890,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               disabled={!recapPreview || recapPreview.rows.length === 0}
               onClick={() => {
                 if (!recapPreview) return;
-                downloadRecapHtmlReport(state, recapPreview);
+                downloadRecapHtmlReport(recapSourceState, recapPreview);
                 setDownloadNotice(
                   `Laporan cetak "${recapPreview.classLabel}" berhasil diunduh!`
                 );

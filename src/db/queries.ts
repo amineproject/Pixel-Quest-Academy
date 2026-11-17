@@ -13,7 +13,7 @@ import {
   tomes,
   users,
 } from './schema.ts';
-import { DEFAULT_ERA_ID, INITIAL_ACADEMY_STATE } from '../data/seedData.ts';
+import { DEFAULT_ERA_ID, DEFAULT_SEASON_ID, INITIAL_ACADEMY_STATE } from '../data/seedData.ts';
 import {
   AcademicYear,
   ActiveQuest,
@@ -25,6 +25,7 @@ import {
   PixelTheme,
   QuestNotice,
   Realm,
+  SeasonId,
   SystemSettings,
 } from '../types/lms.ts';
 
@@ -125,6 +126,7 @@ export async function seedInitialDataIfEmpty() {
           scheduledAt: q.scheduledAt || '',
           classSchedules: JSON.stringify(q.classSchedules || {}),
           academicYearId: q.academicYearId || DEFAULT_ERA_ID,
+          season: q.season || DEFAULT_SEASON_ID,
         });
       }
 
@@ -142,6 +144,7 @@ export async function seedInitialDataIfEmpty() {
           classSchedules: JSON.stringify(n.classSchedules || {}),
           author: n.author,
           academicYearId: n.academicYearId || DEFAULT_ERA_ID,
+          season: n.season || DEFAULT_SEASON_ID,
         });
       }
 
@@ -167,6 +170,7 @@ export async function seedInitialDataIfEmpty() {
         crtScanlines: INITIAL_ACADEMY_STATE.settings.crtScanlines,
         soundEnabled: INITIAL_ACADEMY_STATE.settings.soundEnabled,
         academicTerm: INITIAL_ACADEMY_STATE.settings.academicTerm,
+        activeSeason: INITIAL_ACADEMY_STATE.settings.activeSeason || DEFAULT_SEASON_ID,
         gmName: INITIAL_ACADEMY_STATE.gmProfile.name,
         gmTitle: INITIAL_ACADEMY_STATE.gmProfile.title,
         gmSpecialty: INITIAL_ACADEMY_STATE.gmProfile.specialty,
@@ -211,7 +215,8 @@ export async function getAllAcademyData() {
       theme: 'sunny_quest',
       crtScanlines: false,
       soundEnabled: true,
-      academicTerm: 'Semester Ganjil 2026/2027',
+      academicTerm: 'Era 2026/2027 — Season 1 (Ganjil)',
+      activeSeason: DEFAULT_SEASON_ID,
       gmName: 'Pak Budi Santoso',
       gmTitle: 'Guild Master of Science',
       gmSpecialty: 'Guru IPA & Pembina Sains',
@@ -236,6 +241,7 @@ export async function getAllAcademyData() {
         crtScanlines: s.crtScanlines,
         soundEnabled: s.soundEnabled,
         academicTerm: s.academicTerm,
+        activeSeason: (s.activeSeason === 'genap' ? 'genap' : DEFAULT_SEASON_ID) as SeasonId,
       },
       academicYears:
         academicYearsList.length > 0
@@ -299,6 +305,7 @@ export async function getAllAcademyData() {
           classSchedules: cs,
           author: n.author,
           academicYearId: n.academicYearId || DEFAULT_ERA_ID,
+          season: (n.season === 'genap' ? 'genap' : DEFAULT_SEASON_ID) as SeasonId,
         };
       }),
       realms: realmsList.map((r) => ({
@@ -346,6 +353,7 @@ export async function getAllAcademyData() {
           scheduledAt: q.scheduledAt || '',
           classSchedules: cs,
           academicYearId: q.academicYearId || DEFAULT_ERA_ID,
+          season: (q.season === 'genap' ? 'genap' : DEFAULT_SEASON_ID) as SeasonId,
         };
       }),
       grades: gradesList.map((g) => ({
@@ -645,6 +653,7 @@ export async function upsertNotice(n: QuestNotice) {
     const cleanLink = (n.linkUrl || '').trim();
     const csJson = JSON.stringify(n.classSchedules || {});
     const eraId = n.academicYearId || DEFAULT_ERA_ID;
+    const seasonId: SeasonId = n.season === 'genap' ? 'genap' : DEFAULT_SEASON_ID;
     return await db
       .insert(notices)
       .values({
@@ -659,6 +668,7 @@ export async function upsertNotice(n: QuestNotice) {
         classSchedules: csJson,
         author: n.author,
         academicYearId: eraId,
+        season: seasonId,
       })
       .onConflictDoUpdate({
         target: notices.id,
@@ -672,6 +682,7 @@ export async function upsertNotice(n: QuestNotice) {
           scheduledAt: n.scheduledAt || '',
           classSchedules: csJson,
           academicYearId: eraId,
+          season: seasonId,
         },
       });
   } catch (error) {
@@ -787,6 +798,7 @@ export async function upsertQuest(q: ActiveQuest) {
     const cleanLink = (q.linkUrl || '').trim();
     const csJson = JSON.stringify(q.classSchedules || {});
     const eraId = q.academicYearId || DEFAULT_ERA_ID;
+    const seasonId: SeasonId = q.season === 'genap' ? 'genap' : DEFAULT_SEASON_ID;
     return await db
       .insert(quests)
       .values({
@@ -802,6 +814,7 @@ export async function upsertQuest(q: ActiveQuest) {
         scheduledAt: q.scheduledAt || '',
         classSchedules: csJson,
         academicYearId: eraId,
+        season: seasonId,
       })
       .onConflictDoUpdate({
         target: quests.id,
@@ -817,6 +830,7 @@ export async function upsertQuest(q: ActiveQuest) {
           scheduledAt: q.scheduledAt || '',
           classSchedules: csJson,
           academicYearId: eraId,
+          season: seasonId,
         },
       });
   } catch (error) {
@@ -879,6 +893,7 @@ export async function updateSystemSettings(
     if (set.crtScanlines !== undefined) updatePayload.crtScanlines = set.crtScanlines;
     if (set.soundEnabled !== undefined) updatePayload.soundEnabled = set.soundEnabled;
     if (set.academicTerm !== undefined) updatePayload.academicTerm = set.academicTerm;
+    if (set.activeSeason !== undefined) updatePayload.activeSeason = set.activeSeason;
     if (gm?.name !== undefined) updatePayload.gmName = gm.name;
     if (gm?.title !== undefined) updatePayload.gmTitle = gm.title;
     if (gm?.specialty !== undefined) updatePayload.gmSpecialty = gm.specialty;
@@ -894,7 +909,8 @@ export async function updateSystemSettings(
         theme: set.theme || 'sunny_quest',
         crtScanlines: set.crtScanlines ?? false,
         soundEnabled: set.soundEnabled ?? true,
-        academicTerm: set.academicTerm || 'Semester Ganjil 2026/2027',
+        academicTerm: set.academicTerm || 'Era 2026/2027 — Season 1 (Ganjil)',
+        activeSeason: set.activeSeason || DEFAULT_SEASON_ID,
         gmName: gm?.name || 'Pak Budi Santoso',
         gmTitle: gm?.title || 'Guild Master of Science',
         gmSpecialty: gm?.specialty || 'Guru IPA & Pembina Sains',

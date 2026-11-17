@@ -50,6 +50,7 @@ import {
   getHeroLevelProgress,
   getHeroTotalExp,
   isContentVisibleToHero,
+  parseTargetDungeonIds,
 } from '../../utils/exp';
 
 const HERO_AVATAR_OPTIONS: { value: AvatarClass; label: string }[] = [
@@ -380,11 +381,16 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
               const metaTimeLabel = effSchedule.releaseTime
                 ? formatScheduleDateTime(effSchedule.rawSchedule)
                 : formatRetroDate(notice.releaseDate);
+              const isClassSpecificNotice =
+                parseTargetDungeonIds(notice.targetDungeonId).length > 0;
+              const targetTag = isClassSpecificNotice && dungeon
+                ? `Khusus ${dungeon.guildCode}`
+                : 'Semua Kelas';
 
               return (
                 <ThemedNoticeCard
                   key={notice.id}
-                  speaker={`${priorityLabel} · ${notice.author}`}
+                  speaker={`${priorityLabel} · ${targetTag} · ${notice.author}`}
                   metaRight={metaTimeLabel}
                   footer={
                     notice.linkUrl ? (

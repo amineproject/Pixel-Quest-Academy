@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CalendarClock, Clock, Layers } from 'lucide-react';
 import { Dungeon } from '../types/lms';
-import { sortDungeonsAlphabetically } from '../utils/exp';
+import { parseTargetDungeonIds, sortDungeonsAlphabetically } from '../utils/exp';
 import { DungeonOptGroupOptions, PixelFieldLabel, PixelSelect } from './PixelUI';
 
 type ScheduleMode = 'now' | 'sync' | 'per_class';
@@ -81,10 +81,12 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
     }
   };
 
-  const baseDungeons =
-    targetDungeonId === 'all'
-      ? sortedDungeons
-      : sortedDungeons.filter((d) => d.id === targetDungeonId);
+  const targetIds = parseTargetDungeonIds(targetDungeonId);
+  const isAllTargets = targetIds.length === 0;
+
+  const baseDungeons = isAllTargets
+    ? sortedDungeons
+    : sortedDungeons.filter((d) => targetIds.includes(d.id));
 
   const teachesFilterRealm = (d: Dungeon) => {
     if (!filterRealmId) return true;
@@ -93,12 +95,12 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
   };
 
   const matchingDungeons =
-    targetDungeonId === 'all' && filterRealmId
+    isAllTargets && filterRealmId
       ? baseDungeons.filter(teachesFilterRealm)
       : baseDungeons;
   const nonMatchingCount = baseDungeons.length - matchingDungeons.length;
   const visibleDungeons =
-    targetDungeonId === 'all' && filterRealmId && !showAllClasses && matchingDungeons.length > 0
+    isAllTargets && filterRealmId && !showAllClasses && matchingDungeons.length > 0
       ? matchingDungeons
       : baseDungeons;
 
@@ -237,7 +239,7 @@ export const ScheduleConfigSection: React.FC<ScheduleConfigSectionProps> = ({
             )}
           </div>
 
-          {filterRealmId && targetDungeonId === 'all' && nonMatchingCount > 0 && (
+          {filterRealmId && isAllTargets && nonMatchingCount > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-pixel)]/50 text-[11px]">
               <span className="text-[var(--text-secondary)]">
                 Menampilkan kelas yang mengajarkan{' '}
