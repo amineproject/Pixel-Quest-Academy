@@ -18,9 +18,11 @@ import {
   TierDungeonFilter,
   resolveTierDungeonScope,
 } from '../../components/TierDungeonFilter';
+import { PixelRealmGlyph } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyState,
+  PixelFieldLabel,
   PixelLinkButton,
   PixelModal,
   PixelSectionTitle,
@@ -98,6 +100,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
 }) => {
   const isGm = role === UserRole.GAME_MASTER;
   const [filter, setFilter] = useState<QuestBoardFilter>('all');
+  const [selectedRealmId, setSelectedRealmId] = useState<string>('all');
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [detailQuest, setDetailQuest] = useState<ActiveQuest | null>(null);
@@ -121,6 +124,22 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
     if (!hero) return null;
     return getHeroEffectiveRealmIds(hero, state.dungeons);
   }, [hero, state.dungeons]);
+
+  const enrolledRealms = useMemo(() => {
+    if (isGm || !hero) return state.realms;
+    if (heroRealmIds && heroRealmIds.length > 0) {
+      const allowedSet = new Set(heroRealmIds);
+      return state.realms.filter((r) => allowedSet.has(r.id));
+    }
+    return state.realms;
+  }, [isGm, hero, heroRealmIds, state.realms]);
+
+  const activeRealmFilter = useMemo(() => {
+    if (isGm || selectedRealmId === 'all') return 'all';
+    return enrolledRealms.some((r) => r.id === selectedRealmId)
+      ? selectedRealmId
+      : 'all';
+  }, [isGm, selectedRealmId, enrolledRealms]);
 
   const rows = useMemo(() => {
     const baseQuests = isGm
@@ -229,16 +248,29 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
     heroRealmIds,
   ]);
 
+  const questCountByRealm = useMemo(() => {
+    const map = new Map<string, number>();
+    rows.forEach((r) => {
+      map.set(r.quest.realmId, (map.get(r.quest.realmId) || 0) + 1);
+    });
+    return map;
+  }, [rows]);
+
+  const realmScopedRows = useMemo(() => {
+    if (isGm || activeRealmFilter === 'all') return rows;
+    return rows.filter((r) => r.quest.realmId === activeRealmFilter);
+  }, [rows, isGm, activeRealmFilter]);
+
   const filteredRows = useMemo(() => {
-    if (filter === 'pending') return rows.filter((r) => !r.isDone);
-    if (filter === 'done') return rows.filter((r) => r.isDone);
-    return rows;
-  }, [rows, filter]);
+    if (filter === 'pending') return realmScopedRows.filter((r) => !r.isDone);
+    if (filter === 'done') return realmScopedRows.filter((r) => r.isDone);
+    return realmScopedRows;
+  }, [realmScopedRows, filter]);
 
   const filterOptions: { id: QuestBoardFilter; label: string; count: number }[] = [
-    { id: 'all', label: 'Semua', count: rows.length },
-    { id: 'pending', label: 'Belum', count: rows.filter((r) => !r.isDone).length },
-    { id: 'done', label: 'Selesai', count: rows.filter((r) => r.isDone).length },
+    { id: 'all', label: 'Semua', count: realmScopedRows.length },
+    { id: 'pending', label: 'Belum', count: realmScopedRows.filter((r) => !r.isDone).length },
+    { id: 'done', label: 'Selesai', count: realmScopedRows.filter((r) => r.isDone).length },
   ];
 
   const detailRow = detailQuest
@@ -283,6 +315,62 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
           })}
         </div>
 
+        {!isGm && enrolledRealms.length > 0 && (
+          <div className="pt-2 border-t border-[var(--border-pixel)]/30 space-y-1.5">
+            <PixelFieldLabel>Filter Mapel yang Diikuti</PixelFieldLabel>
+            <div
+              className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll"
+              role="tablist"
+              aria-label="Filter mapel yang diikuti"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeRealmFilter === 'all'}
+                onClick={() => setSelectedRealmId('all')}
+                className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                  activeRealmFilter === 'all'
+                    ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
+                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
+                }`}
+              >
+                <span>Semua Mapel</span>
+                <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10px] tabular-nums">
+                  {rows.length}
+                </span>
+              </button>
+              {enrolledRealms.map((realm) => {
+                const selected = activeRealmFilter === realm.id;
+                const count = questCountByRealm.get(realm.id) || 0;
+                return (
+                  <button
+                    key={realm.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setSelectedRealmId(realm.id)}
+                    className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                      selected
+                        ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
+                    }`}
+                  >
+                    <PixelRealmGlyph
+                      icon={realm.icon}
+                      color={selected ? '#1A1C2C' : realm.accentColor}
+                      size={15}
+                    />
+                    <span>{realm.name}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10px] tabular-nums">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {isGm && (
           <TierDungeonFilter
             idPrefix="qb"
@@ -300,11 +388,25 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         <PixelEmptyState
           title="Belum Ada Quest di Daftar Ini"
           description={
-            filter === 'pending'
-              ? 'Semua tugas sudah dikumpulkan atau diselesaikan!'
-              : filter === 'done'
-                ? 'Belum ada tugas yang berstatus selesai.'
-                : 'Belum ada Quest yang ditugaskan saat ini.'
+            activeRealmFilter !== 'all'
+              ? 'Belum ada tugas untuk mata pelajaran dan status yang dipilih.'
+              : filter === 'pending'
+                ? 'Semua tugas sudah dikumpulkan atau diselesaikan!'
+                : filter === 'done'
+                  ? 'Belum ada tugas yang berstatus selesai.'
+                  : 'Belum ada Quest yang ditugaskan saat ini.'
+          }
+          action={
+            activeRealmFilter !== 'all' ? (
+              <PixelButton
+                type="button"
+                size="sm"
+                variant="neutral"
+                onClick={() => setSelectedRealmId('all')}
+              >
+                Tampilkan Semua Mapel
+              </PixelButton>
+            ) : undefined
           }
           compact
         />
