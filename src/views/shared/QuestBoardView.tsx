@@ -12,8 +12,13 @@ import {
   ActiveQuest,
   GmMenuId,
   HeroStudent,
+  QuestCategory,
   UserRole,
 } from '../../types/lms';
+import {
+  QuestCategoryBadge,
+  getQuestCategoryIcon,
+} from '../../components/QuestCategoryBadge';
 import {
   TierDungeonFilter,
   resolveTierDungeonScope,
@@ -30,11 +35,18 @@ import {
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import { WoodenQuestBoard } from '../../components/WoodenQuestBoard';
 import {
+  QUEST_CATEGORIES,
+  doesTargetMatchDungeon,
+  formatChapterLabel,
   formatRetroDate,
+  formatTargetDungeonsSummary,
   getDeadlineUrgency,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
+  getQuestCategoryMeta,
   isContentVisibleToHero,
+  normalizeQuestCategory,
+  parseTargetDungeonIds,
 } from '../../utils/exp';
 
 export type QuestBoardFilter = 'all' | 'pending' | 'done';
@@ -101,6 +113,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
   const isGm = role === UserRole.GAME_MASTER;
   const [filter, setFilter] = useState<QuestBoardFilter>('all');
   const [selectedRealmId, setSelectedRealmId] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | QuestCategory>('all');
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [detailQuest, setDetailQuest] = useState<ActiveQuest | null>(null);
@@ -145,19 +158,19 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
     const baseQuests = isGm
       ? state.quests.filter((q) => {
           if (!gmScope.isFiltered) return true;
+          const targetIds = parseTargetDungeonIds(q.dungeonId);
+          if (targetIds.length > 0) {
+            return gmScope.activeDungeons.some((d) => targetIds.includes(d.id));
+          }
           return gmScope.activeDungeons.some((d) => {
-            if (q.dungeonId === d.id) return true;
-            if (q.dungeonId === 'all') {
-              if (q.scheduledAt === '__per_class__') {
-                return Boolean(q.classSchedules?.[d.id]);
-              }
-              return (
-                !d.realmIds ||
-                d.realmIds.length === 0 ||
-                d.realmIds.includes(q.realmId)
-              );
+            if (q.scheduledAt === '__per_class__') {
+              return Boolean(q.classSchedules?.[d.id]);
             }
-            return false;
+            return (
+              !d.realmIds ||
+              d.realmIds.length === 0 ||
+              d.realmIds.includes(q.realmId)
+            );
           });
         })
       : hero
@@ -203,7 +216,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
       const targetHeroes = state.heroes.filter(
         (h) =>
           h.active &&
-          (quest.dungeonId === 'all' || h.dungeonId === quest.dungeonId) &&
+          doesTargetMatchDungeon(quest.dungeonId, h.dungeonId) &&
           (!gmScope.isFiltered || gmScope.activeDungeonIdSet.has(h.dungeonId))
       );
 
@@ -257,8 +270,30 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
   }, [rows]);
 
   const realmScopedRows = useMemo(() => {
-    if (isGm || activeRealmFilter === 'all') return rows;
-    return rows.filter((r) => r.quest.realmId === activeRealmFilter);
+    return rows.filter((r) => {
+      if (!isGm && activeRealmFilter !== 'all' && r.quest.realmId !== activeRealmFilter) {
+        return false;
+      }
+      if (
+        selectedCategory !== 'all' &&
+        normalizeQuestCategory(r.quest.category) !== selectedCategory
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [rows, isGm, activeRealmFilter, selectedCategory]);
+
+  const categoryCountMap = useMemo(() => {
+    const map = new Map<QuestCategory, number>();
+    rows.forEach((r) => {
+      if (!isGm && activeRealmFilter !== 'all' && r.quest.realmId !== activeRealmFilter) {
+        return;
+      }
+      const cat = normalizeQuestCategory(r.quest.category);
+      map.set(cat, (map.get(cat) || 0) + 1);
+    });
+    return map;
   }, [rows, isGm, activeRealmFilter]);
 
   const filteredRows = useMemo(() => {
@@ -381,6 +416,55 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
             onChangeDungeonIds={setSelectedDungeonIds}
           />
         )}
+
+        {/* RPG Quest Category Filter */}
+        <div className="pt-2 border-t border-[var(--border-pixel)]/30 space-y-1.5">
+          <PixelFieldLabel>Filter Kategori Quest</PixelFieldLabel>
+          <div
+            className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll"
+            role="tablist"
+            aria-label="Filter kategori quest"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedCategory === 'all'}
+              onClick={() => setSelectedCategory('all')}
+              className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                selectedCategory === 'all'
+                  ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
+              }`}
+            >
+              Semua Kategori
+            </button>
+            {QUEST_CATEGORIES.map((cat) => {
+              const active = selectedCategory === cat.id;
+              const cnt = categoryCountMap.get(cat.id) || 0;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  title={cat.description}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                    active
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
+                  }`}
+                >
+                  {getQuestCategoryIcon(cat.id, 13)}
+                  <span>{cat.label}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10px] tabular-nums">
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </ThemedPanelCard>
 
       {/* Lightweight Quest List */}
@@ -414,14 +498,27 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         <div className="space-y-3">
           {filteredRows.map(({ quest, urgency, personalStatus, counts }) => {
             const realm = realmMap.get(quest.realmId);
-            const dungeon =
-              quest.dungeonId === 'all' ? null : dungeonMap.get(quest.dungeonId);
+            const targetIds = parseTargetDungeonIds(quest.dungeonId);
+            const targetSummary = formatTargetDungeonsSummary(
+              quest.dungeonId,
+              state.dungeons,
+              'Semua Kelas'
+            );
+            const singleDungeon =
+              targetIds.length === 1 ? dungeonMap.get(targetIds[0]) : undefined;
+            const chapterText = quest.chapter?.trim()
+              ? formatChapterLabel(quest.chapter)
+              : '';
 
             return (
               <WoodenQuestBoard
                 key={quest.id}
                 urgent={urgency.isOverdue}
-                bannerTitle={realm ? `${realm.code} · ${realm.name}` : 'QUEST BOARD'}
+                bannerTitle={
+                  realm
+                    ? `${chapterText ? `${chapterText} · ` : ''}${realm.code} · ${realm.name}`
+                    : `${chapterText ? `${chapterText} · ` : ''}QUEST BOARD`
+                }
                 bannerRight={
                   !isGm && personalStatus ? (
                     <span
@@ -448,12 +545,23 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                   },
                   {
                     label: 'KELAS',
-                    value: dungeon ? dungeon.guildCode : 'Semua Kelas',
+                    value: targetSummary,
                   },
                 ]}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5">
                   <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <QuestCategoryBadge category={quest.category} compact />
+                      {chapterText && (
+                        <span className="px-2 py-0.5 text-[10.5px] font-bold border border-[#3d1b0c]/50 bg-[#fff7eb] text-[#45230e]">
+                          {chapterText}
+                        </span>
+                      )}
+                      <span className="text-[11px] font-semibold text-[#563018]">
+                        {getQuestCategoryMeta(quest.category).description}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setDetailQuest(quest)}
@@ -467,11 +575,11 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                         <Clock size={15} className="shrink-0 text-[#6d2e17]" />
                         <span>Batas: {formatRetroDate(quest.deadline)}</span>
                       </span>
-                      {dungeon && (
+                      {targetIds.length > 0 && (
                         <>
                           <span aria-hidden="true">·</span>
                           <span className="text-[13.5px] font-semibold">
-                            {dungeon.name}
+                            {singleDungeon ? singleDungeon.name : targetSummary}
                           </span>
                         </>
                       )}
@@ -523,6 +631,17 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         {detailQuest && (
           <div className="space-y-4 text-[16px]">
             <div className="pixel-box-inset p-3.5 space-y-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <QuestCategoryBadge category={detailQuest.category} showDescription />
+                {detailQuest.chapter?.trim() && (
+                  <span className="px-2 py-0.5 text-[11px] font-bold border border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)]">
+                    Bab / Teks: {formatChapterLabel(detailQuest.chapter)}
+                  </span>
+                )}
+                <span className="px-2 py-0.5 text-[11px] font-semibold border border-[var(--border-pixel)]/50 bg-[var(--bg-inset)] text-[var(--text-secondary)]">
+                  Kelas: {formatTargetDungeonsSummary(detailQuest.dungeonId, state.dungeons, 'Semua Kelas')}
+                </span>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2 text-[14px]">
                 <span className="font-semibold text-[var(--accent-warning)]">
                   Tenggat: {formatRetroDate(detailQuest.deadline)} (

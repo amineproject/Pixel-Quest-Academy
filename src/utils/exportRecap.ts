@@ -10,8 +10,11 @@ import {
 import {
   buildAcademicPeriodLabel,
   calculateExpEarned,
+  doesTargetMatchDungeon,
+  formatChapterLabel,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
+  getQuestCategoryMeta,
   getRankFromScore,
   sortDungeonsAlphabetically,
 } from './exp';
@@ -114,7 +117,7 @@ export function buildClassRecapData(
       const matchRealm = realmId === 'all' || q.realmId === realmId;
       if (!matchRealm) return false;
       if (dungeonId === 'all') return true;
-      const matchDungeon = q.dungeonId === 'all' || q.dungeonId === dungeonId;
+      const matchDungeon = doesTargetMatchDungeon(q.dungeonId, dungeonId);
       const dungeonAllowsRealm =
         !selectedDungeon?.realmIds ||
         selectedDungeon.realmIds.length === 0 ||
@@ -150,8 +153,7 @@ export function buildClassRecapData(
       const isRealmAllowed =
         !allowedRealms || allowedRealms.includes(quest.realmId) || Boolean(grade);
       const isQuestForHeroDungeon =
-        quest.dungeonId === 'all' ||
-        quest.dungeonId === hero.dungeonId ||
+        doesTargetMatchDungeon(quest.dungeonId, hero.dungeonId) ||
         Boolean(grade);
       const enrolled = isRealmAllowed && isQuestForHeroDungeon;
 
@@ -344,12 +346,15 @@ export function downloadAssessmentExcel(
     ['4. Sel kosong atau "-" tidak akan menimpa nilai yang sudah ada saat diunggah kembali.'],
     [],
     ['DAFTAR TUGAS (ACTIVE QUESTS)'],
-    ['Judul Tugas (Nama Kolom)', 'Mapel', 'Max EXP', 'Tenggat', 'Tingkat'],
+    ['Judul Tugas (Nama Kolom)', 'Bab / Chapter / Teks', 'Mapel', 'Kategori', 'Max EXP', 'Tenggat', 'Tingkat'],
     ...recap.quests.map((q) => {
       const realm = state.realms.find((r) => r.id === q.realmId);
+      const catMeta = getQuestCategoryMeta(q.category);
       return [
         q.title,
+        q.chapter?.trim() ? formatChapterLabel(q.chapter) : '-',
         realm ? `${realm.code} — ${realm.name}` : '-',
+        catMeta.label,
         q.maxExp,
         q.deadline,
         q.difficulty,
@@ -357,7 +362,7 @@ export function downloadAssessmentExcel(
     }),
   ];
   const infoWs = XLSX.utils.aoa_to_sheet(infoRows);
-  infoWs['!cols'] = [{ wch: 42 }, { wch: 28 }, { wch: 12 }, { wch: 14 }, { wch: 12 }];
+  infoWs['!cols'] = [{ wch: 42 }, { wch: 24 }, { wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, infoWs, 'Info_&_Panduan');
 
   const slug = sanitizeFileName(recap.classLabel || 'semua-kelas');

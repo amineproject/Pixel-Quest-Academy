@@ -30,9 +30,13 @@ import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
   buildAcademicPeriodLabel,
   calculateExpEarned,
+  doesTargetMatchDungeon,
+  formatChapterLabel,
+  formatTargetDungeonsSummary,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
   getSeasonLabel,
+  parseTargetDungeonIds,
 } from '../../utils/exp';
 import {
   buildClassRecapData,
@@ -104,19 +108,19 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       state.quests.filter((q) => {
         if (q.realmId !== selectedRealmId) return false;
         if (!scope.isFiltered) return true;
+        const targetIds = parseTargetDungeonIds(q.dungeonId);
+        if (targetIds.length > 0) {
+          return scope.activeDungeons.some((d) => targetIds.includes(d.id));
+        }
         return scope.activeDungeons.some((d) => {
-          if (q.dungeonId === d.id) return true;
-          if (q.dungeonId === 'all') {
-            if (q.scheduledAt === '__per_class__') {
-              return Boolean(q.classSchedules?.[d.id]);
-            }
-            return (
-              !d.realmIds ||
-              d.realmIds.length === 0 ||
-              d.realmIds.includes(q.realmId)
-            );
+          if (q.scheduledAt === '__per_class__') {
+            return Boolean(q.classSchedules?.[d.id]);
           }
-          return false;
+          return (
+            !d.realmIds ||
+            d.realmIds.length === 0 ||
+            d.realmIds.includes(q.realmId)
+          );
         });
       }),
     [state.quests, selectedRealmId, scope]
@@ -227,8 +231,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       }
       if (
         activeQuest &&
-        activeQuest.dungeonId !== 'all' &&
-        h.dungeonId !== activeQuest.dungeonId
+        !doesTargetMatchDungeon(activeQuest.dungeonId, h.dungeonId)
       ) {
         return false;
       }
@@ -616,11 +619,17 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               <option value="">Belum ada Quest di Mapel &amp; Kelas ini</option>
             ) : (
               questsForRealm.map((q) => {
-                const targetDng = state.dungeons.find((d) => d.id === q.dungeonId);
-                const scope = targetDng ? targetDng.guildCode : 'Semua Kelas';
+                const scopeLabel = formatTargetDungeonsSummary(
+                  q.dungeonId,
+                  state.dungeons,
+                  'Semua Kelas'
+                );
+                const chapSuffix = q.chapter?.trim()
+                  ? ` · ${formatChapterLabel(q.chapter)}`
+                  : '';
                 return (
                   <option key={q.id} value={q.id}>
-                    [{scope}] {q.title} (Max {q.maxExp} EXP)
+                    [{scopeLabel}] {q.title}{chapSuffix} (Max {q.maxExp} EXP)
                   </option>
                 );
               })
@@ -647,7 +656,8 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               <BookOpen size={17} className="text-[var(--accent-warning)] shrink-0 mt-0.5 sm:mt-0" />
               <div className="min-w-0">
                 <p className="font-pixel-ui text-[10.5px] sm:text-[11px] text-[var(--accent-warning)] break-words">
-                  {activeRealm ? `${activeRealm.code} — ${activeRealm.name}` : 'MAPEL'} · +{activeQuest.maxExp} EXP
+                  {activeRealm ? `${activeRealm.code} — ${activeRealm.name}` : 'MAPEL'}
+                  {activeQuest.chapter?.trim() ? ` · ${formatChapterLabel(activeQuest.chapter)}` : ''} · +{activeQuest.maxExp} EXP
                 </p>
                 <p className="text-[14px] font-bold text-[var(--text-primary)] break-words mt-0.5">
                   {activeQuest.title}

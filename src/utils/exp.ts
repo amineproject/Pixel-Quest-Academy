@@ -4,6 +4,7 @@ import {
   ExpGrade,
   GradeStatus,
   HeroStudent,
+  QuestCategory,
   Realm,
   SeasonId,
 } from '../types/lms';
@@ -901,4 +902,60 @@ export function buildAcademicPeriodLabel(
   const cleanEra = (eraName || '').trim();
   const seasonLabel = getSeasonLabel(season);
   return cleanEra ? `Era ${cleanEra} — ${seasonLabel}` : seasonLabel;
+}
+
+export interface QuestCategoryMeta {
+  id: QuestCategory;
+  label: string;
+  shortLabel: string;
+  description: string;
+  badgeClass: string;
+}
+
+export const QUEST_CATEGORIES: QuestCategoryMeta[] = [
+  {
+    id: 'Main',
+    label: 'Main Quest',
+    shortLabel: 'MAIN QUEST',
+    description: 'Tugas utama yang wajib diselesaikan (individu)',
+    badgeClass: 'bg-amber-100 text-amber-950 border-amber-800',
+  },
+  {
+    id: 'Party',
+    label: 'Party Quest',
+    shortLabel: 'PARTY QUEST',
+    description: 'Misi yang dikerjakan secara berkelompok',
+    badgeClass: 'bg-sky-100 text-sky-950 border-sky-800',
+  },
+  {
+    id: 'Special',
+    label: 'Special Quest',
+    shortLabel: 'SPECIAL QUEST',
+    description: 'Misi khusus atau alternatif',
+    badgeClass: 'bg-fuchsia-100 text-fuchsia-950 border-fuchsia-800',
+  },
+  {
+    id: 'Knowledge',
+    label: 'Knowledge Quest',
+    shortLabel: 'KNOWLEDGE QUEST',
+    description: 'Misi eksplorasi pengetahuan',
+    badgeClass: 'bg-emerald-100 text-emerald-950 border-emerald-800',
+  },
+];
+
+export function normalizeQuestCategory(raw?: string | null): QuestCategory {
+  if (raw === 'Party' || raw === 'Special' || raw === 'Knowledge') {
+    return raw;
+  }
+  return 'Main';
+}
+
+export function getQuestCategoryMeta(
+  category?: QuestCategory | string | null
+): QuestCategoryMeta {
+  const normalized = normalizeQuestCategory(category);
+  return (
+    QUEST_CATEGORIES.find((item) => item.id === normalized) ||
+    QUEST_CATEGORIES[0]
+  );
 }

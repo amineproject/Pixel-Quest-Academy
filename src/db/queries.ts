@@ -23,11 +23,19 @@ import {
   GameMasterProfile,
   HeroStudent,
   PixelTheme,
+  QuestCategory,
   QuestNotice,
   Realm,
   SeasonId,
   SystemSettings,
 } from '../types/lms.ts';
+
+function normalizeQuestCategory(raw?: string | null): QuestCategory {
+  if (raw === 'Party' || raw === 'Special' || raw === 'Knowledge') {
+    return raw;
+  }
+  return 'Main';
+}
 
 export async function seedInitialDataIfEmpty() {
   try {
@@ -118,11 +126,13 @@ export async function seedInitialDataIfEmpty() {
           realmId: q.realmId,
           dungeonId: q.dungeonId,
           title: q.title,
+          chapter: String(q.chapter || ''),
           instructions: q.instructions,
           linkUrl: q.linkUrl || '',
           deadline: q.deadline,
           maxExp: q.maxExp,
           difficulty: q.difficulty,
+          category: normalizeQuestCategory(q.category),
           scheduledAt: q.scheduledAt || '',
           classSchedules: JSON.stringify(q.classSchedules || {}),
           academicYearId: q.academicYearId || DEFAULT_ERA_ID,
@@ -345,11 +355,13 @@ export async function getAllAcademyData() {
           realmId: q.realmId || '',
           dungeonId: q.dungeonId,
           title: q.title,
+          chapter: (q as any).chapter ? String((q as any).chapter) : '',
           instructions: q.instructions,
           linkUrl: q.linkUrl || '',
           deadline: q.deadline,
           maxExp: q.maxExp,
           difficulty: q.difficulty as any,
+          category: normalizeQuestCategory((q as any).category),
           scheduledAt: q.scheduledAt || '',
           classSchedules: cs,
           academicYearId: q.academicYearId || DEFAULT_ERA_ID,
@@ -806,11 +818,13 @@ export async function upsertQuest(q: ActiveQuest) {
         realmId: q.realmId,
         dungeonId: q.dungeonId,
         title: q.title,
+        chapter: String(q.chapter || '').trim(),
         instructions: q.instructions,
         linkUrl: cleanLink,
         deadline: q.deadline,
         maxExp: q.maxExp,
         difficulty: q.difficulty,
+        category: normalizeQuestCategory(q.category),
         scheduledAt: q.scheduledAt || '',
         classSchedules: csJson,
         academicYearId: eraId,
@@ -822,11 +836,13 @@ export async function upsertQuest(q: ActiveQuest) {
           realmId: q.realmId,
           dungeonId: q.dungeonId,
           title: q.title,
+          chapter: String(q.chapter || '').trim(),
           instructions: q.instructions,
           linkUrl: cleanLink,
           deadline: q.deadline,
           maxExp: q.maxExp,
           difficulty: q.difficulty,
+          category: normalizeQuestCategory(q.category),
           scheduledAt: q.scheduledAt || '',
           classSchedules: csJson,
           academicYearId: eraId,

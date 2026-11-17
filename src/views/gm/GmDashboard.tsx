@@ -16,6 +16,7 @@ import {
   ThemedPanelCard,
 } from '../../components/ThemePrimitives';
 import {
+  doesTargetMatchDungeon,
   formatRetroDate,
   getGmLevelProgress,
   getHeroTotalExp,
@@ -68,7 +69,7 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
     // Quests that have at least one active Hero without a 'tuntas' grade yet
     const waitingQuests = quests.filter((q) => {
       const targetHeroes = heroes.filter(
-        (h) => h.active && (q.dungeonId === 'all' || h.dungeonId === q.dungeonId)
+        (h) => h.active && doesTargetMatchDungeon(q.dungeonId, h.dungeonId)
       );
       if (targetHeroes.length === 0) return true;
       return targetHeroes.some((h) => {

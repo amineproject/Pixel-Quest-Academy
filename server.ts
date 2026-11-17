@@ -209,11 +209,18 @@ app.get('/api/academy', async (req, res) => {
               realmId: q.realm_id || q.realmId,
               dungeonId: q.dungeon_id || q.dungeonId,
               title: q.title,
+              chapter: q.chapter ? String(q.chapter) : '',
               instructions: q.instructions,
               linkUrl: q.link_url || q.linkUrl || '',
               deadline: q.deadline,
               maxExp: q.max_exp || q.maxExp,
               difficulty: q.difficulty,
+              category:
+                q.category === 'Party' ||
+                q.category === 'Special' ||
+                q.category === 'Knowledge'
+                  ? q.category
+                  : 'Main',
               scheduledAt: q.scheduled_at || q.scheduledAt || '',
               classSchedules: cs,
               academicYearId: q.academic_year_id || q.academicYearId || undefined,
@@ -566,11 +573,13 @@ app.post('/api/quests', async (req, res) => {
         realm_id: req.body.realmId,
         dungeon_id: req.body.dungeonId,
         title: req.body.title,
+        chapter: String(req.body.chapter || '').trim(),
         instructions: req.body.instructions,
         link_url: req.body.linkUrl || '',
         deadline: req.body.deadline,
         max_exp: req.body.maxExp,
         difficulty: req.body.difficulty,
+        category: req.body.category || 'Main',
         scheduled_at: req.body.scheduledAt || '',
         class_schedules: JSON.stringify(req.body.classSchedules || {}),
         academic_year_id: req.body.academicYearId || null,

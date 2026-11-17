@@ -35,6 +35,7 @@ import {
 } from '../../types/lms';
 import { THEME_STYLES } from '../../utils/themes';
 import { PixelAvatar, PixelRealmGlyph } from '../../components/PixelArt';
+import { QuestCategoryBadge } from '../../components/QuestCategoryBadge';
 import {
   PixelButton,
   PixelEmptyChest,
@@ -51,6 +52,7 @@ import {
   ThemedReadingSurface,
 } from '../../components/ThemePrimitives';
 import {
+  formatChapterLabel,
   formatRetroDate,
   getDeadlineUrgency,
   getEffectiveGradeStatus,
@@ -59,6 +61,7 @@ import {
   getHeroLevelProgress,
   getHeroTotalExp,
   isContentVisibleToHero,
+  parseTargetDungeonIds,
 } from '../../utils/exp';
 
 interface HeroLogProps {
@@ -614,15 +617,23 @@ export const HeroLog: React.FC<HeroLogProps> = ({
           const heroDungeon = state.dungeons.find((d) => d.id === hero.dungeonId);
 
           const resolveQuestClassInfo = (q: ActiveQuest) => {
-            if (q.dungeonId !== 'all') {
-              const specific = state.dungeons.find((d) => d.id === q.dungeonId);
+            const targetIds = parseTargetDungeonIds(q.dungeonId);
+            if (targetIds.length > 0) {
+              const preferredId =
+                hero.dungeonId && targetIds.includes(hero.dungeonId)
+                  ? hero.dungeonId
+                  : targetIds[0];
+              const specific = state.dungeons.find((d) => d.id === preferredId);
               if (specific) {
                 return {
                   key: specific.id,
                   code: specific.guildCode,
                   label: `${specific.guildCode} — ${specific.name}`,
                   tier: specific.tier,
-                  scope: 'Khusus Kelas',
+                  scope:
+                    targetIds.length > 1
+                      ? `Khusus ${targetIds.length} Kelas`
+                      : 'Khusus Kelas',
                 };
               }
             }
@@ -632,7 +643,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                 code: heroDungeon.guildCode,
                 label: `${heroDungeon.guildCode} — ${heroDungeon.name}`,
                 tier: heroDungeon.tier,
-                scope: q.dungeonId === 'all' ? 'Lintas Kelas' : 'Kelas Aktif',
+                scope: targetIds.length === 0 ? 'Lintas Kelas' : 'Kelas Aktif',
               };
             }
             return {
@@ -670,6 +681,12 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     >
                       {ui.label}
                     </span>
+                    <QuestCategoryBadge category={quest.category} compact />
+                    {quest.chapter?.trim() && (
+                      <span className="text-[10.5px] font-bold px-1.5 py-0.5 border border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)]">
+                        {formatChapterLabel(quest.chapter)}
+                      </span>
+                    )}
                     {scopeBadge && (
                       <span className="text-[10.5px] font-semibold px-1.5 py-0.5 border border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] text-[var(--text-secondary)]">
                         {scopeBadge}
@@ -945,6 +962,14 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                 >
                   {ui.label}
                 </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <QuestCategoryBadge category={detailQuest.category} showDescription />
+                {detailQuest.chapter?.trim() && (
+                  <span className="px-2 py-0.5 text-[11px] font-bold border border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)]">
+                    Bab / Teks: {formatChapterLabel(detailQuest.chapter)}
+                  </span>
+                )}
               </div>
               <p className="text-[12px] text-[var(--text-muted)] tabular-nums">
                 Tenggat: {formatRetroDate(detailQuest.deadline)} ({urgency.label})

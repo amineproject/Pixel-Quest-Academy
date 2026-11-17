@@ -1,20 +1,26 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  QUEST_CATEGORIES,
   buildAcademicPeriodLabel,
   calculateExpEarned,
+  doesTargetMatchDungeon,
   escapeCsvCell,
+  formatChapterLabel,
+  formatTargetDungeonsSummary,
   getGmLevelProgress,
   getGuildLeaderboard,
   getHeroAchievements,
   getHeroLevelProgress,
   getHeroTotalExp,
+  getQuestCategoryMeta,
   getScopedHeroLeaderboardInputs,
   getSeasonLabel,
   getShortSeasonLabel,
   getWeeklyGuildLeaderboard,
   isContentVisibleToHero,
   maskHeroName,
+  normalizeQuestCategory,
   parseTargetDungeonIds,
   serializeTargetDungeonIds,
 } from './exp';
@@ -22,7 +28,7 @@ import {
   loadOfflineContentSnapshot,
   saveOfflineContentSnapshot,
 } from './offlineCache';
-import { ActiveQuest, ExpGrade, HeroStudent } from '../types/lms';
+import { ActiveQuest, Dungeon, ExpGrade, HeroStudent } from '../types/lms';
 
 const sampleHeroes: HeroStudent[] = [
   {
@@ -425,6 +431,58 @@ describe('Multi-Class Notice Targeting & Exclusion', () => {
     assert.equal(isContentVisibleToHero(multiClassNotice, '', now), false);
   });
 });
+
+describe('RPG Quest Categories', () => {
+  it('supports Main, Party, Special, and Knowledge Quest metadata cleanly', () => {
+    assert.equal(QUEST_CATEGORIES.length, 4);
+    assert.equal(normalizeQuestCategory(undefined), 'Main');
+    assert.equal(normalizeQuestCategory('Party'), 'Party');
+    assert.equal(normalizeQuestCategory('Special'), 'Special');
+    assert.equal(normalizeQuestCategory('Knowledge'), 'Knowledge');
+    assert.equal(getQuestCategoryMeta('Party').label, 'Party Quest');
+    assert.equal(
+      getQuestCategoryMeta('Knowledge').description,
+      'Misi eksplorasi pengetahuan'
+    );
+  });
+});
+
+describe('Multi-Class Quest/Tome Targeting & Chapter Formatting', () => {
+  const sampleDungeons: Dungeon[] = [
+    { id: 'd1', name: 'Kelas VII-A', guildCode: 'VII-A', tier: 'Kelas VII', capacity: 32, description: 'Kelas 7A', realmIds: ['r1'] },
+    { id: 'd2', name: 'Kelas VII-B', guildCode: 'VII-B', tier: 'Kelas VII', capacity: 32, description: 'Kelas 7B', realmIds: ['r1'] },
+    { id: 'd3', name: 'Kelas VIII-A', guildCode: 'VIII-A', tier: 'Kelas VIII', capacity: 32, description: 'Kelas 8A', realmIds: ['r2'] },
+  ];
+
+  it('matches all, single, and comma-separated multi-class IDs accurately', () => {
+    assert.equal(doesTargetMatchDungeon('all', 'd1'), true);
+    assert.equal(doesTargetMatchDungeon('all', 'd3'), true);
+    assert.equal(doesTargetMatchDungeon(undefined, 'd2'), true);
+
+    assert.equal(doesTargetMatchDungeon('d1', 'd1'), true);
+    assert.equal(doesTargetMatchDungeon('d1', 'd2'), false);
+
+    assert.equal(doesTargetMatchDungeon('d1,d3', 'd1'), true);
+    assert.equal(doesTargetMatchDungeon('d1,d3', 'd3'), true);
+    assert.equal(doesTargetMatchDungeon('d1,d3', 'd2'), false);
+    assert.equal(doesTargetMatchDungeon('d1,d3', ''), false);
+  });
+
+  it('formats multi-class target summaries and Quest Bab/Chapter/Teks labels cleanly', () => {
+    assert.equal(formatTargetDungeonsSummary('all', sampleDungeons), 'Semua Kelas');
+    assert.equal(formatTargetDungeonsSummary('d1', sampleDungeons), 'VII-A — Kelas VII-A');
+    assert.equal(
+      formatTargetDungeonsSummary('d1,d3', sampleDungeons),
+      '2 Kelas (VII-A, VIII-A)'
+    );
+
+    assert.equal(formatChapterLabel(''), 'Bab 1');
+    assert.equal(formatChapterLabel('2'), 'Bab 2');
+    assert.equal(formatChapterLabel('Bab 3'), 'Bab 3');
+    assert.equal(formatChapterLabel('Teks Prosedur'), 'Teks Prosedur');
+  });
+});
+
 
 
 

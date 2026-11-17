@@ -17,6 +17,7 @@ import {
   getEffectiveGradeStatus,
   getHeroLevelProgress,
   getHeroTotalExp,
+  parseTargetDungeonIds,
 } from '../../utils/exp';
 
 interface GmGuildChroniclesProps {
@@ -67,12 +68,14 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({ state }) =
       (g) => getEffectiveGradeStatus(g) === 'tuntas'
     ).length;
 
-    const relevantQuests = state.quests.filter(
-      (q) =>
-        !scope.isFiltered ||
-        q.dungeonId === 'all' ||
-        scope.activeDungeonIdSet.has(q.dungeonId)
-    );
+    const relevantQuests = state.quests.filter((q) => {
+      if (!scope.isFiltered) return true;
+      const targetIds = parseTargetDungeonIds(q.dungeonId);
+      return (
+        targetIds.length === 0 ||
+        targetIds.some((id) => scope.activeDungeonIdSet.has(id))
+      );
+    });
     const possibleCompletions = active.length * relevantQuests.length;
     const pct =
       possibleCompletions > 0

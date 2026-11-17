@@ -108,17 +108,21 @@ CREATE TABLE IF NOT EXISTS public.quests (
     realm_id TEXT REFERENCES public.realms(id) ON DELETE CASCADE,
     dungeon_id TEXT NOT NULL DEFAULT 'all',
     title TEXT NOT NULL,
+    chapter TEXT NOT NULL DEFAULT '',
     instructions TEXT NOT NULL,
     link_url TEXT DEFAULT '',
     deadline TEXT NOT NULL,
     max_exp INTEGER NOT NULL DEFAULT 200,
     difficulty TEXT NOT NULL DEFAULT 'Normal',
+    category TEXT NOT NULL DEFAULT 'Main',
     scheduled_at TEXT NOT NULL DEFAULT '',
     class_schedules TEXT NOT NULL DEFAULT '{}',
     academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS chapter TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
+ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Main';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
 ALTER TABLE public.quests ADD COLUMN IF NOT EXISTS academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL;
@@ -880,21 +884,24 @@ BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.quests (id, realm_id, dungeon_id, title, instructions, link_url, deadline, max_exp, difficulty, scheduled_at, class_schedules, academic_year_id)
+  INSERT INTO public.quests (id, realm_id, dungeon_id, title, chapter, instructions, link_url, deadline, max_exp, difficulty, category, scheduled_at, class_schedules, academic_year_id)
   VALUES (
     p_data->>'id', NULLIF(TRIM(COALESCE(p_data->>'realm_id', '')), ''),
     COALESCE(p_data->>'dungeon_id', 'all'), p_data->>'title',
+    COALESCE(TRIM(COALESCE(p_data->>'chapter', '')), ''),
     COALESCE(p_data->>'instructions', ''), COALESCE(p_data->>'link_url', ''),
     COALESCE(p_data->>'deadline', to_char(now(), 'YYYY-MM-DD')),
     COALESCE((p_data->>'max_exp')::int, 200), COALESCE(p_data->>'difficulty', 'Normal'),
+    COALESCE(NULLIF(TRIM(COALESCE(p_data->>'category', '')), ''), 'Main'),
     COALESCE(p_data->>'scheduled_at', ''),
     COALESCE(p_data->>'class_schedules', '{}'),
     NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), '')
   )
   ON CONFLICT (id) DO UPDATE SET
     realm_id = EXCLUDED.realm_id, dungeon_id = EXCLUDED.dungeon_id, title = EXCLUDED.title,
+    chapter = EXCLUDED.chapter,
     instructions = EXCLUDED.instructions, link_url = EXCLUDED.link_url, deadline = EXCLUDED.deadline,
-    max_exp = EXCLUDED.max_exp, difficulty = EXCLUDED.difficulty,
+    max_exp = EXCLUDED.max_exp, difficulty = EXCLUDED.difficulty, category = EXCLUDED.category,
     scheduled_at = EXCLUDED.scheduled_at, class_schedules = EXCLUDED.class_schedules,
     academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.quests.academic_year_id);
   RETURN jsonb_build_object('ok', true);

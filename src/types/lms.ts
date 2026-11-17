@@ -62,6 +62,8 @@ export type NoticePriority = 'Low' | 'Medium' | 'Critical';
 
 export type QuestDifficulty = 'Normal' | 'Elite' | 'Boss';
 
+export type QuestCategory = 'Main' | 'Party' | 'Special' | 'Knowledge';
+
 export interface GameMasterProfile {
   name: string;
   title: string;
@@ -135,7 +137,7 @@ export interface Realm {
 export interface AncientTome {
   id: string;
   realmId: string;
-  targetDungeonId?: string; // 'all' or specific dungeonId
+  targetDungeonId?: string; // 'all', single dungeonId, or comma-separated dungeonIds
   title: string;
   chapter: string; // Bab / Chapter / Teks manual
   readMinutes?: number; // Deprecated optional legacy field
@@ -150,13 +152,15 @@ export interface AncientTome {
 export interface ActiveQuest {
   id: string;
   realmId: string;
-  dungeonId: string; // 'all' or specific dungeonId
+  dungeonId: string; // 'all', single dungeonId, or comma-separated dungeonIds
   title: string;
+  chapter?: string; // Bab / Chapter / Teks
   instructions: string;
   linkUrl?: string;
   deadline: string;
   maxExp: number;
   difficulty: QuestDifficulty;
+  category?: QuestCategory;
   scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
   classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
   academicYearId?: string;

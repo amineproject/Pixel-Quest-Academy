@@ -19,6 +19,7 @@ import {
   PixelTextarea,
 } from '../../components/PixelUI';
 import { ScheduleConfigSection } from '../../components/ScheduleConfigSection';
+import { TargetDungeonsSelector } from '../../components/TargetDungeonsSelector';
 import {
   ThemedPanelCard,
   ThemedReadingSurface,
@@ -27,13 +28,18 @@ import { WoodenQuestBoard } from '../../components/WoodenQuestBoard';
 import {
   formatChapterLabel,
   formatRetroDate,
+  formatTargetDungeonsSummary,
   getScheduleStatusSummary,
+  parseTargetDungeonIds,
+  serializeTargetDungeonIds,
+  sortDungeonsAlphabetically,
 } from '../../utils/exp';
 
 function doesTomeApplyToDungeon(tome: AncientTome, dungeon: Dungeon): boolean {
-  const target = tome.targetDungeonId || 'all';
-  if (target === dungeon.id) return true;
-  if (target !== 'all') return false;
+  const targetIds = parseTargetDungeonIds(tome.targetDungeonId);
+  if (targetIds.length > 0) {
+    return targetIds.includes(dungeon.id);
+  }
   if (tome.scheduledAt === '__per_class__') {
     return Boolean(tome.classSchedules?.[dungeon.id]);
   }
@@ -78,15 +84,40 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     setSelectedIds((prev) => prev.filter((id) => valid.has(id)));
   }, [state.tomes]);
 
+  const sortedDungeons = useMemo(
+    () => sortDungeonsAlphabetically(state.dungeons),
+    [state.dungeons]
+  );
+  const validDungeonIdSet = useMemo(
+    () => new Set(sortedDungeons.map((d) => d.id)),
+    [sortedDungeons]
+  );
+
   const [realmId, setRealmId] = useState(state.realms[0]?.id || '');
   const [title, setTitle] = useState('');
   const [chapter, setChapter] = useState('Bab 1');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
-  const [targetDungeonId, setTargetDungeonId] = useState('all');
+  const [targetScopeMode, setTargetScopeMode] = useState<'all' | 'selected'>('all');
+  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
+  const [targetError, setTargetError] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState('');
   const [classSchedules, setClassSchedules] = useState<Record<string, string>>({});
+
+  const effectiveTargetDungeonId = useMemo(() => {
+    if (targetScopeMode === 'all') return 'all';
+    const validSelected = selectedTargetIds.filter((id) =>
+      validDungeonIdSet.has(id)
+    );
+    if (validSelected.length === 0) return '';
+    return serializeTargetDungeonIds(validSelected, sortedDungeons.length);
+  }, [
+    targetScopeMode,
+    selectedTargetIds,
+    validDungeonIdSet,
+    sortedDungeons.length,
+  ]);
 
   const filtered = state.tomes
     .filter((t) => {
@@ -126,10 +157,6 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
   };
 
   const openCreate = () => {
-    const defaultDungeon =
-      scope.isFiltered && scope.activeDungeons.length === 1
-        ? scope.activeDungeons[0].id
-        : 'all';
     setEditing(null);
     setRealmId(
       realmFilter !== 'all' ? realmFilter : state.realms[0]?.id || ''
@@ -139,13 +166,27 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     setSummary('');
     setContent('');
     setLinkUrl('');
-    setTargetDungeonId(defaultDungeon);
+    if (
+      scope.isFiltered &&
+      scope.activeDungeons.length > 0 &&
+      scope.activeDungeons.length < sortedDungeons.length
+    ) {
+      setTargetScopeMode('selected');
+      setSelectedTargetIds(scope.activeDungeons.map((d) => d.id));
+    } else {
+      setTargetScopeMode('all');
+      setSelectedTargetIds([]);
+    }
+    setTargetError(null);
     setScheduledAt('');
     setClassSchedules({});
     setModalOpen(true);
   };
 
   const openEdit = (t: AncientTome) => {
+    const parsedIds = parseTargetDungeonIds(t.targetDungeonId).filter((id) =>
+      validDungeonIdSet.has(id)
+    );
     setEditing(t);
     setRealmId(t.realmId);
     setTitle(t.title);
@@ -153,7 +194,14 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
     setSummary(t.summary);
     setContent(t.content);
     setLinkUrl(t.linkUrl || '');
-    setTargetDungeonId(t.targetDungeonId || 'all');
+    if (parsedIds.length > 0) {
+      setTargetScopeMode('selected');
+      setSelectedTargetIds(parsedIds);
+    } else {
+      setTargetScopeMode('all');
+      setSelectedTargetIds([]);
+    }
+    setTargetError(null);
     setScheduledAt(t.scheduledAt || '');
     setClassSchedules(t.classSchedules || {});
     setModalOpen(true);
@@ -162,6 +210,32 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
+
+    const validSelected = selectedTargetIds.filter((id) =>
+      validDungeonIdSet.has(id)
+    );
+    if (targetScopeMode === 'selected' && validSelected.length === 0) {
+      setTargetError(
+        'Pilih minimal 1 kelas tujuan, atau ubah mode ke "Semua Kelas".'
+      );
+      return;
+    }
+
+    const finalTargetDungeonId =
+      targetScopeMode === 'all'
+        ? 'all'
+        : serializeTargetDungeonIds(validSelected, sortedDungeons.length);
+
+    const finalTargetIds = parseTargetDungeonIds(finalTargetDungeonId);
+    const cleanedClassSchedules =
+      finalTargetIds.length === 0
+        ? classSchedules
+        : Object.fromEntries(
+            Object.entries(classSchedules || {}).filter(([dId]) =>
+              finalTargetIds.includes(dId)
+            )
+          );
+
     onSaveTome({
       id: editing?.id || `tm-${Date.now()}`,
       realmId,
@@ -170,9 +244,9 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
       summary: summary.trim() || content.trim().slice(0, 90),
       content: content.trim(),
       linkUrl: linkUrl.trim(),
-      targetDungeonId,
+      targetDungeonId: finalTargetDungeonId,
       scheduledAt,
-      classSchedules,
+      classSchedules: cleanedClassSchedules,
       publishedDate:
         editing?.publishedDate || new Date().toISOString().slice(0, 10),
     });
@@ -252,6 +326,15 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
             const realm = state.realms.find((r) => r.id === tome.realmId);
             const sched = getScheduleStatusSummary(tome, state.dungeons);
             const isSelected = selectedIds.includes(tome.id);
+            const targetIds = parseTargetDungeonIds(tome.targetDungeonId);
+            const targetSummary = formatTargetDungeonsSummary(
+              tome.targetDungeonId,
+              state.dungeons,
+              'Semua Kelas'
+            );
+            const targetedDungeons = state.dungeons.filter((d) =>
+              targetIds.includes(d.id)
+            );
             return (
               <WoodenQuestBoard
                 key={tome.id}
@@ -268,6 +351,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                 }
                 stats={[
                   { label: 'MAPEL', value: realm?.name || 'General' },
+                  { label: 'KELAS', value: targetSummary },
                   { label: 'RILIS', value: formatRetroDate(tome.publishedDate) },
                   {
                     label: 'STATUS',
@@ -288,6 +372,19 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                   <p className="text-[14.5px] sm:text-[15px] text-[#45230e] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
                     {tome.summary}
                   </p>
+                )}
+
+                {targetedDungeons.length > 1 && (
+                  <div className="flex flex-wrap gap-1">
+                    {targetedDungeons.map((d) => (
+                      <span
+                        key={d.id}
+                        className="px-1.5 py-0.5 text-[10.5px] font-semibold bg-[#fff7eb]/80 border border-[#3d1b0c]/30 text-[#45230e]"
+                      >
+                        {d.guildCode} ({d.name})
+                      </span>
+                    ))}
+                  </div>
                 )}
 
                 <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#563018]">
@@ -351,6 +448,16 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
               </p>
               <span className="text-[11px] text-[var(--text-muted)] tabular-nums">
                 {getScheduleStatusSummary(previewTome, state.dungeons).label}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 border font-semibold bg-[var(--bg-inset)] text-[var(--text-primary)] border-[var(--border-pixel)]/50">
+                Target:{' '}
+                {formatTargetDungeonsSummary(
+                  previewTome.targetDungeonId,
+                  state.dungeons,
+                  'Semua Kelas'
+                )}
               </span>
             </div>
             {previewTome.summary && (
@@ -467,12 +574,31 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
             />
           </div>
 
+          <TargetDungeonsSelector
+            dungeons={state.dungeons}
+            mode={targetScopeMode}
+            onChangeMode={setTargetScopeMode}
+            selectedIds={selectedTargetIds}
+            onChangeSelectedIds={setSelectedTargetIds}
+            errorMessage={targetError}
+            onClearError={() => setTargetError(null)}
+            label="Target Kelas Penerima Materi"
+            allLabel="Semua Kelas"
+            allDescription="Materi ini dapat diakses seluruh kelas yang mempelajari mapel terpilih."
+            selectedDescription="Centang satu atau beberapa kelas penerima materi."
+            highlightedRealmId={realmId}
+            highlightedRealmName={state.realms.find((r) => r.id === realmId)?.name}
+          />
+
           <ScheduleConfigSection
             idPrefix="tm-sched"
             targetLabel="Target Kelas Penerima Materi"
+            hideTargetSelect
+            filterRealmId={realmId}
+            filterRealmName={state.realms.find((r) => r.id === realmId)?.name}
             dungeons={state.dungeons}
-            targetDungeonId={targetDungeonId}
-            onChangeTargetDungeonId={setTargetDungeonId}
+            targetDungeonId={effectiveTargetDungeonId || 'all'}
+            onChangeTargetDungeonId={() => {}}
             scheduledAt={scheduledAt}
             onChangeScheduledAt={setScheduledAt}
             classSchedules={classSchedules}
