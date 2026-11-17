@@ -2011,12 +2011,8 @@ export default function App() {
                   <HeroNotice
                     state={eraFilteredState}
                     hero={activeHero}
-                    onNavigate={handleSelectHeroMenu}
                     onAttemptRestrictedRoute={handleTriggerAccessDenied}
-                    onUpdateAvatar={handleUpdateHeroAvatar}
-                    onChangePin={handleChangeOwnHeroPin}
                     unreadNoticeCount={unreadNoticeCount}
-                    unreadQuestCount={unreadQuestCount}
                     onMarkGuildNotificationsRead={markGuildNotificationsRead}
                   />
                 )}
@@ -2048,6 +2044,7 @@ export default function App() {
                     onUpdateTheme={handleUpdateTheme}
                     onUpdateAvatar={handleUpdateHeroAvatar}
                     onUpdateUsername={handleUpdateHeroUsername}
+                    onChangePin={handleChangeOwnHeroPin}
                   />
                 )}
                 {heroMenu === 'about' && (

@@ -70,6 +70,10 @@ interface HeroLogProps {
   onUpdateUsername?: (
     username: string
   ) => Promise<{ ok: boolean; error?: string }>;
+  onChangePin?: (
+    currentPin: string,
+    newPin: string
+  ) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const HERO_AVATAR_OPTIONS: { value: AvatarClass; label: string }[] = [
@@ -125,6 +129,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   onUpdateTheme,
   onUpdateAvatar,
   onUpdateUsername,
+  onChangePin,
 }) => {
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarClass>(hero.avatar);
@@ -135,6 +140,14 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   );
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [currentPinInput, setCurrentPinInput] = useState('');
+  const [newPinInput, setNewPinInput] = useState('');
+  const [confirmPinInput, setConfirmPinInput] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [isSavingPin, setIsSavingPin] = useState(false);
+
   const [statusRealmFilter, setStatusRealmFilter] = useState<string>('all');
   const [statusGroupMode, setStatusGroupMode] = useState<'class_realm' | 'realm_class'>('class_realm');
   const [collapsedStatusGroups, setCollapsedStatusGroups] = useState<Record<string, boolean>>({});
@@ -248,10 +261,27 @@ export const HeroLog: React.FC<HeroLogProps> = ({
     <div className="space-y-5">
       <PixelSectionTitle
         title="Hero Log / Status Tugas"
-        subtitle="Status tugas, avatar, dan username akun siswa"
+        subtitle="Status tugas, lencana, PIN keamanan, avatar, dan username akun"
         action={
-          (onUpdateAvatar || onUpdateUsername) ? (
+          (onChangePin || onUpdateAvatar || onUpdateUsername) ? (
             <div className="flex flex-wrap items-center gap-1.5">
+              {onChangePin && (
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant={hero.hasPin ? 'neutral' : 'success'}
+                  onClick={() => {
+                    setCurrentPinInput('');
+                    setNewPinInput('');
+                    setConfirmPinInput('');
+                    setPinError(null);
+                    setPinModalOpen(true);
+                  }}
+                >
+                  <KeyRound size={13} />
+                  {hero.hasPin ? 'Ubah PIN' : 'Buat PIN'}
+                </PixelButton>
+              )}
               {onUpdateUsername && (
                 <PixelButton
                   type="button"
@@ -310,6 +340,12 @@ export const HeroLog: React.FC<HeroLogProps> = ({
             </div>
             <p className="text-[12.5px] text-[var(--text-secondary)] truncate mt-0.5">
               {hero.heroClass} · NIS {hero.studentCode} · {relevantQuests.length} Tugas Terdaftar
+            </p>
+            <p className="text-[11px] mt-0.5 flex items-center gap-1">
+              <Lock size={11} className={hero.hasPin ? 'text-emerald-700' : 'text-amber-800'} />
+              <span className={hero.hasPin ? 'text-emerald-700 font-semibold' : 'text-amber-800 font-semibold'}>
+                {hero.hasPin ? 'Akun Dilindungi PIN' : 'Belum Pasang PIN Rahasia'}
+              </span>
             </p>
           </div>
         </div>
@@ -1083,6 +1119,110 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               </PixelButton>
               <PixelButton type="submit" variant="success" disabled={isSavingUsername}>
                 {isSavingUsername ? 'Menyimpan...' : 'Simpan Username'}
+              </PixelButton>
+            </div>
+          </form>
+        </PixelModal>
+      )}
+
+      {/* Student Self-Service Secret PIN Modal */}
+      {onChangePin && (
+        <PixelModal
+          open={pinModalOpen}
+          title={hero.hasPin ? 'Ubah PIN Rahasia' : 'Buat PIN Rahasia Siswa'}
+          onClose={() => setPinModalOpen(false)}
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setPinError(null);
+              const trimmedNew = newPinInput.trim();
+              if (trimmedNew.length < 4) {
+                setPinError('PIN baru minimal 4 karakter/angka.');
+                return;
+              }
+              if (trimmedNew !== confirmPinInput.trim()) {
+                setPinError('Konfirmasi PIN baru tidak cocok!');
+                return;
+              }
+              setIsSavingPin(true);
+              const res = await onChangePin(currentPinInput.trim(), trimmedNew);
+              setIsSavingPin(false);
+              if (!res.ok) {
+                setPinError(res.error || 'Gagal menyimpan PIN.');
+                return;
+              }
+              setPinModalOpen(false);
+            }}
+            autoComplete="off"
+            className="space-y-3"
+          >
+            <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
+              Dengan memasang <strong>PIN Rahasia</strong>, teman sekelas yang mengetahui NIS atau Username kamu tidak dapat membuka akunmu dari perangkat lain.
+            </p>
+
+            {hero.hasPin && (
+              <div>
+                <PixelFieldLabel htmlFor="hero-cur-pin">PIN Saat Ini</PixelFieldLabel>
+                <PixelInput
+                  id="hero-cur-pin"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="new-password"
+                  required
+                  placeholder="Masukkan PIN saat ini..."
+                  value={currentPinInput}
+                  onChange={(e) => setCurrentPinInput(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div>
+              <PixelFieldLabel htmlFor="hero-new-pin">PIN Baru (4–12 Angka/Karakter)</PixelFieldLabel>
+              <PixelInput
+                id="hero-new-pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                maxLength={12}
+                required
+                placeholder="Contoh: 123456"
+                value={newPinInput}
+                onChange={(e) => setNewPinInput(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <PixelFieldLabel htmlFor="hero-conf-pin">Ulangi PIN Baru</PixelFieldLabel>
+              <PixelInput
+                id="hero-conf-pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="new-password"
+                maxLength={12}
+                required
+                placeholder="Ketik ulang PIN baru..."
+                value={confirmPinInput}
+                onChange={(e) => setConfirmPinInput(e.target.value)}
+              />
+            </div>
+
+            {pinError && (
+              <p className="text-[12.5px] font-semibold text-[var(--accent-danger)]">
+                [!] {pinError}
+              </p>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <PixelButton
+                type="button"
+                variant="neutral"
+                onClick={() => setPinModalOpen(false)}
+              >
+                Batal
+              </PixelButton>
+              <PixelButton type="submit" variant="success" disabled={isSavingPin}>
+                {isSavingPin ? 'Menyimpan...' : 'Simpan PIN'}
               </PixelButton>
             </div>
           </form>
