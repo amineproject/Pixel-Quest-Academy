@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   AtSign,
   Award,
-  BookOpen,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -152,7 +151,6 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   const [isSavingPin, setIsSavingPin] = useState(false);
 
   const [statusRealmFilter, setStatusRealmFilter] = useState<string>('all');
-  const [statusGroupMode, setStatusGroupMode] = useState<'class_realm' | 'realm_class'>('class_realm');
   const [collapsedStatusGroups, setCollapsedStatusGroups] = useState<Record<string, boolean>>({});
   const [detailQuest, setDetailQuest] = useState<ActiveQuest | null>(null);
 
@@ -537,37 +535,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
         />
 
         {visibleRealms.length > 0 && (
-          <div className="space-y-2">
-            {/* Group Mode Toggle */}
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setStatusGroupMode('class_realm')}
-                className={`pixel-btn min-h-[36px] px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
-                  statusGroupMode === 'class_realm'
-                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
-                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
-                }`}
-              >
-                <GraduationCap size={14} />
-                <span>Per Kelas &amp; Mapel</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusGroupMode('realm_class')}
-                className={`pixel-btn min-h-[36px] px-2.5 text-[11px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
-                  statusGroupMode === 'realm_class'
-                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
-                    : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
-                }`}
-              >
-                <BookOpen size={14} />
-                <span>Per Mapel &amp; Kelas</span>
-              </button>
-            </div>
-
-            {/* Subject Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pixel-scroll">
               <button
                 type="button"
                 onClick={() => setStatusRealmFilter('all')}
@@ -596,7 +564,6 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                   </button>
                 );
               })}
-            </div>
           </div>
         )}
 
@@ -727,211 +694,137 @@ export const HeroLog: React.FC<HeroLogProps> = ({
             );
           };
 
-          if (statusGroupMode === 'class_realm') {
-            // Group by Kelas -> Mapel
-            const classBuckets = new Map<
-              string,
-              {
-                key: string;
-                code: string;
-                label: string;
-                tier: string;
-                quests: ActiveQuest[];
-              }
-            >();
-            filteredQuestsForStatus.forEach((q) => {
-              const info = resolveQuestClassInfo(q);
-              const existing = classBuckets.get(info.key);
-              if (existing) {
-                existing.quests.push(q);
-              } else {
-                classBuckets.set(info.key, {
-                  key: info.key,
-                  code: info.code,
-                  label: info.label,
-                  tier: info.tier,
-                  quests: [q],
-                });
-              }
-            });
+          // Group by Kelas -> Mapel
+          const classBuckets = new Map<
+            string,
+            {
+              key: string;
+              code: string;
+              label: string;
+              tier: string;
+              quests: ActiveQuest[];
+            }
+          >();
+          filteredQuestsForStatus.forEach((q) => {
+            const info = resolveQuestClassInfo(q);
+            const existing = classBuckets.get(info.key);
+            if (existing) {
+              existing.quests.push(q);
+            } else {
+              classBuckets.set(info.key, {
+                key: info.key,
+                code: info.code,
+                label: info.label,
+                tier: info.tier,
+                quests: [q],
+              });
+            }
+          });
 
-            return Array.from(classBuckets.values()).map((cls) => {
-              const classTuntas = cls.quests.filter(
-                (q) =>
-                  getEffectiveGradeStatus(
-                    heroGrades.find((g) => g.questId === q.id)
-                  ) === 'tuntas'
-              ).length;
-              const realmsInClass = state.realms.filter((r) =>
-                cls.quests.some((q) => q.realmId === r.id)
-              );
-
-              return (
-                <ThemedPanelCard key={cls.key} className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <GraduationCap
-                        size={17}
-                        className="text-[var(--accent-primary)] shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-pixel-ui text-[10px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
-                            {cls.code}
-                          </span>
-                          <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
-                            {cls.label}
-                          </h3>
-                          {cls.tier && (
-                            <span className="text-[11px] text-[var(--text-muted)]">
-                              ({cls.tier})
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11.5px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
-                          {realmsInClass.length} Mapel · {classTuntas}/{cls.quests.length} Tugas Tuntas
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {realmsInClass.map((realm) => {
-                      const realmQuests = cls.quests.filter(
-                        (q) => q.realmId === realm.id
-                      );
-                      const groupKey = `${cls.key}::${realm.id}`;
-                      const isCollapsed = Boolean(collapsedStatusGroups[groupKey]);
-                      const tuntasInRealm = realmQuests.filter(
-                        (q) =>
-                          getEffectiveGradeStatus(
-                            heroGrades.find((g) => g.questId === q.id)
-                          ) === 'tuntas'
-                      ).length;
-
-                      return (
-                        <div
-                          key={groupKey}
-                          className="pixel-box-inset p-2.5 sm:p-3 space-y-2.5 border border-[var(--border-pixel)]/50 bg-[var(--bg-inset)]"
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCollapsedStatusGroups((prev) => ({
-                                ...prev,
-                                [groupKey]: !prev[groupKey],
-                              }))
-                            }
-                            className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <PixelRealmGlyph
-                                icon={realm.icon}
-                                color={realm.accentColor}
-                                size={22}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <h4 className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
-                                  {realm.code} — {realm.name}
-                                </h4>
-                                <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
-                                  {tuntasInRealm}/{realmQuests.length} Tuntas
-                                </p>
-                              </div>
-                            </div>
-                            <span className="text-[var(--text-secondary)] shrink-0">
-                              {isCollapsed ? (
-                                <ChevronRight size={16} />
-                              ) : (
-                                <ChevronDown size={16} />
-                              )}
-                            </span>
-                          </button>
-
-                          {!isCollapsed && (
-                            <div className="space-y-2">
-                              {realmQuests.map((quest) => {
-                                const info = resolveQuestClassInfo(quest);
-                                return renderStatusRow(quest, info.scope);
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ThemedPanelCard>
-              );
-            });
-          }
-
-          // Mode 2: Per Mapel -> Kelas
-          const realmsToShow = visibleRealms.filter(
-            (r) => statusRealmFilter === 'all' || r.id === statusRealmFilter
-          );
-
-          return realmsToShow.map((realm) => {
-            const realmQuests = filteredQuestsForStatus.filter(
-              (q) => q.realmId === realm.id
+          return Array.from(classBuckets.values()).map((cls) => {
+            const classTuntas = cls.quests.filter(
+              (q) =>
+                getEffectiveGradeStatus(
+                  heroGrades.find((g) => g.questId === q.id)
+                ) === 'tuntas'
+            ).length;
+            const realmsInClass = state.realms.filter((r) =>
+              cls.quests.some((q) => q.realmId === r.id)
             );
-            if (realmQuests.length === 0) return null;
-
-            const classSubGroups = new Map<
-              string,
-              { key: string; label: string; quests: ActiveQuest[] }
-            >();
-            realmQuests.forEach((q) => {
-              const info = resolveQuestClassInfo(q);
-              const existing = classSubGroups.get(info.key);
-              if (existing) {
-                existing.quests.push(q);
-              } else {
-                classSubGroups.set(info.key, {
-                  key: info.key,
-                  label: info.label,
-                  quests: [q],
-                });
-              }
-            });
 
             return (
-              <ThemedPanelCard key={realm.id} className="space-y-3">
-                <div className="flex items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <PixelRealmGlyph
-                      icon={realm.icon}
-                      color={realm.accentColor}
-                      size={24}
+              <ThemedPanelCard key={cls.key} className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/40">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <GraduationCap
+                      size={17}
+                      className="text-[var(--accent-primary)] shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
-                        {realm.name}
-                      </h3>
-                      <p className="text-[11.5px] font-semibold text-[var(--text-muted)]">
-                        {realm.code} · {realmQuests.length} Tugas
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-pixel-ui text-[10px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
+                          {cls.code}
+                        </span>
+                        <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
+                          {cls.label}
+                        </h3>
+                        {cls.tier && (
+                          <span className="text-[11px] text-[var(--text-muted)]">
+                            ({cls.tier})
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11.5px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
+                        {realmsInClass.length} Mapel · {classTuntas}/{cls.quests.length} Tugas Tuntas
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2.5">
-                  {Array.from(classSubGroups.values()).map((cg) => (
-                    <div
-                      key={`${realm.id}-${cg.key}`}
-                      className="space-y-2"
-                    >
-                      <div className="flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--accent-primary)]">
-                        <GraduationCap size={13} />
-                        <span>Kelas: {cg.label}</span>
+                <div className="space-y-3">
+                  {realmsInClass.map((realm) => {
+                    const realmQuests = cls.quests.filter(
+                      (q) => q.realmId === realm.id
+                    );
+                    const groupKey = `${cls.key}::${realm.id}`;
+                    const isCollapsed = Boolean(collapsedStatusGroups[groupKey]);
+                    const tuntasInRealm = realmQuests.filter(
+                      (q) =>
+                        getEffectiveGradeStatus(
+                          heroGrades.find((g) => g.questId === q.id)
+                        ) === 'tuntas'
+                    ).length;
+
+                    return (
+                      <div
+                        key={groupKey}
+                        className="pixel-box-inset p-2.5 sm:p-3 space-y-2.5 border border-[var(--border-pixel)]/50 bg-[var(--bg-inset)]"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCollapsedStatusGroups((prev) => ({
+                              ...prev,
+                              [groupKey]: !prev[groupKey],
+                            }))
+                          }
+                          className="w-full flex items-center justify-between gap-2 text-left cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <PixelRealmGlyph
+                              icon={realm.icon}
+                              color={realm.accentColor}
+                              size={22}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
+                                {realm.code} — {realm.name}
+                              </h4>
+                              <p className="text-[11px] text-[var(--text-muted)] tabular-nums">
+                                {tuntasInRealm}/{realmQuests.length} Tuntas
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[var(--text-secondary)] shrink-0">
+                            {isCollapsed ? (
+                              <ChevronRight size={16} />
+                            ) : (
+                              <ChevronDown size={16} />
+                            )}
+                          </span>
+                        </button>
+
+                        {!isCollapsed && (
+                          <div className="space-y-2">
+                            {realmQuests.map((quest) => {
+                              const info = resolveQuestClassInfo(quest);
+                              return renderStatusRow(quest, info.scope);
+                            })}
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        {cg.quests.map((quest) => {
-                          const info = resolveQuestClassInfo(quest);
-                          return renderStatusRow(quest, info.scope);
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ThemedPanelCard>
             );
