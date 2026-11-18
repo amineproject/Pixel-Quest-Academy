@@ -11,6 +11,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { AcademyState, Dungeon, ExpGrade, GradeStatus } from '../../types/lms';
+import { QuestCategoryBadge } from '../../components/QuestCategoryBadge';
 import {
   TierDungeonFilter,
   resolveTierDungeonScope,
@@ -36,7 +37,9 @@ import {
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
   getSeasonLabel,
+  groupQuestsByCategory,
   parseTargetDungeonIds,
+  sortQuestsByCategory,
 } from '../../utils/exp';
 import {
   buildClassRecapData,
@@ -105,25 +108,32 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
 
   const questsForRealm = useMemo(
     () =>
-      state.quests.filter((q) => {
-        if (q.realmId !== selectedRealmId) return false;
-        if (!scope.isFiltered) return true;
-        const targetIds = parseTargetDungeonIds(q.dungeonId);
-        if (targetIds.length > 0) {
-          return scope.activeDungeons.some((d) => targetIds.includes(d.id));
-        }
-        return scope.activeDungeons.some((d) => {
-          if (q.scheduledAt === '__per_class__') {
-            return Boolean(q.classSchedules?.[d.id]);
+      sortQuestsByCategory(
+        state.quests.filter((q) => {
+          if (q.realmId !== selectedRealmId) return false;
+          if (!scope.isFiltered) return true;
+          const targetIds = parseTargetDungeonIds(q.dungeonId);
+          if (targetIds.length > 0) {
+            return scope.activeDungeons.some((d) => targetIds.includes(d.id));
           }
-          return (
-            !d.realmIds ||
-            d.realmIds.length === 0 ||
-            d.realmIds.includes(q.realmId)
-          );
-        });
-      }),
+          return scope.activeDungeons.some((d) => {
+            if (q.scheduledAt === '__per_class__') {
+              return Boolean(q.classSchedules?.[d.id]);
+            }
+            return (
+              !d.realmIds ||
+              d.realmIds.length === 0 ||
+              d.realmIds.includes(q.realmId)
+            );
+          });
+        })
+      ),
     [state.quests, selectedRealmId, scope]
+  );
+
+  const questGroupsForRealm = useMemo(
+    () => groupQuestsByCategory(questsForRealm),
+    [questsForRealm]
   );
 
   const [selectedQuestId, setSelectedQuestId] = useState(
@@ -618,21 +628,29 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             {questsForRealm.length === 0 ? (
               <option value="">Belum ada Quest di Mapel &amp; Kelas ini</option>
             ) : (
-              questsForRealm.map((q) => {
-                const scopeLabel = formatTargetDungeonsSummary(
-                  q.dungeonId,
-                  state.dungeons,
-                  'Semua Kelas'
-                );
-                const chapSuffix = q.chapter?.trim()
-                  ? ` · ${formatChapterLabel(q.chapter)}`
-                  : '';
-                return (
-                  <option key={q.id} value={q.id}>
-                    [{scopeLabel}] {q.title}{chapSuffix} (Max {q.maxExp} EXP)
-                  </option>
-                );
-              })
+              questGroupsForRealm.map((group) => (
+                <optgroup
+                  key={group.meta.id}
+                  label={`${group.meta.label} (${group.items.length} Tugas)`}
+                >
+                  {group.items.map((q) => {
+                    const scopeLabel = formatTargetDungeonsSummary(
+                      q.dungeonId,
+                      state.dungeons,
+                      'Semua Kelas'
+                    );
+                    const chapSuffix = q.chapter?.trim()
+                      ? ` · ${formatChapterLabel(q.chapter)}`
+                      : '';
+                    return (
+                      <option key={q.id} value={q.id}>
+                        [{group.meta.label}] [{scopeLabel}] {q.title}
+                        {chapSuffix} (Max {q.maxExp} EXP)
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              ))
             )}
           </PixelSelect>
         </div>
@@ -655,10 +673,13 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             <div className="flex items-start sm:items-center gap-2.5 min-w-0">
               <BookOpen size={17} className="text-[var(--accent-warning)] shrink-0 mt-0.5 sm:mt-0" />
               <div className="min-w-0">
-                <p className="font-pixel-ui text-[10.5px] sm:text-[11px] text-[var(--accent-warning)] break-words">
-                  {activeRealm ? `${activeRealm.code} — ${activeRealm.name}` : 'MAPEL'}
-                  {activeQuest.chapter?.trim() ? ` · ${formatChapterLabel(activeQuest.chapter)}` : ''} · +{activeQuest.maxExp} EXP
-                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <QuestCategoryBadge category={activeQuest.category} compact />
+                  <p className="font-pixel-ui text-[10.5px] sm:text-[11px] text-[var(--accent-warning)] break-words">
+                    {activeRealm ? `${activeRealm.code} — ${activeRealm.name}` : 'MAPEL'}
+                    {activeQuest.chapter?.trim() ? ` · ${formatChapterLabel(activeQuest.chapter)}` : ''} · +{activeQuest.maxExp} EXP
+                  </p>
+                </div>
                 <p className="text-[14px] font-bold text-[var(--text-primary)] break-words mt-0.5">
                   {activeQuest.title}
                 </p>

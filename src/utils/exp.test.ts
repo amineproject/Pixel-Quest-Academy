@@ -18,11 +18,13 @@ import {
   getSeasonLabel,
   getShortSeasonLabel,
   getWeeklyGuildLeaderboard,
+  groupQuestsByCategory,
   isContentVisibleToHero,
   maskHeroName,
   normalizeQuestCategory,
   parseTargetDungeonIds,
   serializeTargetDungeonIds,
+  sortQuestsByCategory,
 } from './exp';
 import {
   loadOfflineContentSnapshot,
@@ -447,6 +449,32 @@ describe('RPG Quest Categories', () => {
     assert.equal(
       getQuestCategoryMeta('Knowledge').description,
       'Misi eksplorasi pengetahuan'
+    );
+  });
+
+  it('sorts and groups quests strictly by Main, Party, Special, Knowledge order', () => {
+    const unsorted: ActiveQuest[] = [
+      { ...sampleQuests[0], id: 'qk', title: 'Quest 06: Riset', category: 'Knowledge' },
+      { ...sampleQuests[0], id: 'qm2', title: 'Quest 02: Utama B', category: 'Main' },
+      { ...sampleQuests[0], id: 'qs', title: 'Quest 05: Khusus', category: 'Special' },
+      { ...sampleQuests[0], id: 'qp', title: 'Quest 03: Kelompok', category: 'Party' },
+      { ...sampleQuests[0], id: 'qm1', title: 'Quest 01: Utama A', category: undefined },
+    ];
+
+    const sorted = sortQuestsByCategory(unsorted);
+    assert.deepEqual(
+      sorted.map((q) => q.id),
+      ['qm1', 'qm2', 'qp', 'qs', 'qk']
+    );
+
+    const grouped = groupQuestsByCategory(unsorted);
+    assert.deepEqual(
+      grouped.map((g) => g.meta.label),
+      ['Main Quest', 'Party Quest', 'Special Quest', 'Knowledge Quest']
+    );
+    assert.deepEqual(
+      grouped[0].items.map((q) => q.id),
+      ['qm1', 'qm2']
     );
   });
 });

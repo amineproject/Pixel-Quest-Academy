@@ -960,3 +960,51 @@ export function getQuestCategoryMeta(
     QUEST_CATEGORIES[0]
   );
 }
+
+const QUEST_CATEGORY_ORDER = new Map<QuestCategory, number>(
+  QUEST_CATEGORIES.map((c, idx) => [c.id, idx])
+);
+
+export function sortQuestsByCategory<
+  T extends {
+    category?: QuestCategory | string | null;
+    title?: string;
+    chapter?: string;
+    deadline?: string;
+  }
+>(quests: T[]): T[] {
+  return [...quests].sort((a, b) => {
+    const orderA = QUEST_CATEGORY_ORDER.get(normalizeQuestCategory(a.category)) ?? 99;
+    const orderB = QUEST_CATEGORY_ORDER.get(normalizeQuestCategory(b.category)) ?? 99;
+    if (orderA !== orderB) return orderA - orderB;
+
+    const titleDiff = (a.title || '').localeCompare(b.title || '', 'id', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+    if (titleDiff !== 0) return titleDiff;
+
+    const chapDiff = (a.chapter || '').localeCompare(b.chapter || '', 'id', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+    if (chapDiff !== 0) return chapDiff;
+
+    return (a.deadline || '').localeCompare(b.deadline || '');
+  });
+}
+
+export function groupQuestsByCategory<
+  T extends {
+    category?: QuestCategory | string | null;
+    title?: string;
+    chapter?: string;
+    deadline?: string;
+  }
+>(quests: T[]): { meta: QuestCategoryMeta; items: T[] }[] {
+  const sorted = sortQuestsByCategory(quests);
+  return QUEST_CATEGORIES.map((meta) => ({
+    meta,
+    items: sorted.filter((q) => normalizeQuestCategory(q.category) === meta.id),
+  })).filter((group) => group.items.length > 0);
+}
