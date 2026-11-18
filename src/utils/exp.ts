@@ -1008,3 +1008,317 @@ export function groupQuestsByCategory<
     items: sorted.filter((q) => normalizeQuestCategory(q.category) === meta.id),
   })).filter((group) => group.items.length > 0);
 }
+
+export interface DashboardStatusBreakdown {
+  tuntas: number;
+  proses: number;
+  remidial: number;
+  belum: number;
+  totalSlots: number;
+  gradedCount: number;
+  completionPercent: number;
+  averageScore: number;
+}
+
+export interface DashboardRankBucket {
+  rank: LetterRank;
+  label: string;
+  rangeLabel: string;
+  count: number;
+  percent: number;
+}
+
+export interface DashboardComparisonRow {
+  id: string;
+  label: string;
+  subLabel?: string;
+  heroCount?: number;
+  questCount?: number;
+  totalSlots: number;
+  tuntasCount: number;
+  prosesCount: number;
+  remidialCount: number;
+  belumCount: number;
+  completionPercent: number;
+  gradedCount: number;
+  averageScore: number;
+}
+
+export interface DashboardAnalytics {
+  status: DashboardStatusBreakdown;
+  ranks: DashboardRankBucket[];
+  byClass: DashboardComparisonRow[];
+  byRealm: DashboardComparisonRow[];
+  byCategory: DashboardComparisonRow[];
+}
+
+interface MutableAgg {
+  totalSlots: number;
+  tuntasCount: number;
+  prosesCount: number;
+  remidialCount: number;
+  belumCount: number;
+  gradedCount: number;
+  scoreSum: number;
+  questIds: Set<string>;
+}
+
+function createMutableAgg(): MutableAgg {
+  return {
+    totalSlots: 0,
+    tuntasCount: 0,
+    prosesCount: 0,
+    remidialCount: 0,
+    belumCount: 0,
+    gradedCount: 0,
+    scoreSum: 0,
+    questIds: new Set<string>(),
+  };
+}
+
+function finalizeAgg(
+  id: string,
+  label: string,
+  agg: MutableAgg,
+  extra?: { subLabel?: string; heroCount?: number; questCount?: number }
+): DashboardComparisonRow {
+  const completionPercent =
+    agg.totalSlots > 0
+      ? Math.min(100, Math.round((agg.tuntasCount / agg.totalSlots) * 100))
+      : 0;
+  const averageScore =
+    agg.gradedCount > 0 ? Math.round(agg.scoreSum / agg.gradedCount) : 0;
+
+  return {
+    id,
+    label,
+    subLabel: extra?.subLabel,
+    heroCount: extra?.heroCount,
+    questCount: extra?.questCount ?? agg.questIds.size,
+    totalSlots: agg.totalSlots,
+    tuntasCount: agg.tuntasCount,
+    prosesCount: agg.prosesCount,
+    remidialCount: agg.remidialCount,
+    belumCount: agg.belumCount,
+    completionPercent,
+    gradedCount: agg.gradedCount,
+    averageScore,
+  };
+}
+
+export function computeDashboardAnalytics(params: {
+  dungeons: Dungeon[];
+  heroes: HeroStudent[];
+  quests: ActiveQuest[];
+  grades: ExpGrade[];
+  realms: Realm[];
+  scopedDungeonIds?: Set<string> | null;
+  selectedRealmId?: string;
+}): DashboardAnalytics {
+  const {
+    dungeons,
+    heroes,
+    quests,
+    grades,
+    realms,
+    scopedDungeonIds = null,
+    selectedRealmId = 'all',
+  } = params;
+
+  const scopedDungeons = sortDungeonsAlphabetically(
+    scopedDungeonIds
+      ? dungeons.filter((d) => scopedDungeonIds.has(d.id))
+      : dungeons
+  );
+
+  const activeHeroes = heroes.filter(
+    (h) => h.active && (!scopedDungeonIds || scopedDungeonIds.has(h.dungeonId))
+  );
+
+  const scopedQuests = quests.filter((q) => {
+    if (selectedRealmId !== 'all' && q.realmId !== selectedRealmId) {
+      return false;
+    }
+    if (!scopedDungeonIds) return true;
+    const targetIds = parseTargetDungeonIds(q.dungeonId);
+    if (targetIds.length === 0) return true;
+    return targetIds.some((id) => scopedDungeonIds.has(id));
+  });
+
+  // Index grades by heroId__questId (keep latest if duplicates exist)
+  const gradeMap = new Map<string, ExpGrade>();
+  grades.forEach((g) => {
+    gradeMap.set(`${g.heroId}__${g.questId}`, g);
+  });
+
+  const overallAgg = createMutableAgg();
+  const rankCounts: Record<LetterRank, number> = {
+    S: 0,
+    A: 0,
+    B: 0,
+    C: 0,
+    D: 0,
+  };
+
+  const classAggMap = new Map<string, MutableAgg>();
+  scopedDungeons.forEach((d) => classAggMap.set(d.id, createMutableAgg()));
+
+  const heroCountByDungeon = new Map<string, number>();
+  activeHeroes.forEach((h) => {
+    heroCountByDungeon.set(
+      h.dungeonId,
+      (heroCountByDungeon.get(h.dungeonId) || 0) + 1
+    );
+  });
+
+  const scopedRealms =
+    selectedRealmId !== 'all'
+      ? realms.filter((r) => r.id === selectedRealmId)
+      : realms;
+  const realmAggMap = new Map<string, MutableAgg>();
+  scopedRealms.forEach((r) => realmAggMap.set(r.id, createMutableAgg()));
+
+  const categoryAggMap = new Map<QuestCategory, MutableAgg>();
+  QUEST_CATEGORIES.forEach((c) => categoryAggMap.set(c.id, createMutableAgg()));
+
+  // Track quest counts per realm & category within scope even if 0 active heroes
+  scopedQuests.forEach((q) => {
+    const rAgg = realmAggMap.get(q.realmId);
+    if (rAgg) rAgg.questIds.add(q.id);
+    const cat = normalizeQuestCategory(q.category);
+    const cAgg = categoryAggMap.get(cat);
+    if (cAgg) cAgg.questIds.add(q.id);
+  });
+
+  const pushSlot = (
+    agg: MutableAgg | undefined,
+    status: GradeStatus,
+    score: number | null,
+    questId: string
+  ) => {
+    if (!agg) return;
+    agg.totalSlots++;
+    agg.questIds.add(questId);
+    if (status === 'tuntas') agg.tuntasCount++;
+    else if (status === 'proses') agg.prosesCount++;
+    else if (status === 'remidial') agg.remidialCount++;
+    else agg.belumCount++;
+
+    if (score !== null) {
+      agg.gradedCount++;
+      agg.scoreSum += score;
+    }
+  };
+
+  activeHeroes.forEach((hero) => {
+    const allowedRealms = getHeroEffectiveRealmIds(hero, dungeons);
+    scopedQuests.forEach((quest) => {
+      if (!doesTargetMatchDungeon(quest.dungeonId, hero.dungeonId)) {
+        return;
+      }
+      if (
+        quest.realmId &&
+        allowedRealms &&
+        !allowedRealms.includes(quest.realmId)
+      ) {
+        return;
+      }
+
+      const grade = gradeMap.get(`${hero.id}__${quest.id}`);
+      const status: GradeStatus = grade
+        ? getEffectiveGradeStatus(grade)
+        : 'belum';
+      const hasScore = Boolean(grade && status !== 'belum');
+      const numericScore = hasScore
+        ? Math.max(0, Math.min(100, Number(grade?.score ?? 0)))
+        : null;
+
+      if (numericScore !== null) {
+        const rank = getRankFromScore(numericScore);
+        rankCounts[rank]++;
+      }
+
+      pushSlot(overallAgg, status, numericScore, quest.id);
+      pushSlot(classAggMap.get(hero.dungeonId), status, numericScore, quest.id);
+      pushSlot(realmAggMap.get(quest.realmId), status, numericScore, quest.id);
+      pushSlot(
+        categoryAggMap.get(normalizeQuestCategory(quest.category)),
+        status,
+        numericScore,
+        quest.id
+      );
+    });
+  });
+
+  const totalGradedForRank =
+    rankCounts.S + rankCounts.A + rankCounts.B + rankCounts.C + rankCounts.D;
+
+  const rankMeta: { rank: LetterRank; label: string; rangeLabel: string }[] = [
+    { rank: 'S', label: 'Rank S', rangeLabel: '92–100' },
+    { rank: 'A', label: 'Rank A', rangeLabel: '82–91' },
+    { rank: 'B', label: 'Rank B', rangeLabel: '70–81' },
+    { rank: 'C', label: 'Rank C', rangeLabel: '55–69' },
+    { rank: 'D', label: 'Rank D', rangeLabel: '< 55' },
+  ];
+
+  const ranks: DashboardRankBucket[] = rankMeta.map((item) => {
+    const count = rankCounts[item.rank];
+    return {
+      ...item,
+      count,
+      percent:
+        totalGradedForRank > 0
+          ? Math.round((count / totalGradedForRank) * 100)
+          : 0,
+    };
+  });
+
+  const byClass: DashboardComparisonRow[] = scopedDungeons.map((d) =>
+    finalizeAgg(d.id, d.name, classAggMap.get(d.id) || createMutableAgg(), {
+      subLabel: `${d.guildCode} · ${d.tier}`,
+      heroCount: heroCountByDungeon.get(d.id) || 0,
+    })
+  );
+
+  const byRealm: DashboardComparisonRow[] = scopedRealms.map((r) =>
+    finalizeAgg(r.id, r.name, realmAggMap.get(r.id) || createMutableAgg(), {
+      subLabel: r.code,
+    })
+  );
+
+  const byCategory: DashboardComparisonRow[] = QUEST_CATEGORIES.map((c) =>
+    finalizeAgg(
+      c.id,
+      c.label,
+      categoryAggMap.get(c.id) || createMutableAgg(),
+      { subLabel: c.description }
+    )
+  );
+
+  return {
+    status: {
+      tuntas: overallAgg.tuntasCount,
+      proses: overallAgg.prosesCount,
+      remidial: overallAgg.remidialCount,
+      belum: overallAgg.belumCount,
+      totalSlots: overallAgg.totalSlots,
+      gradedCount: overallAgg.gradedCount,
+      completionPercent:
+        overallAgg.totalSlots > 0
+          ? Math.min(
+              100,
+              Math.round((overallAgg.tuntasCount / overallAgg.totalSlots) * 100)
+            )
+          : 0,
+      averageScore:
+        overallAgg.gradedCount > 0
+          ? Math.round(overallAgg.scoreSum / overallAgg.gradedCount)
+          : 0,
+    },
+    ranks,
+    byClass,
+    byRealm,
+    byCategory,
+  };
+}
+

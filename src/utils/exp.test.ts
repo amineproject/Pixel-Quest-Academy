@@ -4,6 +4,7 @@ import {
   QUEST_CATEGORIES,
   buildAcademicPeriodLabel,
   calculateExpEarned,
+  computeDashboardAnalytics,
   doesTargetMatchDungeon,
   escapeCsvCell,
   formatChapterLabel,
@@ -30,7 +31,7 @@ import {
   loadOfflineContentSnapshot,
   saveOfflineContentSnapshot,
 } from './offlineCache';
-import { ActiveQuest, Dungeon, ExpGrade, HeroStudent } from '../types/lms';
+import { ActiveQuest, Dungeon, ExpGrade, HeroStudent, Realm } from '../types/lms';
 
 const sampleHeroes: HeroStudent[] = [
   {
@@ -515,6 +516,97 @@ describe('Multi-Class Quest/Tome Targeting & Chapter Formatting', () => {
   });
 });
 
+describe('computeDashboardAnalytics', () => {
+  const analyticsDungeons: Dungeon[] = [
+    { id: 'd1', name: 'Kelas VII-A', guildCode: 'VII-A', tier: 'Kelas VII', capacity: 32, description: 'Kelas 7A' },
+    { id: 'd2', name: 'Kelas VII-B', guildCode: 'VII-B', tier: 'Kelas VII', capacity: 32, description: 'Kelas 7B' },
+    { id: 'd3', name: 'Kelas VIII-A', guildCode: 'VIII-A', tier: 'Kelas VIII', capacity: 32, description: 'Kelas 8A' },
+  ];
 
+  const analyticsHeroes: HeroStudent[] = [
+    { id: 'ha1', name: 'Siswa Satu', username: 's1', studentCode: '101', dungeonId: 'd1', avatar: 'knight', heroClass: 'Knight', active: true, joinedDate: '2026-01-01' },
+    { id: 'ha2', name: 'Siswa Dua', username: 's2', studentCode: '102', dungeonId: 'd1', avatar: 'mage', heroClass: 'Mage', active: true, joinedDate: '2026-01-01' },
+    { id: 'ha3', name: 'Siswa Tiga', username: 's3', studentCode: '103', dungeonId: 'd2', avatar: 'ranger', heroClass: 'Ranger', active: true, joinedDate: '2026-01-01' },
+    { id: 'ha4', name: 'Siswa Nonaktif', username: 's4', studentCode: '104', dungeonId: 'd3', avatar: 'scholar', heroClass: 'Scholar', active: false, joinedDate: '2026-01-01' },
+  ];
 
+  it('computes status distribution, rank buckets, and per-class/mapel/category metrics accurately', () => {
+    const realms: Realm[] = [
+      { id: 'r1', name: 'Bahasa Indonesia', code: 'BIN', icon: 'book', accentColor: '#15803d', description: '' },
+      { id: 'r2', name: 'IPA Terpadu', code: 'IPA', icon: 'flask', accentColor: '#0284c7', description: '' },
+    ];
+    const quests: ActiveQuest[] = [
+      {
+        id: 'q1',
+        realmId: 'r1',
+        dungeonId: 'd1',
+        title: 'Quest Utama',
+        instructions: '',
+        deadline: '2026-12-01',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Main',
+      },
+      {
+        id: 'q2',
+        realmId: 'r2',
+        dungeonId: 'all',
+        title: 'Quest Kelompok',
+        instructions: '',
+        deadline: '2026-12-02',
+        maxExp: 100,
+        difficulty: 'Elite',
+        category: 'Party',
+      },
+    ];
+    const grades: ExpGrade[] = [
+      { id: 'g1', heroId: 'ha1', questId: 'q1', realmId: 'r1', score: 95, expEarned: 95, status: 'tuntas', feedback: '', gradedDate: '2026-11-10' },
+      { id: 'g2', heroId: 'ha2', questId: 'q1', realmId: 'r1', score: 60, expEarned: 60, status: 'remidial', feedback: '', gradedDate: '2026-11-10' },
+      { id: 'g3', heroId: 'ha1', questId: 'q2', realmId: 'r2', score: 85, expEarned: 85, status: 'tuntas', feedback: '', gradedDate: '2026-11-11' },
+      { id: 'g4', heroId: 'ha3', questId: 'q2', realmId: 'r2', score: 75, expEarned: 75, status: 'proses', feedback: '', gradedDate: '2026-11-11' },
+    ];
 
+    const result = computeDashboardAnalytics({
+      dungeons: analyticsDungeons,
+      heroes: analyticsHeroes,
+      quests,
+      grades,
+      realms,
+    });
+
+    // Expected active slots:
+    // q1 (d1 only): ha1, ha2 => 2 slots (1 tuntas, 1 remidial)
+    // q2 (all): ha1 (d1), ha2 (d1), ha3 (d2) => 3 slots (1 tuntas, 1 belum, 1 proses)
+    // ha4 is inactive so excluded
+    // Total = 5 slots: tuntas=2, proses=1, remidial=1, belum=1
+    assert.equal(result.status.totalSlots, 5);
+    assert.equal(result.status.tuntas, 2);
+    assert.equal(result.status.proses, 1);
+    assert.equal(result.status.remidial, 1);
+    assert.equal(result.status.belum, 1);
+    assert.equal(result.status.completionPercent, 40);
+    assert.equal(result.status.gradedCount, 4);
+    assert.equal(result.status.averageScore, 79); // (95+60+85+75)/4 = 78.75 -> 79
+
+    const rankMap = new Map(result.ranks.map((r) => [r.rank, r.count]));
+    assert.equal(rankMap.get('S'), 1); // 95
+    assert.equal(rankMap.get('A'), 1); // 85
+    assert.equal(rankMap.get('B'), 1); // 75
+    assert.equal(rankMap.get('C'), 1); // 60
+    assert.equal(rankMap.get('D'), 0);
+
+    // Filtered by realm r1
+    const r1Only = computeDashboardAnalytics({
+      dungeons: analyticsDungeons,
+      heroes: analyticsHeroes,
+      quests,
+      grades,
+      realms,
+      selectedRealmId: 'r1',
+    });
+    assert.equal(r1Only.status.totalSlots, 2);
+    assert.equal(r1Only.status.tuntas, 1);
+    assert.equal(r1Only.status.remidial, 1);
+    assert.equal(r1Only.byRealm.length, 1);
+  });
+});

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AcademyState,
   GmMenuId,
@@ -8,18 +8,24 @@ import {
   PixelButton,
   PixelEmptyChest,
   PixelExpBar,
-  PixelLinkButton,
+  PixelFieldLabel,
   PixelSectionTitle,
+  PixelSelect,
 } from '../../components/PixelUI';
 import {
-  ThemedNoticeCard,
-  ThemedPanelCard,
-} from '../../components/ThemePrimitives';
+  TierDungeonFilter,
+  resolveTierDungeonScope,
+} from '../../components/TierDungeonFilter';
 import {
+  ComparisonHorizontalBarChart,
+  RankHistogramChart,
+  StatusDonutChart,
+} from '../../components/DashboardCharts';
+import { ThemedPanelCard } from '../../components/ThemePrimitives';
+import {
+  computeDashboardAnalytics,
   doesTargetMatchDungeon,
-  formatRetroDate,
   getGmLevelProgress,
-  getHeroTotalExp,
 } from '../../utils/exp';
 
 export interface GmDashboardProps {
@@ -34,8 +40,9 @@ export interface GmDashboardProps {
 }
 
 /**
- * Game Master HQ / Tavern Hall dashboard displaying GM level/XP progression,
- * live academy stats, and Tavern Highlights.
+ * Game Master HQ dashboard displaying GM level/XP progression,
+ * live academy KPIs, and interactive graphic reports (status donut,
+ * rank histogram, and class/subject/quest-category comparison bars).
  */
 export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
   state,
@@ -49,6 +56,11 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
   const tomes = state?.tomes ?? [];
   const grades = state?.grades ?? [];
   const notices = state?.notices ?? [];
+  const realms = state?.realms ?? [];
+
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
+  const [selectedRealmId, setSelectedRealmId] = useState<string>('all');
 
   const gmName = state?.gmProfile?.name?.trim() || 'Game Master';
   const gmTitle = state?.gmProfile?.title?.trim() || 'Guild Overseer';
@@ -56,17 +68,20 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
   const academicTerm =
     state?.settings?.academicTerm?.trim() || 'Tahun Ajaran Aktif';
 
+  const scope = useMemo(
+    () =>
+      resolveTierDungeonScope(dungeons, selectedTier, selectedDungeonIds),
+    [dungeons, selectedTier, selectedDungeonIds]
+  );
+
   const {
     activeHeroes,
     pendingQuestsCount,
-    topHero,
-    latestNotice,
     gmLevel,
     hasAnyAcademyData,
   } = useMemo(() => {
     const activeCount = heroes.filter((h) => Boolean(h?.active)).length;
 
-    // Quests that have at least one active Hero without a 'tuntas' grade yet
     const waitingQuests = quests.filter((q) => {
       const targetHeroes = heroes.filter(
         (h) => h.active && doesTargetMatchDungeon(q.dungeonId, h.dungeonId)
@@ -74,21 +89,13 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
       if (targetHeroes.length === 0) return true;
       return targetHeroes.some((h) => {
         const g = grades.find((gr) => gr.heroId === h.id && gr.questId === q.id);
-        return !g || (g.status !== 'tuntas' && (g.status || (g.score >= 70 ? 'tuntas' : 'remidial')) !== 'tuntas');
+        return (
+          !g ||
+          (g.status !== 'tuntas' &&
+            (g.status || (g.score >= 70 ? 'tuntas' : 'remidial')) !== 'tuntas')
+        );
       });
     }).length;
-
-    const sortedTopHero =
-      heroes.length > 0
-        ? [...heroes].sort(
-            (a, b) =>
-              getHeroTotalExp(b.id, grades) - getHeroTotalExp(a.id, grades)
-          )[0]
-        : undefined;
-
-    const sortedNotices = [...notices].sort((a, b) =>
-      (b.releaseDate || '').localeCompare(a.releaseDate || '')
-    );
 
     const levelProgress = getGmLevelProgress({
       dungeonsCount: dungeons.length,
@@ -102,16 +109,48 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
     return {
       activeHeroes: activeCount,
       pendingQuestsCount: waitingQuests,
-      topHero: sortedTopHero,
-      latestNotice: sortedNotices[0],
       gmLevel: levelProgress,
       hasAnyAcademyData:
         heroes.length > 0 ||
         dungeons.length > 0 ||
-        quests.length > 0 ||
-        notices.length > 0,
+        quests.length > 0,
     };
-  }, [heroes, dungeons.length, tomes.length, quests, grades, notices]);
+  }, [heroes, dungeons.length, tomes.length, quests, grades, notices.length]);
+
+  const analytics = useMemo(
+    () =>
+      computeDashboardAnalytics({
+        dungeons,
+        heroes,
+        quests,
+        grades,
+        realms,
+        scopedDungeonIds: scope.isFiltered ? scope.activeDungeonIdSet : null,
+        selectedRealmId,
+      }),
+    [
+      dungeons,
+      heroes,
+      quests,
+      grades,
+      realms,
+      scope.isFiltered,
+      scope.activeDungeonIdSet,
+      selectedRealmId,
+    ]
+  );
+
+  const overallCompletion = useMemo(
+    () =>
+      computeDashboardAnalytics({
+        dungeons,
+        heroes,
+        quests,
+        grades,
+        realms,
+      }).status,
+    [dungeons, heroes, quests, grades, realms]
+  );
 
   const syncLabel =
     syncStatus === 'syncing'
@@ -124,7 +163,7 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
 
   return (
     <div className="space-y-5 min-w-0 w-full">
-      {/* GM Identity Banner + Level Bar + 4 Live Stat Cards */}
+      {/* GM Identity Banner + Level Bar + 4 Live Academic KPI Cards */}
       <ThemedPanelCard className="space-y-3 comic-halftone min-w-0">
         <div className="flex items-center gap-3 min-w-0 pt-1">
           <PixelAvatar
@@ -159,8 +198,8 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
           </div>
         </div>
 
-        {/* 4 Live KPI Counters (Item 2.1: Heroes aktif, Quests menunggu, Notice terbaru, Last sync) */}
-        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 gap-2.5 pt-1 min-w-0">
+        {/* 4 Live KPI Counters (No Notice / Pengumuman clutter) */}
+        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 min-w-0">
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
             <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">HEROES AKTIF</span>
@@ -181,13 +220,11 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
             <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
-              <span className="truncate">NOTICE TERBARU</span>
-              <span className="shrink-0 text-[13px]" aria-hidden="true">📜</span>
+              <span className="truncate">KETUNTASAN</span>
+              <span className="shrink-0 text-[13px]" aria-hidden="true">📊</span>
             </p>
-            <p className="font-pixel-display text-[13px] sm:text-[14px] text-[var(--text-primary)] truncate mt-1.5">
-              {latestNotice
-                ? `${notices.length} · ${formatRetroDate(latestNotice.releaseDate)}`
-                : '0 Notice'}
+            <p className="font-pixel-display text-[14.5px] sm:text-[16px] text-[var(--accent-primary)] tabular-nums truncate mt-1.5">
+              {overallCompletion.completionPercent}% · Skor {overallCompletion.averageScore}
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
@@ -218,86 +255,102 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
         )}
       </ThemedPanelCard>
 
-      {/* Top Hero & Recent Broadcast Snapshot */}
-      <section className="space-y-3 min-w-0">
-        <PixelSectionTitle title="Tavern Highlights" />
+      {/* Academic Graphical Reports Section */}
+      <section className="space-y-3.5 min-w-0">
+        <PixelSectionTitle
+          title="Laporan Grafik Akademik"
+          subtitle="Ringkasan visual ketuntasan, sebaran nilai S–D, dan perbandingan antar kelas/mapel"
+          action={
+            hasAnyAcademyData ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => onNavigate('exp_loot')}
+                >
+                  Buka Penilaian
+                </PixelButton>
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="neutral"
+                  onClick={() => onNavigate('guild_chronicles')}
+                >
+                  Statistik Lengkap
+                </PixelButton>
+              </div>
+            ) : undefined
+          }
+        />
 
-        {!topHero && !latestNotice ? (
+        {!hasAnyAcademyData ? (
           <PixelEmptyChest
-            title="Tavern Highlights Masih Kosong!"
-            description="Belum ada data Heroes atau Notice terbaru untuk ditampilkan di aula ini."
+            title="Laporan Grafik Belum Tersedia"
+            description="Tambahkan kelas, siswa, dan tugas terlebih dahulu agar grafik perkembangan dan nilai muncul di sini."
             action={
               <PixelButton
                 type="button"
                 size="sm"
                 variant="warning"
-                onClick={() => onNavigate('heroes')}
+                onClick={() => onNavigate('active_quests')}
               >
-                Kelola Heroes
+                Kelola Tugas
               </PixelButton>
             }
           />
         ) : (
           <>
-            {topHero && (
-              <ThemedPanelCard className="p-3.5 flex items-center justify-between gap-3 min-w-0">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <PixelAvatar
-                    avatar={topHero.avatar || 'knight'}
-                    size={40}
-                    className="shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)]">
-                      TOP EXP HERO
-                    </p>
-                    <p className="text-[14.5px] font-bold text-[var(--text-primary)] truncate">
-                      {topHero.name || 'Hero'}
-                    </p>
-                    <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
-                      {topHero.heroClass || 'Adventurer'} ·{' '}
-                      <span className="font-semibold text-[var(--accent-warning)] tabular-nums">
-                        {getHeroTotalExp(topHero.id, grades)} EXP
-                      </span>
-                    </p>
+            {/* Interactive Filter Toolbar */}
+            <ThemedPanelCard className="p-3.5">
+              <TierDungeonFilter
+                idPrefix="hq-chart"
+                dungeons={dungeons}
+                selectedTier={selectedTier}
+                onChangeTier={setSelectedTier}
+                selectedDungeonIds={selectedDungeonIds}
+                onChangeDungeonIds={setSelectedDungeonIds}
+                allTotalCount={heroes.length}
+                getTierCount={(tierDungeons) => {
+                  const set = new Set(tierDungeons.map((d) => d.id));
+                  return heroes.filter((h) => set.has(h.dungeonId)).length;
+                }}
+                extraLeftSlot={
+                  <div>
+                    <PixelFieldLabel htmlFor="hq-chart-realm">
+                      Filter Mata Pelajaran
+                    </PixelFieldLabel>
+                    <PixelSelect
+                      id="hq-chart-realm"
+                      value={selectedRealmId}
+                      onChange={(e) => setSelectedRealmId(e.target.value)}
+                      aria-label="Filter Mata Pelajaran"
+                    >
+                      <option value="all">
+                        Semua Mapel ({realms.length})
+                      </option>
+                      {realms.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.code} — {r.name}
+                        </option>
+                      ))}
+                    </PixelSelect>
                   </div>
-                </div>
-                <PixelButton
-                  type="button"
-                  size="sm"
-                  variant="neutral"
-                  onClick={() => onNavigate('exp_loot')}
-                  className="shrink-0"
-                >
-                  Grade
-                </PixelButton>
-              </ThemedPanelCard>
-            )}
-
-            {latestNotice && (
-              <ThemedNoticeCard
-                speaker={`Latest Notice · ${latestNotice.priority || 'INFO'}`}
-                metaRight={formatRetroDate(latestNotice.releaseDate)}
-                footer={
-                  latestNotice.linkUrl ? (
-                    <div className="pt-1 border-t border-[var(--border-pixel)]/30">
-                      <PixelLinkButton
-                        url={latestNotice.linkUrl}
-                        label="Buka Tautan"
-                        compact
-                      />
-                    </div>
-                  ) : undefined
                 }
-              >
-                <h3 className="text-[14px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
-                  {latestNotice.title || 'Pengumuman Guild'}
-                </h3>
-                <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
-                  {latestNotice.description || '-'}
-                </p>
-              </ThemedNoticeCard>
-            )}
+              />
+            </ThemedPanelCard>
+
+            {/* Row 1: Donut Chart + Vertical Rank Histogram */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 min-w-0">
+              <StatusDonutChart status={analytics.status} />
+              <RankHistogramChart
+                ranks={analytics.ranks}
+                gradedCount={analytics.status.gradedCount}
+              />
+            </div>
+
+            {/* Row 2: Full-width Horizontal Bar Chart (Per Kelas / Per Mapel / Per Kategori) */}
+            <ComparisonHorizontalBarChart analytics={analytics} />
           </>
         )}
       </section>
