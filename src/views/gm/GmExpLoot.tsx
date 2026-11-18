@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
+  CheckSquare,
   ChevronDown,
   ChevronRight,
   Download,
@@ -29,6 +30,7 @@ import {
 } from '../../components/PixelUI';
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
+  applyCollectiveGradePatch,
   buildAcademicPeriodLabel,
   calculateExpEarned,
   doesTargetMatchDungeon,
@@ -265,6 +267,16 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const [draftStatuses, setDraftStatuses] = useState<Record<string, GradeStatus>>({});
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
 
+  // Collective / Batch grading controls
+  const [selectedHeroIds, setSelectedHeroIds] = useState<Record<string, boolean>>({});
+  const [bulkTargetMode, setBulkTargetMode] = useState<'all' | 'selected' | 'ungraded'>('all');
+  const [bulkScoreInput, setBulkScoreInput] = useState<string>('');
+  const [bulkStatusInput, setBulkStatusInput] = useState<GradeStatus | 'keep'>('keep');
+  const [bulkNoteInput, setBulkNoteInput] = useState<string>('');
+  const [bulkClearNote, setBulkClearNote] = useState<boolean>(false);
+  const [bulkFeedbackBanner, setBulkFeedbackBanner] = useState<string | null>(null);
+  const [isSavingBulk, setIsSavingBulk] = useState<boolean>(false);
+
   useEffect(() => {
     const scoresMap: Record<string, number> = {};
     const statusMap: Record<string, GradeStatus> = {};
@@ -281,6 +293,51 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     setDraftStatuses(statusMap);
     setDraftNotes(notesMap);
   }, [selectedQuestId, state.grades, state.heroes]);
+
+  useEffect(() => {
+    setSelectedHeroIds({});
+    setBulkTargetMode('all');
+    setBulkFeedbackBanner(null);
+  }, [selectedQuestId, selectedRealmId]);
+
+  const saveHeroesBatch = async (
+    heroesToSave: typeof eligibleHeroes,
+    scoresMap: Record<string, number>,
+    statusesMap: Record<string, GradeStatus>,
+    notesMap: Record<string, string>
+  ) => {
+    if (!activeQuest || heroesToSave.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const batch: ExpGrade[] = heroesToSave.map((h) => {
+      const status = statusesMap[h.id] || 'tuntas';
+      const score =
+        status === 'belum'
+          ? 0
+          : Math.max(0, Math.min(100, Number(scoresMap[h.id]) || 0));
+      const existing = state.grades.find(
+        (g) => g.heroId === h.id && g.questId === activeQuest.id
+      );
+      return {
+        id: existing?.id || `grd-${h.id}-${activeQuest.id}`,
+        heroId: h.id,
+        questId: activeQuest.id,
+        realmId: activeQuest.realmId,
+        score,
+        expEarned:
+          status === 'belum'
+            ? 0
+            : calculateExpEarned(score, activeQuest.maxExp),
+        status,
+        feedback: (notesMap[h.id] || '').trim(),
+        gradedDate: today,
+      };
+    });
+    if (onSaveGradesBatch) {
+      await onSaveGradesBatch(batch);
+    } else {
+      batch.forEach((g) => onSaveGrade(g));
+    }
+  };
 
   const handleSaveHeroGrade = (heroId: string) => {
     if (!activeQuest) return;
@@ -306,33 +363,117 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   };
 
   const handleSaveClassGrades = async (heroesInClass: typeof eligibleHeroes) => {
-    if (!activeQuest || heroesInClass.length === 0) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const batch: ExpGrade[] = heroesInClass.map((h) => {
-      const status = draftStatuses[h.id] || 'tuntas';
-      const score =
-        status === 'belum'
-          ? 0
-          : Math.max(0, Math.min(100, Number(draftScores[h.id]) || 0));
-      const existing = state.grades.find(
-        (g) => g.heroId === h.id && g.questId === activeQuest.id
-      );
-      return {
-        id: existing?.id || `grd-${h.id}-${activeQuest.id}`,
-        heroId: h.id,
-        questId: activeQuest.id,
-        realmId: activeQuest.realmId,
-        score,
-        expEarned: status === 'belum' ? 0 : calculateExpEarned(score, activeQuest.maxExp),
-        status,
-        feedback: (draftNotes[h.id] || '').trim(),
-        gradedDate: today,
-      };
+    await saveHeroesBatch(heroesInClass, draftScores, draftStatuses, draftNotes);
+  };
+
+  const selectedEligibleHeroes = eligibleHeroes.filter((h) =>
+    Boolean(selectedHeroIds[h.id])
+  );
+  const ungradedEligibleHeroes = eligibleHeroes.filter((h) => {
+    if (!activeQuest) return false;
+    return !state.grades.some(
+      (g) => g.heroId === h.id && g.questId === activeQuest.id
+    );
+  });
+
+  const bulkTargetHeroes =
+    bulkTargetMode === 'selected'
+      ? selectedEligibleHeroes
+      : bulkTargetMode === 'ungraded'
+        ? ungradedEligibleHeroes
+        : eligibleHeroes;
+
+  const hasCollectiveChanges =
+    bulkScoreInput.trim() !== '' ||
+    bulkStatusInput !== 'keep' ||
+    bulkNoteInput.trim() !== '' ||
+    bulkClearNote;
+
+  const toggleHeroSelection = (heroId: string) => {
+    setSelectedHeroIds((prev) => {
+      const next = { ...prev, [heroId]: !prev[heroId] };
+      const checkedCount = eligibleHeroes.filter((h) => Boolean(next[h.id])).length;
+      if (checkedCount > 0 && bulkTargetMode === 'all') {
+        setBulkTargetMode('selected');
+      } else if (checkedCount === 0 && bulkTargetMode === 'selected') {
+        setBulkTargetMode('all');
+      }
+      return next;
     });
-    if (onSaveGradesBatch) {
-      await onSaveGradesBatch(batch);
+    setBulkFeedbackBanner(null);
+  };
+
+  const toggleClassSelection = (heroesInClass: typeof eligibleHeroes) => {
+    const allChecked =
+      heroesInClass.length > 0 &&
+      heroesInClass.every((h) => Boolean(selectedHeroIds[h.id]));
+    setSelectedHeroIds((prev) => {
+      const next = { ...prev };
+      heroesInClass.forEach((h) => {
+        next[h.id] = !allChecked;
+      });
+      const checkedCount = eligibleHeroes.filter((h) => Boolean(next[h.id])).length;
+      if (checkedCount > 0 && bulkTargetMode === 'all') {
+        setBulkTargetMode('selected');
+      } else if (checkedCount === 0 && bulkTargetMode === 'selected') {
+        setBulkTargetMode('all');
+      }
+      return next;
+    });
+    setBulkFeedbackBanner(null);
+  };
+
+  const handleSelectAllEligible = () => {
+    const next: Record<string, boolean> = {};
+    eligibleHeroes.forEach((h) => {
+      next[h.id] = true;
+    });
+    setSelectedHeroIds(next);
+    setBulkTargetMode('selected');
+    setBulkFeedbackBanner(null);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedHeroIds({});
+    if (bulkTargetMode === 'selected') {
+      setBulkTargetMode('all');
+    }
+    setBulkFeedbackBanner(null);
+  };
+
+  const handleApplyCollective = async (andSave: boolean) => {
+    if (!activeQuest || bulkTargetHeroes.length === 0 || !hasCollectiveChanges) {
+      return;
+    }
+
+    const { nextScores, nextStatuses, nextNotes } = applyCollectiveGradePatch({
+      targetHeroIds: bulkTargetHeroes.map((h) => h.id),
+      currentScores: draftScores,
+      currentStatuses: draftStatuses,
+      currentNotes: draftNotes,
+      patch: {
+        scoreInput: bulkScoreInput,
+        statusInput: bulkStatusInput,
+        noteInput: bulkNoteInput,
+        clearNote: bulkClearNote,
+      },
+    });
+
+    setDraftScores(nextScores);
+    setDraftStatuses(nextStatuses);
+    setDraftNotes(nextNotes);
+
+    if (andSave) {
+      setIsSavingBulk(true);
+      await saveHeroesBatch(bulkTargetHeroes, nextScores, nextStatuses, nextNotes);
+      setIsSavingBulk(false);
+      setBulkFeedbackBanner(
+        `Berhasil menerapkan & menyimpan penilaian kolektif untuk ${bulkTargetHeroes.length} siswa!`
+      );
     } else {
-      batch.forEach((g) => onSaveGrade(g));
+      setBulkFeedbackBanner(
+        `Draft kolektif diterapkan ke ${bulkTargetHeroes.length} siswa. Klik "Simpan Kelas" atau "Simpan Semua" untuk menyimpan permanen.`
+      );
     }
   };
 
@@ -387,15 +528,27 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       STATUS_SELECT_OPTIONS.find((opt) => opt.id === status) ||
       STATUS_SELECT_OPTIONS[0];
     const isPortraitExpanded = expandedPortraitHeroId === hero.id;
+    const isChecked = Boolean(selectedHeroIds[hero.id]);
 
     return (
       <div
         key={hero.id}
-        className="pixel-box-inset bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60"
+        className={`pixel-box-inset border transition-colors ${
+          isChecked
+            ? 'bg-[var(--bg-surface-alt)] border-[var(--accent-primary)]'
+            : 'bg-[var(--bg-inset)] border-[var(--border-pixel)]/60'
+        }`}
       >
-        {/* PORTRAIT MODE: strictly Avatar, Status Nilai, and Nilai (compact single row) */}
+        {/* PORTRAIT MODE: Checkbox, Avatar, Status Nilai, and Nilai (compact single row) */}
         <div className="hidden portrait:block px-2.5 py-2">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => toggleHeroSelection(hero.id)}
+              aria-label={`Pilih ${hero.name} untuk entry kolektif`}
+              className="w-4 h-4 accent-[var(--accent-primary)] shrink-0 cursor-pointer"
+            />
             <button
               type="button"
               onClick={() =>
@@ -406,7 +559,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               aria-expanded={isPortraitExpanded}
               className="shrink-0 cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-[var(--comic-gold)]"
             >
-              <PixelAvatar avatar={hero.avatar} size={36} />
+              <PixelAvatar avatar={hero.avatar} size={34} />
             </button>
 
             <select
@@ -415,7 +568,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               onChange={(e) =>
                 handleStatusChange(hero.id, e.target.value as GradeStatus)
               }
-              className={`min-w-0 flex-1 min-h-[42px] px-2.5 py-1.5 border-2 rounded-[var(--inset-radius)] text-[13px] font-bold cursor-pointer outline-none ${activeStatusMeta.selectClass}`}
+              className={`min-w-0 flex-1 min-h-[42px] px-2 py-1.5 border-2 rounded-[var(--inset-radius)] text-[13px] font-bold cursor-pointer outline-none ${activeStatusMeta.selectClass}`}
             >
               {STATUS_SELECT_OPTIONS.map((opt) => (
                 <option
@@ -435,7 +588,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               aria-label={`Nilai ${hero.name}`}
               value={score}
               onChange={(e) => handleScoreChange(hero.id, e.target.value)}
-              className="!w-[70px] !min-h-[42px] shrink-0 text-center font-bold tabular-nums"
+              className="!w-[66px] !min-h-[42px] shrink-0 text-center font-bold tabular-nums"
             />
           </div>
 
@@ -477,7 +630,14 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
 
         {/* LANDSCAPE / DESKTOP MODE: clean single compact horizontal row */}
         <div className="portrait:hidden p-2.5 flex flex-wrap lg:flex-nowrap items-center gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1 basis-[210px]">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 basis-[220px]">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => toggleHeroSelection(hero.id)}
+              aria-label={`Pilih ${hero.name} untuk entry kolektif`}
+              className="w-4 h-4 accent-[var(--accent-primary)] shrink-0 cursor-pointer"
+            />
             <PixelAvatar avatar={hero.avatar} size={34} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 min-w-0">
@@ -690,6 +850,194 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             </span>
           </ThemedPanelCard>
 
+          {/* Collective / Bulk Grading Panel (Nilai, Status & Catatan secara kolektif) */}
+          <ThemedPanelCard className="p-3.5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/30">
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckSquare size={16} className="text-[var(--accent-primary)] shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="font-pixel-display text-[12.5px] text-[var(--text-primary)]">
+                    Entry Penilaian Kolektif
+                  </h3>
+                  <p className="text-[11.5px] text-[var(--text-secondary)]">
+                    Atur nilai, status (Tuntas / Belum / Proses Dinilai / Remidial), dan catatan guru sekaligus untuk banyak siswa.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="neutral"
+                  onClick={handleSelectAllEligible}
+                >
+                  Centang Semua ({eligibleHeroes.length})
+                </PixelButton>
+                {selectedEligibleHeroes.length > 0 && (
+                  <PixelButton
+                    type="button"
+                    size="sm"
+                    variant="neutral"
+                    onClick={handleClearSelection}
+                  >
+                    Batal Centang ({selectedEligibleHeroes.length})
+                  </PixelButton>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div>
+                <PixelFieldLabel htmlFor="bulk-target">Sasaran Siswa</PixelFieldLabel>
+                <PixelSelect
+                  id="bulk-target"
+                  value={bulkTargetMode}
+                  onChange={(e) =>
+                    setBulkTargetMode(
+                      e.target.value as 'all' | 'selected' | 'ungraded'
+                    )
+                  }
+                >
+                  <option value="all">
+                    Semua Siswa Tampil ({eligibleHeroes.length})
+                  </option>
+                  <option value="selected">
+                    Siswa Tercentang ({selectedEligibleHeroes.length})
+                  </option>
+                  <option value="ungraded">
+                    Belum Dinilai ({ungradedEligibleHeroes.length})
+                  </option>
+                </PixelSelect>
+              </div>
+
+              <div>
+                <PixelFieldLabel htmlFor="bulk-status">Status Kolektif</PixelFieldLabel>
+                <PixelSelect
+                  id="bulk-status"
+                  value={bulkStatusInput}
+                  onChange={(e) =>
+                    setBulkStatusInput(e.target.value as GradeStatus | 'keep')
+                  }
+                >
+                  <option value="keep">-- Tidak diubah (tetap) --</option>
+                  <option value="tuntas">Tuntas</option>
+                  <option value="proses">Proses Dinilai</option>
+                  <option value="remidial">Remidial</option>
+                  <option value="belum">Belum</option>
+                </PixelSelect>
+              </div>
+
+              <div>
+                <PixelFieldLabel htmlFor="bulk-score">
+                  Nilai Kolektif (0–100)
+                </PixelFieldLabel>
+                <PixelInput
+                  id="bulk-score"
+                  type="number"
+                  min={0}
+                  max={100}
+                  placeholder="Kosong = nilai tetap"
+                  value={bulkScoreInput}
+                  onChange={(e) => setBulkScoreInput(e.target.value)}
+                  disabled={bulkStatusInput === 'belum'}
+                  className="tabular-nums"
+                />
+              </div>
+
+              <div>
+                <PixelFieldLabel htmlFor="bulk-note">
+                  Catatan Kolektif
+                </PixelFieldLabel>
+                <PixelInput
+                  id="bulk-note"
+                  placeholder="Kosong = catatan tetap..."
+                  value={bulkNoteInput}
+                  onChange={(e) => {
+                    setBulkNoteInput(e.target.value);
+                    if (e.target.value.trim() !== '') setBulkClearNote(false);
+                  }}
+                  disabled={bulkClearNote}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+              <label className="inline-flex items-center gap-2 text-[12px] font-semibold text-[var(--text-secondary)] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={bulkClearNote}
+                  onChange={(e) => {
+                    setBulkClearNote(e.target.checked);
+                    if (e.target.checked) setBulkNoteInput('');
+                  }}
+                  className="w-4 h-4 accent-[var(--accent-primary)] cursor-pointer"
+                />
+                <span>Kosongkan catatan siswa pada sasaran ini</span>
+              </label>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="neutral"
+                  disabled={
+                    bulkTargetHeroes.length === 0 ||
+                    !hasCollectiveChanges ||
+                    isSavingBulk
+                  }
+                  onClick={() => void handleApplyCollective(false)}
+                >
+                  Terapkan ke Draft ({bulkTargetHeroes.length})
+                </PixelButton>
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  disabled={
+                    bulkTargetHeroes.length === 0 ||
+                    !hasCollectiveChanges ||
+                    isSavingBulk
+                  }
+                  onClick={() => void handleApplyCollective(true)}
+                >
+                  <Save size={14} />
+                  {isSavingBulk
+                    ? 'Menyimpan...'
+                    : `Terapkan & Simpan (${bulkTargetHeroes.length})`}
+                </PixelButton>
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="success"
+                  disabled={eligibleHeroes.length === 0 || isSavingBulk}
+                  onClick={async () => {
+                    setIsSavingBulk(true);
+                    await saveHeroesBatch(
+                      eligibleHeroes,
+                      draftScores,
+                      draftStatuses,
+                      draftNotes
+                    );
+                    setIsSavingBulk(false);
+                    setBulkFeedbackBanner(
+                      `Semua perubahan (${eligibleHeroes.length} siswa) berhasil disimpan!`
+                    );
+                  }}
+                >
+                  <Save size={14} />
+                  Simpan Semua ({eligibleHeroes.length})
+                </PixelButton>
+              </div>
+            </div>
+
+            {bulkFeedbackBanner && (
+              <p className="text-[12.5px] font-semibold text-[var(--accent-success)] bg-[var(--bg-inset)] px-3 py-2 border border-[var(--accent-success)]">
+                ✓ {bulkFeedbackBanner}
+              </p>
+            )}
+          </ThemedPanelCard>
+
           {/* Grouped by Kelas */}
           {heroGroupsByClass.map((group) => {
             const isCollapsed = Boolean(collapsedClasses[group.key]);
@@ -698,50 +1046,66 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                 (g) => g.heroId === h.id && g.questId === activeQuest.id
               )
             ).length;
+            const checkedInClass = group.heroes.filter((h) =>
+              Boolean(selectedHeroIds[h.id])
+            ).length;
+            const allInClassChecked =
+              group.heroes.length > 0 && checkedInClass === group.heroes.length;
 
             return (
               <ThemedPanelCard key={group.key} className="p-3.5 space-y-3">
                 <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2.5 pb-2.5 border-b border-[var(--border-pixel)]/40">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCollapsedClasses((prev) => ({
-                        ...prev,
-                        [group.key]: !prev[group.key],
-                      }))
-                    }
-                    className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
-                  >
-                    <span className="w-8 h-8 flex items-center justify-center bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60 text-[var(--text-primary)] shrink-0">
-                      {isCollapsed ? (
-                        <ChevronRight size={16} />
-                      ) : (
-                        <ChevronDown size={16} />
-                      )}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <GraduationCap
-                          size={15}
-                          className="text-[var(--accent-primary)] shrink-0"
-                        />
-                        <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
-                          {group.dungeon?.guildCode || 'LAIN'}
-                        </span>
-                        <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] truncate">
-                          {group.dungeon?.name || 'Kelas Lainnya'}
-                        </h3>
-                        {group.dungeon?.tier && (
-                          <span className="text-[12px] text-[var(--text-secondary)]">
-                            ({group.dungeon.tier})
-                          </span>
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={allInClassChecked}
+                      onChange={() => toggleClassSelection(group.heroes)}
+                      aria-label={`Centang seluruh siswa ${group.dungeon?.name || 'kelas ini'}`}
+                      title="Centang / batal centang seluruh kelas ini"
+                      className="w-4 h-4 accent-[var(--accent-primary)] shrink-0 cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCollapsedClasses((prev) => ({
+                          ...prev,
+                          [group.key]: !prev[group.key],
+                        }))
+                      }
+                      className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
+                    >
+                      <span className="w-8 h-8 flex items-center justify-center bg-[var(--bg-inset)] border border-[var(--border-pixel)]/60 text-[var(--text-primary)] shrink-0">
+                        {isCollapsed ? (
+                          <ChevronRight size={16} />
+                        ) : (
+                          <ChevronDown size={16} />
                         )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <GraduationCap
+                            size={15}
+                            className="text-[var(--accent-primary)] shrink-0"
+                          />
+                          <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
+                            {group.dungeon?.guildCode || 'LAIN'}
+                          </span>
+                          <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] truncate">
+                            {group.dungeon?.name || 'Kelas Lainnya'}
+                          </h3>
+                          {group.dungeon?.tier && (
+                            <span className="text-[12px] text-[var(--text-secondary)]">
+                              ({group.dungeon.tier})
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[12px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
+                          {gradedCount}/{group.heroes.length} siswa sudah dinilai
+                          {checkedInClass > 0 ? ` · ${checkedInClass} tercentang` : ''}
+                        </p>
                       </div>
-                      <p className="text-[12px] text-[var(--text-secondary)] mt-0.5 tabular-nums">
-                        {gradedCount}/{group.heroes.length} siswa sudah dinilai
-                      </p>
-                    </div>
-                  </button>
+                    </button>
+                  </div>
 
                   <PixelButton
                     type="button"
@@ -951,7 +1315,8 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       >
         <div className="space-y-3.5">
           <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
-            Unggah kembali file <strong>.xlsx</strong> yang sudah diisi nilai angka (<strong>0–100</strong>) atau status (<em>Proses, Belum, Remidial, Tuntas</em>) pada kolom tugas. Nama kolom otomatis dicocokkan dengan tugas buatan guru.
+            Unggah kembali file <strong>.xlsx</strong> yang sudah diisi nilai angka (<strong>0–100</strong>) atau status (<em>Proses, Belum, Remidial, Tuntas</em>) pada kolom tugas.{' '}
+            <strong>Sel yang diisi akan memperbarui/menimpa nilai lama</strong> pada tugas tersebut, sedangkan <strong>sel kosong atau "-" tidak menimpa</strong> nilai yang sudah ada (catatan guru lama tetap dipertahankan).
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -1027,31 +1392,47 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
 
               {parsedExcel.entries.length > 0 ? (
                 <div className="pixel-box-inset max-h-52 overflow-y-auto pixel-scroll divide-y divide-[var(--border-pixel)]/30">
-                  {parsedExcel.entries.map((entry, idx) => (
-                    <div
-                      key={`${entry.heroId}-${entry.questId}-${idx}`}
-                      className="p-2 flex items-center justify-between gap-2 text-[12px]"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-[var(--text-primary)] truncate">
-                          {entry.heroName} ({entry.studentCode})
-                        </p>
-                        <p className="text-[11px] text-[var(--text-secondary)] truncate">
-                          {entry.questTitle}
-                        </p>
+                  {parsedExcel.entries.map((entry, idx) => {
+                    const existing = state.grades.find(
+                      (g) => g.heroId === entry.heroId && g.questId === entry.questId
+                    );
+                    return (
+                      <div
+                        key={`${entry.heroId}-${entry.questId}-${idx}`}
+                        className="p-2 flex items-center justify-between gap-2 text-[12px]"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-[var(--text-primary)] truncate">
+                            {entry.heroName} ({entry.studentCode})
+                          </p>
+                          <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                            {entry.questTitle} ·{' '}
+                            <span
+                              className={
+                                existing
+                                  ? 'font-semibold text-[var(--accent-warning)]'
+                                  : 'font-semibold text-[var(--accent-success)]'
+                              }
+                            >
+                              {existing
+                                ? `Timpa nilai lama (${existing.score})`
+                                : 'Nilai baru'}
+                            </span>
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0 tabular-nums">
+                          <p className="font-bold text-[var(--accent-warning)]">
+                            {entry.status === 'belum' || entry.status === 'proses'
+                              ? formatStatusLabel(entry.status)
+                              : `${entry.score} (${formatStatusLabel(entry.status)})`}
+                          </p>
+                          <p className="text-[10.5px] text-[var(--accent-success)]">
+                            +{entry.expEarned} EXP
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0 tabular-nums">
-                        <p className="font-bold text-[var(--accent-warning)]">
-                          {entry.status === 'belum' || entry.status === 'proses'
-                            ? formatStatusLabel(entry.status)
-                            : `${entry.score} (${formatStatusLabel(entry.status)})`}
-                        </p>
-                        <p className="text-[10.5px] text-[var(--accent-success)]">
-                          +{entry.expEarned} EXP
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-[12px] text-[var(--text-muted)] text-center py-2">

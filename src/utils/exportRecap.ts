@@ -12,10 +12,12 @@ import {
   calculateExpEarned,
   doesTargetMatchDungeon,
   formatChapterLabel,
+  formatTargetDungeonsSummary,
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
   getQuestCategoryMeta,
   getRankFromScore,
+  parseTargetDungeonIds,
   sortDungeonsAlphabetically,
 } from './exp';
 import { readSheetMatrixClean } from './studentImport';
@@ -274,6 +276,39 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+export function buildAssessmentColumnHeaders(
+  quests: ActiveQuest[],
+  dungeons: Dungeon[]
+): string[] {
+  const titleCounts = new Map<string, number>();
+  quests.forEach((q) => {
+    const norm = q.title.trim().replace(/\s+/g, ' ').toLowerCase();
+    titleCounts.set(norm, (titleCounts.get(norm) || 0) + 1);
+  });
+
+  const usedLabels = new Map<string, number>();
+  return quests.map((q) => {
+    const norm = q.title.trim().replace(/\s+/g, ' ').toLowerCase();
+    const isDuplicateTitle = (titleCounts.get(norm) || 0) > 1;
+    let baseLabel = q.title.trim();
+    if (isDuplicateTitle) {
+      const targetIds = parseTargetDungeonIds(q.dungeonId);
+      const scopeTag =
+        targetIds.length === 0
+          ? 'Semua Kelas'
+          : targetIds
+              .map((id) => dungeons.find((d) => d.id === id)?.guildCode || id)
+              .slice(0, 3)
+              .join(', ');
+      baseLabel = `${baseLabel} [${scopeTag}]`;
+    }
+    const labelKey = baseLabel.toLowerCase();
+    const seen = (usedLabels.get(labelKey) || 0) + 1;
+    usedLabels.set(labelKey, seen);
+    return seen > 1 ? `${baseLabel} (#${seen})` : baseLabel;
+  });
+}
+
 /**
  * Generates a real .xlsx tabular grading workbook where columns match the teacher's ActiveQuests.
  * Filling numeric scores (0-100) or statuses ("Proses", "Belum", "Remidial", "Tuntas") in those
@@ -283,7 +318,7 @@ export function downloadAssessmentExcel(
   state: AcademyState,
   recap: ClassRecapData
 ) {
-  const questHeaders = recap.quests.map((q) => q.title);
+  const questHeaders = buildAssessmentColumnHeaders(recap.quests, state.dungeons);
 
   const headerRow = [
     'No',
@@ -379,8 +414,48 @@ function normalizeColTitle(raw: string): string {
   return raw
     .trim()
     .replace(/^\[[^\]]+\]\s*/, '')
+    .replace(/\s*\(#\d+\)\s*$/, '')
+    .replace(/\s*\[[^\]]+\]\s*$/, '')
     .replace(/\s+/g, ' ')
     .toLowerCase();
+}
+
+function extractColScopeTag(raw: string): string | null {
+  const m = raw.trim().replace(/\s*\(#\d+\)\s*$/, '').match(/\[([^\]]+)\]\s*$/);
+  return m ? m[1].trim().toLowerCase() : null;
+}
+
+function formatQuestScopeTag(quest: ActiveQuest, dungeons: Dungeon[]): string {
+  const targetIds = parseTargetDungeonIds(quest.dungeonId);
+  if (targetIds.length === 0) return 'Semua Kelas';
+  return formatTargetDungeonsSummary(quest.dungeonId, dungeons, 'Semua Kelas');
+}
+
+function resolveBestQuestForHero(
+  candidates: ActiveQuest[],
+  hero: HeroStudent,
+  dungeons: Dungeon[]
+): ActiveQuest {
+  if (candidates.length === 1) return candidates[0];
+  const allowedRealms = getHeroEffectiveRealmIds(hero, dungeons);
+
+  // Score each candidate quest for this specific hero
+  const scored = candidates.map((q) => {
+    let score = 0;
+    const targetIds = parseTargetDungeonIds(q.dungeonId);
+    if (targetIds.length > 0 && targetIds.includes(hero.dungeonId)) {
+      score += 100; // Exact class match
+    } else if (targetIds.length === 0) {
+      score += 40; // All-classes quest
+    }
+    if (!allowedRealms || allowedRealms.includes(q.realmId)) {
+      score += 20;
+    }
+    return { q, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].q;
 }
 
 function parseCellToGrade(
@@ -502,21 +577,88 @@ export async function parseAssessmentExcelFile(
   );
 
   // Match columns against ActiveQuests created by GM
-  const questColumns: { colIndex: number; quest: ActiveQuest; header: string }[] = [];
+  const allDisambiguatedHeaders = buildAssessmentColumnHeaders(
+    state.quests,
+    state.dungeons
+  );
+  const questColumns: {
+    colIndex: number;
+    candidates: ActiveQuest[];
+    header: string;
+    displayLabel: string;
+  }[] = [];
+
+  const titleCounts = new Map<string, number>();
+  state.quests.forEach((q) => {
+    const norm = normalizeColTitle(q.title);
+    titleCounts.set(norm, (titleCounts.get(norm) || 0) + 1);
+  });
+
   headers.forEach((header, colIndex) => {
     if (!header || colIndex === nisCol || colIndex === nameCol) return;
+    const lowerHeader = header.trim().toLowerCase();
+
+    // 1. Check exact disambiguated header match first
+    const exactDisambiguatedIdx = allDisambiguatedHeaders.findIndex(
+      (h) => h.trim().toLowerCase() === lowerHeader
+    );
+    if (exactDisambiguatedIdx >= 0) {
+      const matched = state.quests[exactDisambiguatedIdx];
+      const norm = normalizeColTitle(matched.title);
+      const hasSameTitle = (titleCounts.get(norm) || 0) > 1;
+      const displayLabel = hasSameTitle
+        ? `${matched.title} [${formatQuestScopeTag(matched, state.dungeons)}]`
+        : matched.title;
+      questColumns.push({
+        colIndex,
+        candidates: [matched],
+        header,
+        displayLabel,
+      });
+      return;
+    }
+
+    // 2. Match by base quest title (collecting ALL candidates with the same title)
     const normHeader = normalizeColTitle(header);
-    const exactMatch = state.quests.find((q) => {
+    const scopeTag = extractColScopeTag(header);
+    const candidates = state.quests.filter((q) => {
       const realm = state.realms.find((r) => r.id === q.realmId);
       const withCode = realm ? `[${realm.code}] ${q.title}` : q.title;
-      return (
-        q.title.trim().toLowerCase() === header.toLowerCase() ||
-        withCode.trim().toLowerCase() === header.toLowerCase() ||
-        normalizeColTitle(q.title) === normHeader
-      );
+      const baseMatch =
+        q.title.trim().toLowerCase() === lowerHeader ||
+        withCode.trim().toLowerCase() === lowerHeader ||
+        normalizeColTitle(q.title) === normHeader;
+      if (!baseMatch) return false;
+      if (scopeTag) {
+        const qScope = formatQuestScopeTag(q, state.dungeons).toLowerCase();
+        const targetCodes = parseTargetDungeonIds(q.dungeonId)
+          .map((id) => state.dungeons.find((d) => d.id === id)?.guildCode || id)
+          .join(', ')
+          .toLowerCase();
+        return (
+          qScope.includes(scopeTag) ||
+          targetCodes === scopeTag ||
+          (scopeTag === 'semua kelas' && parseTargetDungeonIds(q.dungeonId).length === 0)
+        );
+      }
+      return true;
     });
-    if (exactMatch) {
-      questColumns.push({ colIndex, quest: exactMatch, header });
+
+    if (candidates.length > 0) {
+      const primary = candidates[0];
+      const hasMultipleCandidates = candidates.length > 1;
+      const displayLabel =
+        hasMultipleCandidates || (titleCounts.get(normHeader) || 0) > 1
+          ? scopeTag
+            ? header.trim()
+            : `${primary.title} (Otomatis per Kelas)`
+          : primary.title;
+      questColumns.push({
+        colIndex,
+        candidates,
+        header,
+        displayLabel,
+      });
     }
   });
 
@@ -530,7 +672,7 @@ export async function parseAssessmentExcelFile(
     };
   }
 
-  const entries: ParsedGradeImportEntry[] = [];
+  const entryMap = new Map<string, ParsedGradeImportEntry>();
   const warnings: string[] = [];
 
   for (let r = headerIdx + 1; r < matrix.length; r++) {
@@ -560,15 +702,16 @@ export async function parseAssessmentExcelFile(
       continue;
     }
 
-    questColumns.forEach(({ colIndex, quest }) => {
+    questColumns.forEach(({ colIndex, candidates }) => {
       const rawCell = String(row[colIndex] ?? '').trim();
+      const quest = resolveBestQuestForHero(candidates, hero, state.dungeons);
       const existing = state.grades.find(
         (g) => g.heroId === hero.id && g.questId === quest.id
       );
       const parsed = parseCellToGrade(rawCell, quest, existing);
       if (!parsed) return;
 
-      entries.push({
+      entryMap.set(`${hero.id}__${quest.id}`, {
         heroId: hero.id,
         heroName: hero.name,
         studentCode: hero.studentCode,
@@ -583,9 +726,13 @@ export async function parseAssessmentExcelFile(
     });
   }
 
+  const uniqueMatchedColumns = Array.from(
+    new Set(questColumns.map((c) => c.displayLabel))
+  );
+
   return {
-    matchedQuestColumns: questColumns.map((c) => c.quest.title),
-    entries,
+    matchedQuestColumns: uniqueMatchedColumns,
+    entries: Array.from(entryMap.values()),
     warnings,
   };
 }

@@ -1322,3 +1322,82 @@ export function computeDashboardAnalytics(params: {
   };
 }
 
+export interface CollectiveGradePatch {
+  scoreInput: string;
+  statusInput: GradeStatus | 'keep';
+  noteInput: string;
+  clearNote?: boolean;
+}
+
+export function applyCollectiveGradePatch(params: {
+  targetHeroIds: string[];
+  currentScores: Record<string, number>;
+  currentStatuses: Record<string, GradeStatus>;
+  currentNotes: Record<string, string>;
+  patch: CollectiveGradePatch;
+}): {
+  nextScores: Record<string, number>;
+  nextStatuses: Record<string, GradeStatus>;
+  nextNotes: Record<string, string>;
+} {
+  const {
+    targetHeroIds,
+    currentScores,
+    currentStatuses,
+    currentNotes,
+    patch,
+  } = params;
+
+  const nextScores = { ...currentScores };
+  const nextStatuses = { ...currentStatuses };
+  const nextNotes = { ...currentNotes };
+
+  const rawScoreTrimmed = (patch.scoreInput || '').trim();
+  const hasScoreUpdate =
+    rawScoreTrimmed !== '' && Number.isFinite(Number(rawScoreTrimmed));
+  const parsedScore = hasScoreUpdate
+    ? Math.max(0, Math.min(100, Math.round(Number(rawScoreTrimmed))))
+    : null;
+
+  const trimmedNote = (patch.noteInput || '').trim();
+  const hasNoteUpdate = Boolean(patch.clearNote) || trimmedNote !== '';
+
+  targetHeroIds.forEach((heroId) => {
+    const prevScore = currentScores[heroId] ?? 80;
+    const prevStatus = currentStatuses[heroId] ?? 'tuntas';
+
+    let finalScore = prevScore;
+    let finalStatus = prevStatus;
+
+    if (patch.statusInput !== 'keep') {
+      finalStatus = patch.statusInput;
+      if (parsedScore !== null) {
+        finalScore = finalStatus === 'belum' ? 0 : parsedScore;
+      } else if (finalStatus === 'belum') {
+        finalScore = 0;
+      } else if (finalStatus === 'tuntas' && prevScore === 0) {
+        finalScore = 80;
+      }
+    } else if (parsedScore !== null) {
+      finalScore = parsedScore;
+      finalStatus = parsedScore >= 70 ? 'tuntas' : 'remidial';
+    }
+
+    nextScores[heroId] = finalScore;
+    nextStatuses[heroId] = finalStatus;
+
+    if (patch.clearNote) {
+      nextNotes[heroId] = '';
+    } else if (hasNoteUpdate) {
+      nextNotes[heroId] = trimmedNote;
+    }
+  });
+
+  return {
+    nextScores,
+    nextStatuses,
+    nextNotes,
+  };
+}
+
+

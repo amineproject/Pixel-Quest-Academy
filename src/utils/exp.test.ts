@@ -2,6 +2,7 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   QUEST_CATEGORIES,
+  applyCollectiveGradePatch,
   buildAcademicPeriodLabel,
   calculateExpEarned,
   computeDashboardAnalytics,
@@ -27,11 +28,17 @@ import {
   serializeTargetDungeonIds,
   sortQuestsByCategory,
 } from './exp';
+import * as XLSX from 'xlsx';
 import {
   loadOfflineContentSnapshot,
   saveOfflineContentSnapshot,
 } from './offlineCache';
-import { ActiveQuest, Dungeon, ExpGrade, HeroStudent, Realm } from '../types/lms';
+import {
+  buildAssessmentColumnHeaders,
+  buildGradesFromImportEntries,
+  parseAssessmentExcelFile,
+} from './exportRecap';
+import { AcademyState, ActiveQuest, Dungeon, ExpGrade, HeroStudent, Realm } from '../types/lms';
 
 const sampleHeroes: HeroStudent[] = [
   {
@@ -610,3 +617,119 @@ describe('computeDashboardAnalytics', () => {
     assert.equal(r1Only.byRealm.length, 1);
   });
 });
+
+describe('applyCollectiveGradePatch', () => {
+  it('applies collective status, score, and teacher notes flexibly without clobbering untouched fields', () => {
+    const baseScores = { h1: 90, h2: 65, h3: 80 };
+    const baseStatuses = { h1: 'tuntas', h2: 'remidial', h3: 'proses' } as const;
+    const baseNotes = { h1: 'Bagus', h2: 'Perlu latihan', h3: '' };
+
+    // 1. Apply collective note only (keep scores & statuses)
+    const noteOnly = applyCollectiveGradePatch({
+      targetHeroIds: ['h1', 'h3'],
+      currentScores: baseScores,
+      currentStatuses: { ...baseStatuses },
+      currentNotes: baseNotes,
+      patch: { scoreInput: '', statusInput: 'keep', noteInput: 'Sudah dicek GM' },
+    });
+    assert.deepEqual(noteOnly.nextScores, { h1: 90, h2: 65, h3: 80 });
+    assert.deepEqual(noteOnly.nextStatuses, { h1: 'tuntas', h2: 'remidial', h3: 'proses' });
+    assert.deepEqual(noteOnly.nextNotes, {
+      h1: 'Sudah dicek GM',
+      h2: 'Perlu latihan',
+      h3: 'Sudah dicek GM',
+    });
+
+    // 2. Apply collective status 'belum' -> forces score 0 for targeted heroes
+    const markBelum = applyCollectiveGradePatch({
+      targetHeroIds: ['h2'],
+      currentScores: baseScores,
+      currentStatuses: { ...baseStatuses },
+      currentNotes: baseNotes,
+      patch: { scoreInput: '', statusInput: 'belum', noteInput: 'Belum mengumpulkan' },
+    });
+    assert.equal(markBelum.nextScores.h2, 0);
+    assert.equal(markBelum.nextStatuses.h2, 'belum');
+    assert.equal(markBelum.nextNotes.h2, 'Belum mengumpulkan');
+    assert.equal(markBelum.nextScores.h1, 90);
+
+    // 3. Apply score + explicit status ('proses') + clearNote
+    const scoreAndStatus = applyCollectiveGradePatch({
+      targetHeroIds: ['h1', 'h2'],
+      currentScores: baseScores,
+      currentStatuses: { ...baseStatuses },
+      currentNotes: baseNotes,
+      patch: { scoreInput: '88', statusInput: 'proses', noteInput: '', clearNote: true },
+    });
+    assert.equal(scoreAndStatus.nextScores.h1, 88);
+    assert.equal(scoreAndStatus.nextStatuses.h1, 'proses');
+    assert.equal(scoreAndStatus.nextNotes.h1, '');
+    assert.equal(scoreAndStatus.nextScores.h2, 88);
+    assert.equal(scoreAndStatus.nextStatuses.h2, 'proses');
+    assert.equal(scoreAndStatus.nextNotes.h2, '');
+  });
+});
+
+describe('Excel Assessment Export & Import Disambiguation', () => {
+  it('disambiguates duplicate quest titles in headers and resolves per-class quests on upload without clobbering feedback', async () => {
+    const dungeons: Dungeon[] = [
+      { id: 'd_e', name: 'The Scroll of Lexicon', guildCode: 'VIII-E', tier: 'Kelas VIII', capacity: 32, description: '' },
+      { id: 'd_g', name: 'The Hall of Rhetoric', guildCode: 'VIII-G', tier: 'Kelas VIII', capacity: 32, description: '' },
+    ];
+    const heroes: HeroStudent[] = [
+      { id: 'h_g1', name: 'Adinda Putri', username: 'adinda', studentCode: '7039', dungeonId: 'd_g', avatar: 'knight', heroClass: 'Knight', active: true, joinedDate: '2026-01-01' },
+    ];
+    const quests: ActiveQuest[] = [
+      { id: 'q5_e', realmId: 'r1', dungeonId: 'd_e', title: 'Quest 05: Master Promosi', instructions: '', deadline: '2026-12-01', maxExp: 200, difficulty: 'Normal' },
+      { id: 'q5_g', realmId: 'r1', dungeonId: 'd_g', title: 'Quest 05: Master Promosi', instructions: '', deadline: '2026-12-01', maxExp: 200, difficulty: 'Normal' },
+    ];
+    const existingGrades: ExpGrade[] = [
+      { id: 'grd-1', heroId: 'h_g1', questId: 'q5_g', realmId: 'r1', score: 75, expEarned: 150, status: 'tuntas', feedback: 'Pertahankan!', gradedDate: '2026-11-10' },
+    ];
+
+    // 1. Verify header disambiguation
+    const headers = buildAssessmentColumnHeaders(quests, dungeons);
+    assert.deepEqual(headers, [
+      'Quest 05: Master Promosi [VIII-E]',
+      'Quest 05: Master Promosi [VIII-G]',
+    ]);
+
+    // 2. Simulate uploading an Excel sheet with duplicate "Quest 05: Master Promosi" column headers
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['No', 'NIS', 'Nama Siswa', 'Kelas', 'Quest 05: Master Promosi', 'Quest 05: Master Promosi'],
+      [1, '7039', 'Adinda Putri', 'VIII-G', '', 92],
+    ]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Tabel_Penilaian');
+    const arrayBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+    const mockFile = new File([arrayBuffer], 'test-penilaian.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    const mockState: AcademyState = {
+      gmProfile: { name: 'GM', title: 'Guru', specialty: 'BIN', avatar: 'guild_master' },
+      settings: { theme: 'sunny_quest', crtScanlines: false, soundEnabled: false, academicTerm: '2026/2027' },
+      dungeons,
+      heroes,
+      notices: [],
+      realms: [{ id: 'r1', name: 'Bahasa Indonesia', code: 'BIN', icon: 'book', accentColor: '#15803d', description: '' }],
+      tomes: [],
+      quests,
+      grades: existingGrades,
+    };
+
+    const parsed = await parseAssessmentExcelFile(mockFile, mockState);
+    assert.equal(parsed.matchedQuestColumns.length, 1);
+    assert.equal(parsed.entries.length, 1);
+    assert.equal(parsed.entries[0].questId, 'q5_g');
+    assert.equal(parsed.entries[0].score, 92);
+
+    // 3. Re-importing updates existing grade id & score while preserving feedback
+    const builtGrades = buildGradesFromImportEntries(parsed.entries, existingGrades);
+    assert.equal(builtGrades[0].id, 'grd-1');
+    assert.equal(builtGrades[0].score, 92);
+    assert.equal(builtGrades[0].feedback, 'Pertahankan!');
+  });
+});
+
+
