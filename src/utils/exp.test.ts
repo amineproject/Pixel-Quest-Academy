@@ -22,11 +22,13 @@ import {
   getWeeklyGuildLeaderboard,
   groupQuestsByCategory,
   isContentVisibleToHero,
+  isQuestAssignedToHero,
   maskHeroName,
   normalizeQuestCategory,
   parseTargetDungeonIds,
   serializeTargetDungeonIds,
   sortQuestsByCategory,
+  syncHeroesRealmsWithDungeonUpdate,
 } from './exp';
 import * as XLSX from 'xlsx';
 import {
@@ -731,5 +733,146 @@ describe('Excel Assessment Export & Import Disambiguation', () => {
     assert.equal(builtGrades[0].feedback, 'Pertahankan!');
   });
 });
+
+describe('Strict Student Subject & Class Quest Isolation', () => {
+  const realms: Realm[] = [
+    { id: 'rlm-inf', name: 'Informatika', code: 'INF', icon: 'bolt', accentColor: '#0284c7', description: '' },
+    { id: 'rlm-bin', name: 'Bahasa Indonesia', code: 'BIN', icon: 'book', accentColor: '#15803d', description: '' },
+  ];
+
+  const dungeons: Dungeon[] = [
+    { id: 'd-8a', name: 'Kelas VIII-A', guildCode: 'VIII-A', tier: 'Kelas VIII', capacity: 32, description: '', realmIds: ['rlm-inf', 'rlm-bin'] },
+    { id: 'd-8b', name: 'Kelas VIII-B', guildCode: 'VIII-B', tier: 'Kelas VIII', capacity: 32, description: '', realmIds: ['rlm-bin'] },
+  ];
+
+  const heroInformatika: HeroStudent = {
+    id: 'h-inf',
+    name: 'Siswa Informatika',
+    username: 'sinf1',
+    studentCode: '8001',
+    dungeonId: 'd-8a',
+    avatar: 'knight',
+    heroClass: 'Knight',
+    active: true,
+    joinedDate: '2026-01-01',
+    enrolledRealmIds: ['rlm-inf'],
+  };
+
+  const heroBahasa: HeroStudent = {
+    id: 'h-bin',
+    name: 'Siswa Bahasa',
+    username: 'sbin1',
+    studentCode: '8002',
+    dungeonId: 'd-8a',
+    avatar: 'scholar',
+    heroClass: 'Scholar',
+    active: true,
+    joinedDate: '2026-01-01',
+    enrolledRealmIds: ['rlm-bin'],
+  };
+
+  const qInfAll: ActiveQuest = {
+    id: 'q-inf',
+    realmId: 'rlm-inf',
+    dungeonId: 'all',
+    title: 'Tugas Algoritma',
+    instructions: '',
+    deadline: '2026-12-10',
+    maxExp: 200,
+    difficulty: 'Normal',
+  };
+
+  const qBinAll: ActiveQuest = {
+    id: 'q-bin',
+    realmId: 'rlm-bin',
+    dungeonId: 'all',
+    title: 'Tugas Teks Deskripsi',
+    instructions: '',
+    deadline: '2026-12-10',
+    maxExp: 200,
+    difficulty: 'Normal',
+  };
+
+  const qInfOtherClass: ActiveQuest = {
+    id: 'q-inf-8b',
+    realmId: 'rlm-inf',
+    dungeonId: 'd-8b',
+    title: 'Tugas Khusus 8B',
+    instructions: '',
+    deadline: '2026-12-10',
+    maxExp: 200,
+    difficulty: 'Normal',
+  };
+
+  it('isolates quests strictly to each student enrolled subject even if stale grades exist', () => {
+    // Student enrolled in Informatika sees Informatika only, never Bahasa Indonesia (even with hasGrade: true)
+    assert.equal(isQuestAssignedToHero(qInfAll, heroInformatika, dungeons), true);
+    assert.equal(isQuestAssignedToHero(qBinAll, heroInformatika, dungeons), false);
+    assert.equal(isQuestAssignedToHero(qBinAll, heroInformatika, dungeons, { hasGrade: true }), false);
+    assert.equal(isQuestAssignedToHero(qInfOtherClass, heroInformatika, dungeons, { hasGrade: true }), false);
+
+    // Vice versa: student enrolled in Bahasa Indonesia sees Bahasa Indonesia only, never Informatika
+    assert.equal(isQuestAssignedToHero(qBinAll, heroBahasa, dungeons), true);
+    assert.equal(isQuestAssignedToHero(qInfAll, heroBahasa, dungeons), false);
+    assert.equal(isQuestAssignedToHero(qInfAll, heroBahasa, dungeons, { hasGrade: true }), false);
+  });
+
+  it('syncs hero enrolledRealmIds when a class removes a subject', () => {
+    const prevDungeon: Dungeon = { ...dungeons[0], realmIds: ['rlm-inf', 'rlm-bin'] };
+    const nextDungeon: Dungeon = { ...dungeons[0], realmIds: ['rlm-inf'] };
+    const heroes: HeroStudent[] = [
+      { ...heroInformatika, id: 'h-both', enrolledRealmIds: ['rlm-inf', 'rlm-bin'] },
+      { ...heroInformatika, id: 'h-only-inf', enrolledRealmIds: ['rlm-inf'] },
+    ];
+
+    const { nextHeroes, changedHeroes } = syncHeroesRealmsWithDungeonUpdate(
+      heroes,
+      prevDungeon,
+      nextDungeon
+    );
+
+    assert.equal(changedHeroes.length, 1);
+    assert.equal(changedHeroes[0].id, 'h-both');
+    assert.deepEqual(nextHeroes[0].enrolledRealmIds, ['rlm-inf']);
+    assert.deepEqual(nextHeroes[1].enrolledRealmIds, ['rlm-inf']);
+  });
+
+  it('skips Excel grade import entries for subjects a student is not enrolled in', async () => {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['No', 'NIS', 'Nama Siswa', 'Kelas', 'Tugas Algoritma', 'Tugas Teks Deskripsi'],
+      [1, '8001', 'Siswa Informatika', 'VIII-A', 90, 85],
+      [2, '8002', 'Siswa Bahasa', 'VIII-A', 75, 95],
+    ]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Tabel_Penilaian');
+    const arrayBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+    const mockFile = new File([arrayBuffer], 'mixed-subjects.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    const mockState: AcademyState = {
+      gmProfile: { name: 'GM', title: 'Guru', specialty: 'Akademik', avatar: 'guild_master' },
+      settings: { theme: 'sunny_quest', crtScanlines: false, soundEnabled: false, academicTerm: '2026/2027' },
+      dungeons,
+      heroes: [heroInformatika, heroBahasa],
+      notices: [],
+      realms,
+      tomes: [],
+      quests: [qInfAll, qBinAll],
+      grades: [],
+    };
+
+    const parsed = await parseAssessmentExcelFile(mockFile, mockState);
+    assert.equal(parsed.entries.length, 2);
+    assert.deepEqual(
+      parsed.entries.map((e) => ({ heroId: e.heroId, questId: e.questId, score: e.score })),
+      [
+        { heroId: 'h-inf', questId: 'q-inf', score: 90 },
+        { heroId: 'h-bin', questId: 'q-bin', score: 95 },
+      ]
+    );
+  });
+});
+
 
 

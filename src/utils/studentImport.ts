@@ -137,15 +137,24 @@ function resolveEnrolledRealms(
     .filter(Boolean);
   const foundIds = new Set<string>();
   tokens.forEach((tok) => {
-    const match = realms.find(
+    const exactMatch = realms.find(
       (r) =>
         r.code.toLowerCase() === tok ||
         r.name.toLowerCase() === tok ||
-        r.id.toLowerCase() === tok ||
-        r.code.toLowerCase().includes(tok) ||
-        r.name.toLowerCase().includes(tok)
+        r.id.toLowerCase() === tok
     );
-    if (match) foundIds.add(match.id);
+    if (exactMatch) {
+      foundIds.add(exactMatch.id);
+      return;
+    }
+    if (tok.length >= 2) {
+      const partialMatch = realms.find(
+        (r) =>
+          r.code.toLowerCase().includes(tok) ||
+          r.name.toLowerCase().includes(tok)
+      );
+      if (partialMatch) foundIds.add(partialMatch.id);
+    }
   });
   if (foundIds.size > 0) return Array.from(foundIds);
   if (matchedDungeon?.realmIds && matchedDungeon.realmIds.length > 0) {

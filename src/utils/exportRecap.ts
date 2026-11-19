@@ -153,10 +153,9 @@ export function buildClassRecapData(
     const cells: RecapQuestCell[] = questsInScope.map((quest) => {
       const grade = heroGrades.find((g) => g.questId === quest.id);
       const isRealmAllowed =
-        !allowedRealms || allowedRealms.includes(quest.realmId) || Boolean(grade);
+        !allowedRealms || allowedRealms.includes(quest.realmId);
       const isQuestForHeroDungeon =
-        doesTargetMatchDungeon(quest.dungeonId, hero.dungeonId) ||
-        Boolean(grade);
+        doesTargetMatchDungeon(quest.dungeonId, hero.dungeonId);
       const enrolled = isRealmAllowed && isQuestForHeroDungeon;
 
       if (!enrolled) {
@@ -702,9 +701,17 @@ export async function parseAssessmentExcelFile(
       continue;
     }
 
+    const heroAllowedRealms = getHeroEffectiveRealmIds(hero, state.dungeons);
+
     questColumns.forEach(({ colIndex, candidates }) => {
       const rawCell = String(row[colIndex] ?? '').trim();
       const quest = resolveBestQuestForHero(candidates, hero, state.dungeons);
+      if (heroAllowedRealms && !heroAllowedRealms.includes(quest.realmId)) {
+        return;
+      }
+      if (!doesTargetMatchDungeon(quest.dungeonId, hero.dungeonId)) {
+        return;
+      }
       const existing = state.grades.find(
         (g) => g.heroId === hero.id && g.questId === quest.id
       );

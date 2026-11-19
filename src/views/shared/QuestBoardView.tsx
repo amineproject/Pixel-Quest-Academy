@@ -44,7 +44,7 @@ import {
   getEffectiveGradeStatus,
   getHeroEffectiveRealmIds,
   getQuestCategoryMeta,
-  isContentVisibleToHero,
+  isQuestAssignedToHero,
   normalizeQuestCategory,
   parseTargetDungeonIds,
 } from '../../utils/exp';
@@ -174,13 +174,9 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
           });
         })
       : hero
-        ? state.quests.filter((q) => {
-            if (!isContentVisibleToHero(q, hero.dungeonId)) return false;
-            if (heroRealmIds && heroRealmIds.length > 0) {
-              return heroRealmIds.includes(q.realmId);
-            }
-            return true;
-          })
+        ? state.quests.filter((q) =>
+            isQuestAssignedToHero(q, hero, state.dungeons)
+          )
         : [];
 
     const sorted = [...baseQuests].sort((a, b) =>

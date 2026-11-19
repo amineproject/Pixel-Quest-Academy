@@ -59,7 +59,7 @@ import {
   getHeroEffectiveRealmIds,
   getHeroLevelProgress,
   getHeroTotalExp,
-  isContentVisibleToHero,
+  isQuestAssignedToHero,
   parseTargetDungeonIds,
 } from '../../utils/exp';
 
@@ -161,17 +161,23 @@ export const HeroLog: React.FC<HeroLogProps> = ({
     return () => window.clearInterval(timer);
   }, []);
 
-  const heroGrades = state.grades.filter((g) => g.heroId === hero.id);
   const allowedRealmIds = getHeroEffectiveRealmIds(hero, state.dungeons);
+  const allowedRealmSet = allowedRealmIds ? new Set(allowedRealmIds) : null;
+  const rawHeroGrades = state.grades.filter((g) => g.heroId === hero.id);
 
-  // Combine quests assigned to this student's class/realms (and currently released) OR any quest that already has a grade entry
+  // Strictly scope quests to this student's enrolled Realms (Mapel) and Class (Dungeon).
+  // Existing grades only unlock early-scheduled visibility within enrolled subjects/classes, never unrelated subjects.
   const relevantQuests = state.quests.filter((q) => {
-    const hasGrade = heroGrades.some((g) => g.questId === q.id);
-    if (hasGrade) return true;
-    const matchSchedule = isContentVisibleToHero(q, hero.dungeonId, now);
-    const matchRealm = !allowedRealmIds || allowedRealmIds.includes(q.realmId);
-    return matchSchedule && matchRealm;
+    const hasGrade = rawHeroGrades.some((g) => g.questId === q.id);
+    return isQuestAssignedToHero(q, hero, state.dungeons, { now, hasGrade });
   });
+  const relevantQuestIdSet = new Set(relevantQuests.map((q) => q.id));
+
+  const heroGrades = rawHeroGrades.filter(
+    (g) =>
+      relevantQuestIdSet.has(g.questId) &&
+      (!allowedRealmSet || allowedRealmSet.has(g.realmId))
+  );
 
   // Compute summary counts by symbol status (NO numeric points/scores)
   const counts = { tuntas: 0, proses: 0, remidial: 0, belum: 0 };
@@ -181,15 +187,25 @@ export const HeroLog: React.FC<HeroLogProps> = ({
     counts[st] += 1;
   });
 
-  const visibleRealms = state.realms.filter((realm) =>
+  const enrolledRealms = allowedRealmSet
+    ? state.realms.filter((realm) => allowedRealmSet.has(realm.id))
+    : state.realms;
+
+  const visibleRealms = enrolledRealms.filter((realm) =>
     relevantQuests.some((q) => q.realmId === realm.id)
   );
+
+  const activeStatusRealmFilter =
+    statusRealmFilter === 'all' ||
+    visibleRealms.some((r) => r.id === statusRealmFilter)
+      ? statusRealmFilter
+      : 'all';
 
   const achievementSummary = getHeroAchievements(
     hero,
     relevantQuests,
     heroGrades,
-    state.realms
+    enrolledRealms
   );
 
   const renderBadgeIcon = (badgeId: string) => {
@@ -327,7 +343,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                 {hero.name}
               </h3>
               <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10px] font-bold text-[#09090f] shrink-0">
-                Lv.{getHeroLevelProgress(getHeroTotalExp(hero.id, state.grades)).level}
+                Lv.{getHeroLevelProgress(getHeroTotalExp(hero.id, heroGrades)).level}
               </span>
               {hero.username ? (
                 <span className="text-[11px] font-bold px-1.5 py-0.5 border border-[var(--accent-warning)]/60 bg-[var(--bg-inset)] text-[var(--accent-warning)] shrink-0">
@@ -342,6 +358,16 @@ export const HeroLog: React.FC<HeroLogProps> = ({
             <p className="text-[12.5px] text-[var(--text-secondary)] truncate mt-0.5">
               {hero.heroClass} · NIS {hero.studentCode} · {relevantQuests.length} Tugas Terdaftar
             </p>
+            <p className="text-[11.5px] text-[var(--text-secondary)] truncate mt-0.5">
+              Mapel Diikuti:{' '}
+              <strong className="text-[var(--text-primary)]">
+                {allowedRealmIds
+                  ? enrolledRealms.length > 0
+                    ? enrolledRealms.map((r) => r.name).join(', ')
+                    : 'Belum ada mapel'
+                  : 'Semua Mapel'}
+              </strong>
+            </p>
             <p className="text-[11px] mt-0.5 flex items-center gap-1">
               <Lock size={11} className={hero.hasPin ? 'text-emerald-700' : 'text-amber-800'} />
               <span className={hero.hasPin ? 'text-emerald-700 font-semibold' : 'text-amber-800 font-semibold'}>
@@ -352,7 +378,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
         </div>
 
         {(() => {
-          const lvl = getHeroLevelProgress(getHeroTotalExp(hero.id, state.grades));
+          const lvl = getHeroLevelProgress(getHeroTotalExp(hero.id, heroGrades));
           return (
             <PixelExpBar
               percent={lvl.percent}
@@ -540,7 +566,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                 type="button"
                 onClick={() => setStatusRealmFilter('all')}
                 className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
-                  statusRealmFilter === 'all'
+                  activeStatusRealmFilter === 'all'
                     ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
                 }`}
@@ -555,7 +581,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     type="button"
                     onClick={() => setStatusRealmFilter(r.id)}
                     className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
-                      statusRealmFilter === r.id
+                      activeStatusRealmFilter === r.id
                         ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
                         : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
                     }`}
@@ -569,7 +595,9 @@ export const HeroLog: React.FC<HeroLogProps> = ({
 
         {(() => {
           const filteredQuestsForStatus = relevantQuests.filter(
-            (q) => statusRealmFilter === 'all' || q.realmId === statusRealmFilter
+            (q) =>
+              activeStatusRealmFilter === 'all' ||
+              q.realmId === activeStatusRealmFilter
           );
 
           if (filteredQuestsForStatus.length === 0) {

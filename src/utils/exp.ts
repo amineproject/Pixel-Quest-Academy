@@ -864,6 +864,109 @@ export function getHeroEffectiveRealmIds(
   return null;
 }
 
+/**
+ * Checks strictly whether a Quest belongs to a Hero's enrolled Realms (Mapel),
+ * target class (Dungeon), and release schedule. Existing grades never bypass
+ * Realm or class enrollment boundaries.
+ */
+export function isQuestAssignedToHero(
+  quest: ActiveQuest,
+  hero: HeroStudent,
+  dungeons: Dungeon[],
+  options?: {
+    now?: Date;
+    hasGrade?: boolean;
+  }
+): boolean {
+  const allowedRealmIds = getHeroEffectiveRealmIds(hero, dungeons);
+  if (allowedRealmIds && !allowedRealmIds.includes(quest.realmId)) {
+    return false;
+  }
+
+  const schedule = getEffectiveScheduleForClass(quest, hero.dungeonId);
+  if (!schedule.targeted) {
+    return false;
+  }
+
+  if (options?.hasGrade) {
+    return true;
+  }
+
+  if (!schedule.releaseTime) {
+    return true;
+  }
+
+  const now = options?.now ?? new Date();
+  return schedule.releaseTime.getTime() <= now.getTime();
+}
+
+/**
+ * Synchronizes heroes' enrolledRealmIds when a class (Dungeon) updates its realmIds,
+ * removing subjects that were unchecked from the class so stale enrollments do not linger.
+ */
+export function syncHeroesRealmsWithDungeonUpdate(
+  heroes: HeroStudent[],
+  prevDungeon: Dungeon | undefined,
+  nextDungeon: Dungeon
+): { nextHeroes: HeroStudent[]; changedHeroes: HeroStudent[] } {
+  if (!prevDungeon) {
+    return { nextHeroes: heroes, changedHeroes: [] };
+  }
+
+  const prevRealms = prevDungeon.realmIds || [];
+  const nextRealms = nextDungeon.realmIds || [];
+  const prevSet = new Set(prevRealms);
+  const nextSet = new Set(nextRealms);
+
+  const removedRealms = prevRealms.filter((id) => !nextSet.has(id));
+  const sameSizeAndItems =
+    prevRealms.length === nextRealms.length &&
+    prevRealms.every((id) => nextSet.has(id));
+
+  if (sameSizeAndItems && prevRealms.length > 0) {
+    return { nextHeroes: heroes, changedHeroes: [] };
+  }
+
+  const changedHeroes: HeroStudent[] = [];
+  const nextHeroes = heroes.map((h) => {
+    if (h.dungeonId !== nextDungeon.id) return h;
+    const current = h.enrolledRealmIds || [];
+    if (current.length === 0) {
+      return h;
+    }
+
+    let updated: string[] = current;
+    const currentSet = new Set(current);
+    const matchedPrevExactly =
+      prevRealms.length > 0 &&
+      current.length === prevRealms.length &&
+      current.every((id) => prevSet.has(id));
+
+    if (matchedPrevExactly) {
+      updated = [...nextRealms];
+    } else if (removedRealms.length > 0) {
+      const removedSet = new Set(removedRealms);
+      updated = current.filter((id) => !removedSet.has(id));
+    } else if (prevRealms.length === 0 && nextRealms.length > 0) {
+      updated = current.filter((id) => nextSet.has(id));
+    }
+
+    const isDifferent =
+      updated.length !== current.length ||
+      updated.some((id, idx) => id !== current[idx]);
+    if (!isDifferent) return h;
+
+    const updatedHero: HeroStudent = {
+      ...h,
+      enrolledRealmIds: updated,
+    };
+    changedHeroes.push(updatedHero);
+    return updatedHero;
+  });
+
+  return { nextHeroes, changedHeroes };
+}
+
 export function normalizeExternalUrl(raw?: string): string {
   const trimmed = (raw || '').trim();
   if (!trimmed) return '';

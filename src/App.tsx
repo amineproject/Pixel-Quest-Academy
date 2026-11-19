@@ -54,7 +54,9 @@ import {
   getQuestCategoryMeta,
   getSeasonLabel,
   isContentVisibleToHero,
+  isQuestAssignedToHero,
   normalizeQuestCategory,
+  syncHeroesRealmsWithDungeonUpdate,
 } from './utils/exp';
 import {
   loadOfflineContentSnapshot,
@@ -503,7 +505,9 @@ export default function App() {
         : eraFilteredState.notices;
     const relevantQuests =
       role === UserRole.HERO && activeHero
-        ? eraFilteredState.quests.filter((q) => isContentVisibleToHero(q, activeHero.dungeonId))
+        ? eraFilteredState.quests.filter((q) =>
+            isQuestAssignedToHero(q, activeHero, eraFilteredState.dungeons)
+          )
         : eraFilteredState.quests;
     return {
       unreadNoticeCount: relevantNotices.filter((n) => !seenNoticeSet.has(n.id)).length,
@@ -1107,17 +1111,35 @@ export default function App() {
 
   const handleSaveDungeon = (dungeon: Dungeon) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const prevDungeon = stateRef.current.dungeons.find(
+      (d) => d.id === dungeon.id
+    );
     const taggedDungeon: Dungeon = {
       ...dungeon,
       academicYearId: dungeon.academicYearId || activeEraId,
     };
+    const { nextHeroes, changedHeroes } = syncHeroesRealmsWithDungeonUpdate(
+      stateRef.current.heroes,
+      prevDungeon,
+      taggedDungeon
+    );
     const next = {
       ...stateRef.current,
       dungeons: upsertItem(stateRef.current.dungeons, taggedDungeon),
+      heroes: nextHeroes,
     };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncDungeon(taggedDungeon, getGmAuth()));
+    const gmAuth = getGmAuth();
+    reportCloudSync(cloudSyncDungeon(taggedDungeon, gmAuth));
+    changedHeroes.forEach((hero) => {
+      reportCloudSync(cloudSyncHero(hero, gmAuth));
+      fetch('/api/heroes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hero),
+      }).catch(() => {});
+    });
     fetch('/api/dungeons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
