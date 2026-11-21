@@ -4,10 +4,12 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Download,
   FileSpreadsheet,
   FileText,
   GraduationCap,
+  MessageSquare,
   Save,
   Upload,
 } from 'lucide-react';
@@ -41,6 +43,8 @@ import {
   getSeasonLabel,
   groupQuestsByCategory,
   parseTargetDungeonIds,
+  resolveScoreFromDraft,
+  sanitizeScoreDraftInput,
   sortQuestsByCategory,
 } from '../../utils/exp';
 import {
@@ -99,7 +103,8 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [collapsedClasses, setCollapsedClasses] = useState<Record<string, boolean>>({});
-  const [expandedPortraitHeroId, setExpandedPortraitHeroId] = useState<string | null>(null);
+  const [expandedNoteHeroIds, setExpandedNoteHeroIds] = useState<Record<string, boolean>>({});
+  const [isCollectiveOpen, setIsCollectiveOpen] = useState<boolean>(true);
 
   const scope = useMemo(
     () =>
@@ -262,8 +267,9 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       return a.name.localeCompare(b.name, 'id', { sensitivity: 'base' });
     });
 
-  // Local draft scores, statuses, and feedback notes for smooth editing before clicking Save
+  // Local draft scores (numeric + raw text input for smooth mobile editing), statuses, and notes
   const [draftScores, setDraftScores] = useState<Record<string, number>>({});
+  const [draftScoreInputs, setDraftScoreInputs] = useState<Record<string, string>>({});
   const [draftStatuses, setDraftStatuses] = useState<Record<string, GradeStatus>>({});
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
 
@@ -279,17 +285,28 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
 
   useEffect(() => {
     const scoresMap: Record<string, number> = {};
+    const scoreInputsMap: Record<string, string> = {};
     const statusMap: Record<string, GradeStatus> = {};
     const notesMap: Record<string, string> = {};
     state.heroes.forEach((h) => {
       const existing = state.grades.find(
         (g) => g.heroId === h.id && g.questId === selectedQuestId
       );
-      scoresMap[h.id] = existing ? existing.score : 80;
-      statusMap[h.id] = existing ? getEffectiveGradeStatus(existing) : 'tuntas';
+      const effectiveStatus = existing
+        ? getEffectiveGradeStatus(existing)
+        : 'tuntas';
+      const initialScore = existing
+        ? effectiveStatus === 'belum'
+          ? 0
+          : existing.score
+        : 80;
+      scoresMap[h.id] = initialScore;
+      scoreInputsMap[h.id] = String(initialScore);
+      statusMap[h.id] = effectiveStatus;
       notesMap[h.id] = existing ? existing.feedback : '';
     });
     setDraftScores(scoresMap);
+    setDraftScoreInputs(scoreInputsMap);
     setDraftStatuses(statusMap);
     setDraftNotes(notesMap);
   }, [selectedQuestId, state.grades, state.heroes]);
@@ -304,7 +321,8 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     heroesToSave: typeof eligibleHeroes,
     scoresMap: Record<string, number>,
     statusesMap: Record<string, GradeStatus>,
-    notesMap: Record<string, string>
+    notesMap: Record<string, string>,
+    scoreInputsMap: Record<string, string> = draftScoreInputs
   ) => {
     if (!activeQuest || heroesToSave.length === 0) return;
     const today = new Date().toISOString().slice(0, 10);
@@ -313,7 +331,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
       const score =
         status === 'belum'
           ? 0
-          : Math.max(0, Math.min(100, Number(scoresMap[h.id]) || 0));
+          : resolveScoreFromDraft(scoreInputsMap[h.id], scoresMap[h.id] ?? 0);
       const existing = state.grades.find(
         (g) => g.heroId === h.id && g.questId === activeQuest.id
       );
@@ -345,7 +363,9 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     const score =
       status === 'belum'
         ? 0
-        : Math.max(0, Math.min(100, Number(draftScores[heroId]) || 0));
+        : resolveScoreFromDraft(draftScoreInputs[heroId], draftScores[heroId] ?? 0);
+    setDraftScores((prev) => ({ ...prev, [heroId]: score }));
+    setDraftScoreInputs((prev) => ({ ...prev, [heroId]: String(score) }));
     const existing = state.grades.find(
       (g) => g.heroId === heroId && g.questId === activeQuest.id
     );
@@ -363,7 +383,13 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   };
 
   const handleSaveClassGrades = async (heroesInClass: typeof eligibleHeroes) => {
-    await saveHeroesBatch(heroesInClass, draftScores, draftStatuses, draftNotes);
+    await saveHeroesBatch(
+      heroesInClass,
+      draftScores,
+      draftStatuses,
+      draftNotes,
+      draftScoreInputs
+    );
   };
 
   const selectedEligibleHeroes = eligibleHeroes.filter((h) =>
@@ -460,12 +486,29 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     });
 
     setDraftScores(nextScores);
+    setDraftScoreInputs((prev) => {
+      const nextInputs = { ...prev };
+      bulkTargetHeroes.forEach((h) => {
+        nextInputs[h.id] = String(nextScores[h.id] ?? 0);
+      });
+      return nextInputs;
+    });
     setDraftStatuses(nextStatuses);
     setDraftNotes(nextNotes);
 
     if (andSave) {
       setIsSavingBulk(true);
-      await saveHeroesBatch(bulkTargetHeroes, nextScores, nextStatuses, nextNotes);
+      const nextInputsForSave: Record<string, string> = { ...draftScoreInputs };
+      bulkTargetHeroes.forEach((h) => {
+        nextInputsForSave[h.id] = String(nextScores[h.id] ?? 0);
+      });
+      await saveHeroesBatch(
+        bulkTargetHeroes,
+        nextScores,
+        nextStatuses,
+        nextNotes,
+        nextInputsForSave
+      );
       setIsSavingBulk(false);
       setBulkFeedbackBanner(
         `Berhasil menerapkan & menyimpan penilaian kolektif untuk ${bulkTargetHeroes.length} siswa!`
@@ -499,24 +542,43 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     setDraftStatuses((prev) => ({ ...prev, [heroId]: nextStatus }));
     if (nextStatus === 'belum') {
       setDraftScores((prev) => ({ ...prev, [heroId]: 0 }));
+      setDraftScoreInputs((prev) => ({ ...prev, [heroId]: '0' }));
     } else if ((draftScores[heroId] ?? 0) === 0 && nextStatus === 'tuntas') {
       setDraftScores((prev) => ({ ...prev, [heroId]: 80 }));
+      setDraftScoreInputs((prev) => ({ ...prev, [heroId]: '80' }));
     }
   };
 
   const handleScoreChange = (heroId: string, rawValue: string) => {
-    const nextScore = Math.max(0, Math.min(100, Number(rawValue) || 0));
-    setDraftScores((prev) => ({ ...prev, [heroId]: nextScore }));
+    const { inputValue, numericScore } = sanitizeScoreDraftInput(rawValue);
+    setDraftScoreInputs((prev) => ({ ...prev, [heroId]: inputValue }));
+    if (numericScore === null) {
+      return;
+    }
+    setDraftScores((prev) => ({ ...prev, [heroId]: numericScore }));
     setDraftStatuses((prev) => ({
       ...prev,
-      [heroId]: nextScore >= 70 ? 'tuntas' : 'remidial',
+      [heroId]: numericScore >= 70 ? 'tuntas' : 'remidial',
     }));
+  };
+
+  const handleScoreBlur = (heroId: string) => {
+    const status = draftStatuses[heroId] ?? 'tuntas';
+    const currentInput = draftScoreInputs[heroId];
+    if (currentInput === undefined || currentInput.trim() === '') {
+      const restored = status === 'belum' ? 0 : (draftScores[heroId] ?? 0);
+      setDraftScoreInputs((prev) => ({ ...prev, [heroId]: String(restored) }));
+    }
   };
 
   const renderHeroGradeCard = (hero: (typeof eligibleHeroes)[number]) => {
     if (!activeQuest) return null;
     const status = draftStatuses[hero.id] ?? 'tuntas';
     const score = status === 'belum' ? 0 : (draftScores[hero.id] ?? 80);
+    const scoreInputValue =
+      status === 'belum'
+        ? (draftScoreInputs[hero.id] ?? '0')
+        : (draftScoreInputs[hero.id] ?? String(score));
     const expEarned =
       status === 'belum'
         ? 0
@@ -527,142 +589,58 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     const activeStatusMeta =
       STATUS_SELECT_OPTIONS.find((opt) => opt.id === status) ||
       STATUS_SELECT_OPTIONS[0];
-    const isPortraitExpanded = expandedPortraitHeroId === hero.id;
+    const isNoteExpanded = Boolean(expandedNoteHeroIds[hero.id]);
+    const hasNoteText = Boolean((draftNotes[hero.id] || '').trim());
     const isChecked = Boolean(selectedHeroIds[hero.id]);
 
     return (
       <div
         key={hero.id}
-        className={`pixel-box-inset border transition-colors ${
+        className={`pixel-box-inset border p-2.5 sm:p-3 transition-colors ${
           isChecked
             ? 'bg-[var(--bg-surface-alt)] border-[var(--accent-primary)]'
             : 'bg-[var(--bg-inset)] border-[var(--border-pixel)]/60'
         }`}
       >
-        {/* PORTRAIT MODE: Checkbox, Avatar, Status Nilai, and Nilai (compact single row) */}
-        <div className="hidden portrait:block px-2.5 py-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <input
-              type="checkbox"
-              checked={isChecked}
-              onChange={() => toggleHeroSelection(hero.id)}
-              aria-label={`Pilih ${hero.name} untuk entry kolektif`}
-              className="w-4 h-4 accent-[var(--accent-primary)] shrink-0 cursor-pointer"
-            />
-            <button
-              type="button"
-              onClick={() =>
-                setExpandedPortraitHeroId(isPortraitExpanded ? null : hero.id)
-              }
-              title={`${hero.name} (NIS ${hero.studentCode})`}
-              aria-label={hero.name}
-              aria-expanded={isPortraitExpanded}
-              className="shrink-0 cursor-pointer rounded focus-visible:outline-2 focus-visible:outline-[var(--comic-gold)]"
-            >
-              <PixelAvatar avatar={hero.avatar} size={34} />
-            </button>
-
-            <select
-              aria-label={`Status nilai ${hero.name}`}
-              value={status}
-              onChange={(e) =>
-                handleStatusChange(hero.id, e.target.value as GradeStatus)
-              }
-              className={`min-w-0 flex-1 min-h-[42px] px-2 py-1.5 border-2 rounded-[var(--inset-radius)] text-[13px] font-bold cursor-pointer outline-none ${activeStatusMeta.selectClass}`}
-            >
-              {STATUS_SELECT_OPTIONS.map((opt) => (
-                <option
-                  key={opt.id}
-                  value={opt.id}
-                  className="bg-[var(--bg-surface)] text-[var(--text-primary)]"
-                >
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-
-            <PixelInput
-              type="number"
-              min={0}
-              max={100}
-              aria-label={`Nilai ${hero.name}`}
-              value={score}
-              onChange={(e) => handleScoreChange(hero.id, e.target.value)}
-              className="!w-[66px] !min-h-[42px] shrink-0 text-center font-bold tabular-nums"
-            />
-          </div>
-
-          {isPortraitExpanded && (
-            <div className="mt-2 pt-2 border-t border-[var(--border-pixel)]/30 space-y-2">
-              <div className="flex items-center justify-between gap-2 text-[12px]">
-                <span className="font-bold text-[var(--text-primary)] truncate">
-                  {hero.name} (NIS {hero.studentCode})
-                </span>
-                <span className="font-bold text-[var(--accent-success)] shrink-0 tabular-nums">
-                  +{expEarned} EXP
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <PixelInput
-                  placeholder="Catatan guru (opsional)..."
-                  value={draftNotes[hero.id] ?? ''}
-                  onChange={(e) =>
-                    setDraftNotes((prev) => ({
-                      ...prev,
-                      [hero.id]: e.target.value,
-                    }))
-                  }
-                  className="flex-1 !min-h-[38px] text-[13px]"
-                />
-                <PixelButton
-                  type="button"
-                  size="sm"
-                  variant="success"
-                  onClick={() => handleSaveHeroGrade(hero.id)}
-                >
-                  <Save size={14} />
-                  Save
-                </PixelButton>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* LANDSCAPE / DESKTOP MODE: clean single compact horizontal row */}
-        <div className="portrait:hidden p-2.5 flex flex-wrap lg:flex-nowrap items-center gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1 basis-[220px]">
-            <input
-              type="checkbox"
-              checked={isChecked}
-              onChange={() => toggleHeroSelection(hero.id)}
-              aria-label={`Pilih ${hero.name} untuk entry kolektif`}
-              className="w-4 h-4 accent-[var(--accent-primary)] shrink-0 cursor-pointer"
-            />
-            <PixelAvatar avatar={hero.avatar} size={34} className="shrink-0" />
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
+          {/* Student Identity */}
+          <div className="flex items-center gap-2.5 min-w-0 lg:flex-1 lg:basis-[220px]">
+            <label className="min-w-[32px] min-h-[36px] flex items-center justify-center shrink-0 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => toggleHeroSelection(hero.id)}
+                aria-label={`Pilih ${hero.name} untuk entry kolektif`}
+                className="w-4 h-4 accent-[var(--accent-primary)] cursor-pointer"
+              />
+            </label>
+            <PixelAvatar avatar={hero.avatar} size={36} className="shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h4 className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <h4 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
                   {hero.name}
                 </h4>
-                <span className="text-[11px] font-bold text-[var(--accent-success)] shrink-0 tabular-nums">
+                <span className="text-[11.5px] font-bold text-[var(--accent-success)] shrink-0 tabular-nums">
                   +{expEarned} EXP
                 </span>
               </div>
               <p className="text-[11.5px] text-[var(--text-secondary)] truncate tabular-nums">
                 NIS {hero.studentCode} ·{' '}
                 {existingGrade ? `Tersimpan ${existingGrade.score}` : 'Belum dinilai'}
+                {!isNoteExpanded && hasNoteText ? ' · Ada catatan' : ''}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Unified Controls: works seamlessly in mobile portrait/landscape & desktop without unmounting on keyboard open */}
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-1.5 sm:gap-2 lg:flex-[1.45] min-w-0">
             <select
               aria-label={`Status nilai ${hero.name}`}
               value={status}
               onChange={(e) =>
                 handleStatusChange(hero.id, e.target.value as GradeStatus)
               }
-              className={`min-h-[40px] w-[142px] px-2.5 py-1 border-2 rounded-[var(--inset-radius)] text-[12.5px] font-bold cursor-pointer outline-none ${activeStatusMeta.selectClass}`}
+              className={`min-w-[116px] flex-1 lg:flex-none lg:w-[144px] min-h-[44px] lg:min-h-[40px] px-2.5 py-1 border-2 rounded-[var(--inset-radius)] text-[14px] sm:text-[13px] font-bold cursor-pointer outline-none ${activeStatusMeta.selectClass}`}
             >
               {STATUS_SELECT_OPTIONS.map((opt) => (
                 <option
@@ -676,34 +654,62 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             </select>
 
             <PixelInput
-              type="number"
-              min={0}
-              max={100}
-              aria-label={`Input nilai angka ${hero.name}`}
-              value={score}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={3}
+              aria-label={`Nilai ${hero.name}`}
+              value={scoreInputValue}
+              onFocus={(e) => e.currentTarget.select()}
               onChange={(e) => handleScoreChange(hero.id, e.target.value)}
-              className="!w-[68px] !min-h-[40px] shrink-0 text-center font-bold tabular-nums"
+              onBlur={() => handleScoreBlur(hero.id)}
+              placeholder="0"
+              className="!w-[68px] sm:!w-[74px] !min-h-[44px] lg:!min-h-[40px] !px-2 !text-[16px] sm:!text-[14px] shrink-0 text-center font-bold tabular-nums"
             />
-          </div>
 
-          <div className="flex items-center gap-2 flex-1 min-w-[180px]">
-            <PixelInput
-              placeholder="Catatan guru..."
-              value={draftNotes[hero.id] ?? ''}
-              onChange={(e) =>
-                setDraftNotes((prev) => ({
+            <PixelButton
+              type="button"
+              size="sm"
+              variant={hasNoteText ? 'warning' : 'neutral'}
+              onClick={() =>
+                setExpandedNoteHeroIds((prev) => ({
                   ...prev,
-                  [hero.id]: e.target.value,
+                  [hero.id]: !prev[hero.id],
                 }))
               }
-              className="flex-1 !min-h-[40px] text-[13px]"
-            />
+              aria-label={`Catatan guru untuk ${hero.name}`}
+              aria-expanded={isNoteExpanded}
+              title="Buka / tutup catatan guru"
+              className="lg:hidden !min-w-[44px] !min-h-[44px] !px-2.5 shrink-0"
+            >
+              <MessageSquare size={15} />
+            </PixelButton>
+
+            <div
+              className={`${
+                isNoteExpanded ? 'block' : 'hidden'
+              } lg:block w-full lg:w-auto lg:flex-1 order-last lg:order-none min-w-0`}
+            >
+              <PixelInput
+                aria-label={`Catatan guru ${hero.name}`}
+                placeholder="Catatan guru (opsional)..."
+                value={draftNotes[hero.id] ?? ''}
+                onChange={(e) =>
+                  setDraftNotes((prev) => ({
+                    ...prev,
+                    [hero.id]: e.target.value,
+                  }))
+                }
+                className="w-full !min-h-[44px] lg:!min-h-[40px] !text-[16px] sm:!text-[13px]"
+              />
+            </div>
+
             <PixelButton
               type="button"
               size="sm"
               variant="success"
               onClick={() => handleSaveHeroGrade(hero.id)}
-              className="shrink-0 !min-h-[40px]"
+              className="shrink-0 !min-h-[44px] lg:!min-h-[40px] !px-3"
             >
               <Save size={14} />
               Save
@@ -720,12 +726,13 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
         title="EXP & Loot / Penilaian"
         subtitle="Kelompokkan penilaian berdasarkan Mapel & Kelas atau unggah/unduh rekap Excel"
         action={
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <PixelButton
               type="button"
               size="sm"
               variant="primary"
               onClick={openUploadModal}
+              className="flex-1 min-[420px]:flex-initial !min-h-[44px] sm:!min-h-[40px]"
             >
               <Upload size={14} />
               Upload Nilai Excel
@@ -735,6 +742,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               size="sm"
               variant="warning"
               onClick={openRecapModal}
+              className="flex-1 min-[420px]:flex-initial !min-h-[44px] sm:!min-h-[40px]"
             >
               <Download size={14} />
               Unduh Excel &amp; Rekap
@@ -853,183 +861,216 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
           {/* Collective / Bulk Grading Panel (Nilai, Status & Catatan secara kolektif) */}
           <ThemedPanelCard className="p-3.5 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[var(--border-pixel)]/30">
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckSquare size={16} className="text-[var(--accent-primary)] shrink-0" />
-                <div className="min-w-0">
-                  <h3 className="font-pixel-display text-[12.5px] text-[var(--text-primary)]">
-                    Entry Penilaian Kolektif
-                  </h3>
-                  <p className="text-[11.5px] text-[var(--text-secondary)]">
-                    Atur nilai, status (Tuntas / Belum / Proses Dinilai / Remidial), dan catatan guru sekaligus untuk banyak siswa.
-                  </p>
+              <div className="flex items-start sm:items-center justify-between gap-2 min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CheckSquare size={16} className="text-[var(--accent-primary)] shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="font-pixel-display text-[12.5px] text-[var(--text-primary)]">
+                      Entry Penilaian Kolektif
+                    </h3>
+                    <p className="text-[11.5px] text-[var(--text-secondary)]">
+                      Atur nilai, status (Tuntas / Belum / Proses Dinilai / Remidial), dan catatan guru sekaligus untuk banyak siswa.
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                 <PixelButton
                   type="button"
                   size="sm"
                   variant="neutral"
-                  onClick={handleSelectAllEligible}
+                  onClick={() => setIsCollectiveOpen((prev) => !prev)}
+                  aria-expanded={isCollectiveOpen}
+                  className="shrink-0 !min-h-[38px] !px-2.5"
                 >
-                  Centang Semua ({eligibleHeroes.length})
+                  {isCollectiveOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                  <span className="hidden min-[400px]:inline">
+                    {isCollectiveOpen ? 'Tutup' : 'Buka'}
+                  </span>
                 </PixelButton>
-                {selectedEligibleHeroes.length > 0 && (
+              </div>
+
+              {isCollectiveOpen && (
+                <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                   <PixelButton
                     type="button"
                     size="sm"
                     variant="neutral"
-                    onClick={handleClearSelection}
+                    onClick={handleSelectAllEligible}
+                    className="flex-1 sm:flex-initial"
                   >
-                    Batal Centang ({selectedEligibleHeroes.length})
+                    Centang Semua ({eligibleHeroes.length})
                   </PixelButton>
-                )}
-              </div>
+                  {selectedEligibleHeroes.length > 0 && (
+                    <PixelButton
+                      type="button"
+                      size="sm"
+                      variant="neutral"
+                      onClick={handleClearSelection}
+                      className="flex-1 sm:flex-initial"
+                    >
+                      Batal Centang ({selectedEligibleHeroes.length})
+                    </PixelButton>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              <div>
-                <PixelFieldLabel htmlFor="bulk-target">Sasaran Siswa</PixelFieldLabel>
-                <PixelSelect
-                  id="bulk-target"
-                  value={bulkTargetMode}
-                  onChange={(e) =>
-                    setBulkTargetMode(
-                      e.target.value as 'all' | 'selected' | 'ungraded'
-                    )
-                  }
-                >
-                  <option value="all">
-                    Semua Siswa Tampil ({eligibleHeroes.length})
-                  </option>
-                  <option value="selected">
-                    Siswa Tercentang ({selectedEligibleHeroes.length})
-                  </option>
-                  <option value="ungraded">
-                    Belum Dinilai ({ungradedEligibleHeroes.length})
-                  </option>
-                </PixelSelect>
-              </div>
+            {isCollectiveOpen && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <div>
+                    <PixelFieldLabel htmlFor="bulk-target">Sasaran Siswa</PixelFieldLabel>
+                    <PixelSelect
+                      id="bulk-target"
+                      value={bulkTargetMode}
+                      onChange={(e) =>
+                        setBulkTargetMode(
+                          e.target.value as 'all' | 'selected' | 'ungraded'
+                        )
+                      }
+                      className="!text-[16px] sm:!text-[14px]"
+                    >
+                      <option value="all">
+                        Semua Siswa Tampil ({eligibleHeroes.length})
+                      </option>
+                      <option value="selected">
+                        Siswa Tercentang ({selectedEligibleHeroes.length})
+                      </option>
+                      <option value="ungraded">
+                        Belum Dinilai ({ungradedEligibleHeroes.length})
+                      </option>
+                    </PixelSelect>
+                  </div>
 
-              <div>
-                <PixelFieldLabel htmlFor="bulk-status">Status Kolektif</PixelFieldLabel>
-                <PixelSelect
-                  id="bulk-status"
-                  value={bulkStatusInput}
-                  onChange={(e) =>
-                    setBulkStatusInput(e.target.value as GradeStatus | 'keep')
-                  }
-                >
-                  <option value="keep">-- Tidak diubah (tetap) --</option>
-                  <option value="tuntas">Tuntas</option>
-                  <option value="proses">Proses Dinilai</option>
-                  <option value="remidial">Remidial</option>
-                  <option value="belum">Belum</option>
-                </PixelSelect>
-              </div>
+                  <div>
+                    <PixelFieldLabel htmlFor="bulk-status">Status Kolektif</PixelFieldLabel>
+                    <PixelSelect
+                      id="bulk-status"
+                      value={bulkStatusInput}
+                      onChange={(e) =>
+                        setBulkStatusInput(e.target.value as GradeStatus | 'keep')
+                      }
+                      className="!text-[16px] sm:!text-[14px]"
+                    >
+                      <option value="keep">-- Tidak diubah (tetap) --</option>
+                      <option value="tuntas">Tuntas</option>
+                      <option value="proses">Proses Dinilai</option>
+                      <option value="remidial">Remidial</option>
+                      <option value="belum">Belum</option>
+                    </PixelSelect>
+                  </div>
 
-              <div>
-                <PixelFieldLabel htmlFor="bulk-score">
-                  Nilai Kolektif (0–100)
-                </PixelFieldLabel>
-                <PixelInput
-                  id="bulk-score"
-                  type="number"
-                  min={0}
-                  max={100}
-                  placeholder="Kosong = nilai tetap"
-                  value={bulkScoreInput}
-                  onChange={(e) => setBulkScoreInput(e.target.value)}
-                  disabled={bulkStatusInput === 'belum'}
-                  className="tabular-nums"
-                />
-              </div>
+                  <div>
+                    <PixelFieldLabel htmlFor="bulk-score">
+                      Nilai Kolektif (0–100)
+                    </PixelFieldLabel>
+                    <PixelInput
+                      id="bulk-score"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={3}
+                      placeholder="Kosong = nilai tetap"
+                      value={bulkScoreInput}
+                      onChange={(e) =>
+                        setBulkScoreInput(sanitizeScoreDraftInput(e.target.value).inputValue)
+                      }
+                      disabled={bulkStatusInput === 'belum'}
+                      className="!text-[16px] sm:!text-[14px] tabular-nums"
+                    />
+                  </div>
 
-              <div>
-                <PixelFieldLabel htmlFor="bulk-note">
-                  Catatan Kolektif
-                </PixelFieldLabel>
-                <PixelInput
-                  id="bulk-note"
-                  placeholder="Kosong = catatan tetap..."
-                  value={bulkNoteInput}
-                  onChange={(e) => {
-                    setBulkNoteInput(e.target.value);
-                    if (e.target.value.trim() !== '') setBulkClearNote(false);
-                  }}
-                  disabled={bulkClearNote}
-                />
-              </div>
-            </div>
+                  <div>
+                    <PixelFieldLabel htmlFor="bulk-note">
+                      Catatan Kolektif
+                    </PixelFieldLabel>
+                    <PixelInput
+                      id="bulk-note"
+                      placeholder="Kosong = catatan tetap..."
+                      value={bulkNoteInput}
+                      onChange={(e) => {
+                        setBulkNoteInput(e.target.value);
+                        if (e.target.value.trim() !== '') setBulkClearNote(false);
+                      }}
+                      disabled={bulkClearNote}
+                      className="!text-[16px] sm:!text-[14px]"
+                    />
+                  </div>
+                </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
-              <label className="inline-flex items-center gap-2 text-[12px] font-semibold text-[var(--text-secondary)] cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={bulkClearNote}
-                  onChange={(e) => {
-                    setBulkClearNote(e.target.checked);
-                    if (e.target.checked) setBulkNoteInput('');
-                  }}
-                  className="w-4 h-4 accent-[var(--accent-primary)] cursor-pointer"
-                />
-                <span>Kosongkan catatan siswa pada sasaran ini</span>
-              </label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+                  <label className="inline-flex items-center gap-2 text-[12px] font-semibold text-[var(--text-secondary)] cursor-pointer select-none min-h-[36px]">
+                    <input
+                      type="checkbox"
+                      checked={bulkClearNote}
+                      onChange={(e) => {
+                        setBulkClearNote(e.target.checked);
+                        if (e.target.checked) setBulkNoteInput('');
+                      }}
+                      className="w-4 h-4 accent-[var(--accent-primary)] cursor-pointer shrink-0"
+                    />
+                    <span>Kosongkan catatan siswa pada sasaran ini</span>
+                  </label>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <PixelButton
-                  type="button"
-                  size="sm"
-                  variant="neutral"
-                  disabled={
-                    bulkTargetHeroes.length === 0 ||
-                    !hasCollectiveChanges ||
-                    isSavingBulk
-                  }
-                  onClick={() => void handleApplyCollective(false)}
-                >
-                  Terapkan ke Draft ({bulkTargetHeroes.length})
-                </PixelButton>
-                <PixelButton
-                  type="button"
-                  size="sm"
-                  variant="primary"
-                  disabled={
-                    bulkTargetHeroes.length === 0 ||
-                    !hasCollectiveChanges ||
-                    isSavingBulk
-                  }
-                  onClick={() => void handleApplyCollective(true)}
-                >
-                  <Save size={14} />
-                  {isSavingBulk
-                    ? 'Menyimpan...'
-                    : `Terapkan & Simpan (${bulkTargetHeroes.length})`}
-                </PixelButton>
-                <PixelButton
-                  type="button"
-                  size="sm"
-                  variant="success"
-                  disabled={eligibleHeroes.length === 0 || isSavingBulk}
-                  onClick={async () => {
-                    setIsSavingBulk(true);
-                    await saveHeroesBatch(
-                      eligibleHeroes,
-                      draftScores,
-                      draftStatuses,
-                      draftNotes
-                    );
-                    setIsSavingBulk(false);
-                    setBulkFeedbackBanner(
-                      `Semua perubahan (${eligibleHeroes.length} siswa) berhasil disimpan!`
-                    );
-                  }}
-                >
-                  <Save size={14} />
-                  Simpan Semua ({eligibleHeroes.length})
-                </PixelButton>
-              </div>
-            </div>
+                  <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2">
+                    <PixelButton
+                      type="button"
+                      size="sm"
+                      variant="neutral"
+                      disabled={
+                        bulkTargetHeroes.length === 0 ||
+                        !hasCollectiveChanges ||
+                        isSavingBulk
+                      }
+                      onClick={() => void handleApplyCollective(false)}
+                      className="!min-h-[44px] sm:!min-h-[40px]"
+                    >
+                      Terapkan ke Draft ({bulkTargetHeroes.length})
+                    </PixelButton>
+                    <PixelButton
+                      type="button"
+                      size="sm"
+                      variant="primary"
+                      disabled={
+                        bulkTargetHeroes.length === 0 ||
+                        !hasCollectiveChanges ||
+                        isSavingBulk
+                      }
+                      onClick={() => void handleApplyCollective(true)}
+                      className="!min-h-[44px] sm:!min-h-[40px]"
+                    >
+                      <Save size={14} />
+                      {isSavingBulk
+                        ? 'Menyimpan...'
+                        : `Terapkan & Simpan (${bulkTargetHeroes.length})`}
+                    </PixelButton>
+                    <PixelButton
+                      type="button"
+                      size="sm"
+                      variant="success"
+                      disabled={eligibleHeroes.length === 0 || isSavingBulk}
+                      onClick={async () => {
+                        setIsSavingBulk(true);
+                        await saveHeroesBatch(
+                          eligibleHeroes,
+                          draftScores,
+                          draftStatuses,
+                          draftNotes,
+                          draftScoreInputs
+                        );
+                        setIsSavingBulk(false);
+                        setBulkFeedbackBanner(
+                          `Semua perubahan (${eligibleHeroes.length} siswa) berhasil disimpan!`
+                        );
+                      }}
+                      className="!min-h-[44px] sm:!min-h-[40px]"
+                    >
+                      <Save size={14} />
+                      Simpan Semua ({eligibleHeroes.length})
+                    </PixelButton>
+                  </div>
+                </div>
+              </>
+            )}
 
             {bulkFeedbackBanner && (
               <p className="text-[12.5px] font-semibold text-[var(--accent-success)] bg-[var(--bg-inset)] px-3 py-2 border border-[var(--accent-success)]">
@@ -1053,17 +1094,19 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               group.heroes.length > 0 && checkedInClass === group.heroes.length;
 
             return (
-              <ThemedPanelCard key={group.key} className="p-3.5 space-y-3">
+              <ThemedPanelCard key={group.key} className="p-3 sm:p-3.5 space-y-3">
                 <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-2.5 pb-2.5 border-b border-[var(--border-pixel)]/40">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <input
-                      type="checkbox"
-                      checked={allInClassChecked}
-                      onChange={() => toggleClassSelection(group.heroes)}
-                      aria-label={`Centang seluruh siswa ${group.dungeon?.name || 'kelas ini'}`}
-                      title="Centang / batal centang seluruh kelas ini"
-                      className="w-4 h-4 accent-[var(--accent-primary)] shrink-0 cursor-pointer"
-                    />
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <label className="min-w-[32px] min-h-[36px] flex items-center justify-center shrink-0 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={allInClassChecked}
+                        onChange={() => toggleClassSelection(group.heroes)}
+                        aria-label={`Centang seluruh siswa ${group.dungeon?.name || 'kelas ini'}`}
+                        title="Centang / batal centang seluruh kelas ini"
+                        className="w-4 h-4 accent-[var(--accent-primary)] cursor-pointer"
+                      />
+                    </label>
                     <button
                       type="button"
                       onClick={() =>

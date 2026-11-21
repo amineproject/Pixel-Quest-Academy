@@ -26,6 +26,8 @@ import {
   maskHeroName,
   normalizeQuestCategory,
   parseTargetDungeonIds,
+  resolveScoreFromDraft,
+  sanitizeScoreDraftInput,
   serializeTargetDungeonIds,
   sortQuestsByCategory,
   syncHeroesRealmsWithDungeonUpdate,
@@ -873,6 +875,46 @@ describe('Strict Student Subject & Class Quest Isolation', () => {
     );
   });
 });
+
+describe('Mobile/Desktop Score Draft Input Sanitization', () => {
+  it('allows clearing the input via backspace without snapping back to 0 mid-edit', () => {
+    assert.deepEqual(sanitizeScoreDraftInput(''), {
+      inputValue: '',
+      numericScore: null,
+    });
+    assert.deepEqual(sanitizeScoreDraftInput('abc'), {
+      inputValue: '',
+      numericScore: null,
+    });
+  });
+
+  it('strips non-numeric characters, trims leading zeros, and clamps between 0 and 100', () => {
+    assert.deepEqual(sanitizeScoreDraftInput('0'), {
+      inputValue: '0',
+      numericScore: 0,
+    });
+    assert.deepEqual(sanitizeScoreDraftInput('085'), {
+      inputValue: '85',
+      numericScore: 85,
+    });
+    assert.deepEqual(sanitizeScoreDraftInput('92a'), {
+      inputValue: '92',
+      numericScore: 92,
+    });
+    assert.deepEqual(sanitizeScoreDraftInput('105'), {
+      inputValue: '100',
+      numericScore: 100,
+    });
+  });
+
+  it('resolves empty draft back to fallback score and clamps valid drafts', () => {
+    assert.equal(resolveScoreFromDraft('', 80), 80);
+    assert.equal(resolveScoreFromDraft(undefined, 75), 75);
+    assert.equal(resolveScoreFromDraft('94', 80), 94);
+    assert.equal(resolveScoreFromDraft('120', 80), 100);
+  });
+});
+
 
 
 

@@ -1503,4 +1503,49 @@ export function applyCollectiveGradePatch(params: {
   };
 }
 
+export interface ParsedScoreDraft {
+  inputValue: string;
+  numericScore: number | null;
+}
+
+/**
+ * Sanitizes free-form score text input for mobile/desktop grading (0..100).
+ * Keeps empty string as '' with numericScore = null so mobile Backspace works smoothly
+ * without snapping back to 0 mid-edit.
+ */
+export function sanitizeScoreDraftInput(rawValue: string): ParsedScoreDraft {
+  const digitsOnly = String(rawValue ?? '').replace(/[^\d]/g, '');
+  if (!digitsOnly) {
+    return { inputValue: '', numericScore: null };
+  }
+  const parsed = parseInt(digitsOnly, 10);
+  if (!Number.isFinite(parsed)) {
+    return { inputValue: '', numericScore: null };
+  }
+  const clamped = Math.max(0, Math.min(100, parsed));
+  return {
+    inputValue: String(clamped),
+    numericScore: clamped,
+  };
+}
+
+/**
+ * Resolves a final numeric 0..100 score from a possibly-empty draft input string.
+ */
+export function resolveScoreFromDraft(
+  draftInput: string | undefined,
+  fallbackScore: number = 0
+): number {
+  const trimmed = String(draftInput ?? '').trim();
+  if (!trimmed) {
+    return Math.max(0, Math.min(100, Math.round(fallbackScore)));
+  }
+  const parsed = sanitizeScoreDraftInput(trimmed);
+  if (parsed.numericScore === null) {
+    return Math.max(0, Math.min(100, Math.round(fallbackScore)));
+  }
+  return parsed.numericScore;
+}
+
+
 
