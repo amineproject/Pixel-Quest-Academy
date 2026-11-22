@@ -306,7 +306,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           </label>
           <label className="flex items-center justify-between gap-3 min-h-[44px] cursor-pointer">
             <span className="text-[13.5px] font-semibold text-[var(--text-primary)]">
-              8-Bit Chiptune SFX
+              16-Bit Chiptune SFX
             </span>
             <input
               type="checkbox"

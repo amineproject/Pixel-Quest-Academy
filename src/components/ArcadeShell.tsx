@@ -60,7 +60,7 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'guild_chronicles', label: 'Guild Chronicles', shortLabel: 'Chronicles', standardName: 'Statistik' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'settings', label: 'System Settings', shortLabel: 'Config', standardName: 'Pengaturan' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.7' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.8' },
 ];
 
 export const HERO_NAV_ITEMS: {
@@ -75,7 +75,7 @@ export const HERO_NAV_ITEMS: {
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.7' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.8' },
 ];
 
 export function getGmMenuIcon(id: GmMenuId, size = 18) {
@@ -292,14 +292,14 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             <PixelCoin size={15} className="animate-coin-shine" />
             <span>
               {theme === 'sunny_quest'
-                ? 'SUPER PAPER STAGE · MARIO PAPER EDITION'
+                ? '16-BIT PIXEL · SUPER PAPER STAGE'
                 : theme === 'daylight_rpg'
-                  ? 'POKÉMON CAFÉ REMIX · PATISSERIE EDITION'
+                  ? '16-BIT PIXEL · POKÉMON CAFÉ REMIX'
                   : theme === 'nes_classic'
-                    ? 'SPROUT PIXEL VILLAGE · PIXEL GAME'
+                    ? '16-BIT PIXEL · SPROUT VILLAGE'
                     : theme === 'gameboy_green'
-                      ? 'PHANTOM PERSONA POP · CONFIDANT EDITION'
-                      : 'MOBILE LEGENDS · LAND OF DAWN EDITION'}
+                      ? '16-BIT PIXEL · PHANTOM PERSONA'
+                      : '16-BIT PIXEL · MOBILE LEGENDS'}
             </span>
           </div>
             <div className="flex items-center gap-1.5">
@@ -366,11 +366,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               ? 'sm:h-[calc(100dvh-110px)] sm:min-h-[500px]'
               : 'sm:h-[calc(100dvh-150px)] sm:min-h-[460px] sm:max-h-[860px]'
           } ${
-            theme === 'daylight_rpg'
-              ? 'sm:rounded-[20px] sm:border-2 sm:border-[var(--border-pixel)]'
-              : theme === 'gameboy_green'
-                ? 'sm:rounded-[2px] sm:border-2 sm:border-[var(--border-pixel)]'
-                : 'sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)]'
+            theme === 'gameboy_green'
+              ? 'sm:rounded-[2px] sm:border-2 sm:border-[var(--border-pixel)]'
+              : 'sm:rounded-[6px] sm:border-2 sm:border-[var(--border-pixel)]'
           } ${crtScanlines ? 'crt-scanlines' : ''}`}
         >
           {/* Persistent Sidebar Navigation (Desktop & Tablet >= 768px) */}
@@ -448,20 +446,18 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                     const activeBtnClass = isPersonaTheme
                       ? 'persona-slant bg-[#e60012] text-white border-2 border-white shadow-[3px_3px_0_0_#ffe600] font-bold'
                       : theme === 'daylight_rpg'
-                        ? 'bg-[#c75008] text-white border-2 border-[#4e2a1e] rounded-[14px] shadow-[0_3px_0_0_#4e2a1e] font-bold'
+                        ? 'bg-[#c75008] text-white border-2 border-[#4e2a1e] rounded-[5px] shadow-[2px_3px_0_0_#4e2a1e] font-bold'
                         : theme === 'nes_classic'
                           ? 'bg-[#3f7d28] text-white border-2 border-[#5c3822] shadow-[2px_2px_0_0_#5c3822] font-bold'
                           : isMlbbTheme
-                            ? 'bg-gradient-to-r from-[#c83218] to-[#df4a26] text-white border-2 border-[#f5c84c] rounded-[6px] shadow-[0_3px_0_0_#071022] font-bold'
-                            : 'bg-[#e52521] text-white border-2 border-white ring-2 ring-[#2e1d14] rounded-[14px] shadow-[0_4px_0_0_#7f1d1d] font-bold';
+                            ? 'bg-gradient-to-r from-[#c83218] to-[#df4a26] text-white border-2 border-[#f5c84c] rounded-[4px] shadow-[3px_3px_0_0_#071022] font-bold'
+                            : 'bg-[#e52521] text-white border-2 border-white ring-2 ring-[#2e1d14] rounded-[5px] shadow-[3px_3px_0_0_#7f1d1d] font-bold';
 
                     const idleBtnClass = isPersonaTheme
                       ? 'text-[#f4f4f5] border-2 border-transparent hover:bg-[#1b1b26] hover:border-[#e60012]/70 hover:text-white'
                       : isMlbbTheme
-                        ? 'text-slate-100 border-2 border-transparent rounded-[6px] hover:bg-[#163466] hover:border-[#d4a94f]/60 hover:text-white'
-                        : theme === 'daylight_rpg'
-                          ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
-                          : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
+                        ? 'text-slate-100 border-2 border-transparent rounded-[4px] hover:bg-[#163466] hover:border-[#d4a94f]/60 hover:text-white'
+                        : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
 
                     const badgeCount = getBadgeCountForGm(item.id);
                     return (
@@ -531,20 +527,18 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                     const activeBtnClass = isPersonaTheme
                       ? 'persona-slant bg-[#e60012] text-white border-2 border-white shadow-[3px_3px_0_0_#ffe600] font-bold'
                       : theme === 'daylight_rpg'
-                        ? 'bg-[#c75008] text-white border-2 border-[#4e2a1e] rounded-[14px] shadow-[0_3px_0_0_#4e2a1e] font-bold'
+                        ? 'bg-[#c75008] text-white border-2 border-[#4e2a1e] rounded-[5px] shadow-[2px_3px_0_0_#4e2a1e] font-bold'
                         : theme === 'nes_classic'
                           ? 'bg-[#3f7d28] text-white border-2 border-[#5c3822] shadow-[2px_2px_0_0_#5c3822] font-bold'
                           : isMlbbTheme
-                            ? 'bg-gradient-to-r from-[#c83218] to-[#df4a26] text-white border-2 border-[#f5c84c] rounded-[6px] shadow-[0_3px_0_0_#071022] font-bold'
-                            : 'bg-[#e52521] text-white border-2 border-white ring-2 ring-[#2e1d14] rounded-[14px] shadow-[0_4px_0_0_#7f1d1d] font-bold';
+                            ? 'bg-gradient-to-r from-[#c83218] to-[#df4a26] text-white border-2 border-[#f5c84c] rounded-[4px] shadow-[3px_3px_0_0_#071022] font-bold'
+                            : 'bg-[#e52521] text-white border-2 border-white ring-2 ring-[#2e1d14] rounded-[5px] shadow-[3px_3px_0_0_#7f1d1d] font-bold';
 
                     const idleBtnClass = isPersonaTheme
                       ? 'text-[#f4f4f5] border-2 border-transparent hover:bg-[#1b1b26] hover:border-[#e60012]/70 hover:text-white'
                       : isMlbbTheme
-                        ? 'text-slate-100 border-2 border-transparent rounded-[6px] hover:bg-[#163466] hover:border-[#d4a94f]/60 hover:text-white'
-                        : theme === 'daylight_rpg'
-                          ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
-                          : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
+                        ? 'text-slate-100 border-2 border-transparent rounded-[4px] hover:bg-[#163466] hover:border-[#d4a94f]/60 hover:text-white'
+                        : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
 
                     const badgeCount = getBadgeCountForHero(item.id);
                     return (

@@ -33,27 +33,27 @@
     --outer-sub: #991b1b;
     --grid-line: rgba(255, 255, 255, 0.35);
     --comic-glow: linear-gradient(180deg, #52b2e8 0%, #99dbfa 52%, #6ee7b7 72%, #2e7d32 100%);
-    --font-display: "Fredoka", "Nunito", sans-serif;
-    --font-ui: "Fredoka", "Nunito", sans-serif;
+    --font-display: "Pixelify Sans", "Fredoka", sans-serif;
+    --font-ui: "Chakra Petch", "Fredoka", sans-serif;
     --font-body: "Nunito", "Plus Jakarta Sans", sans-serif;
-    --card-radius: 16px;
-    --inset-radius: 12px;
-    --btn-radius: 12px;
+    --card-radius: 6px;
+    --inset-radius: 4px;
+    --btn-radius: 5px;
     --box-border-w: 2.5px;
-    --box-shadow-style: 0 4px 0 0 rgba(46, 29, 20, 0.85);
-    --btn-shadow-style: 0 3px 0 0 var(--shadow-ink);
-    --header-pattern: radial-gradient(rgba(229, 37, 33, 0.08) 2px, transparent 2px);
+    --box-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.85), inset 0 -2px 0 rgba(46, 29, 20, 0.14), 4px 4px 0 0 rgba(46, 29, 20, 0.85);
+    --btn-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.35), 3px 3px 0 0 var(--shadow-ink);
+    --header-pattern: repeating-conic-gradient(rgba(229, 37, 33, 0.08) 0% 25%, transparent 0% 50%);
     --board-ink: #1e140e;
     --board-muted: #433025;
     --board-accent: #e52521;
     --board-chip-bg: #fef2f2;
-    --board-chip-border: rgba(46, 29, 20, 0.45);
-    --board-divider: rgba(46, 29, 20, 0.16);
+    --board-chip-border: rgba(46, 29, 20, 0.55);
+    --board-divider: rgba(46, 29, 20, 0.18);
     --board-edit-bg: #fef9c3;
   }
 
   [data-theme="daylight_rpg"] {
-    /* Theme 2: Pokémon Café ReMix — Warm Peach Wallpaper, Turquoise Tray & Honey Orange */
+    /* Theme 2: Pokémon Café ReMix — 16-Bit Patisserie Tray, Peach Dither & Honey Orange */
     --bg-outer: #f5c3a0;
     --bg-canvas: #fffaf2;
     --bg-surface: #ffffff;
@@ -62,7 +62,7 @@
     --surface-tint: #b8ece9;
     --border-pixel: #4e2a1e;
     --border-highlight: #4e2a1e;
-    --shadow-ink: rgba(78, 42, 30, 0.34);
+    --shadow-ink: #4e2a1e;
     --text-primary: #3f2117;
     --text-secondary: #683c2b;
     --text-muted: #8a5b46;
@@ -83,27 +83,27 @@
     --outer-sub: #c82a36;
     --grid-line: rgba(255, 255, 255, 0.38);
     --comic-glow: linear-gradient(135deg, #f9d5b8 0%, #f5c09b 55%, #f0b18a 100%);
-    --font-display: "Fredoka", "Nunito", sans-serif;
-    --font-ui: "Fredoka", "Nunito", sans-serif;
+    --font-display: "Pixelify Sans", "Fredoka", sans-serif;
+    --font-ui: "Chakra Petch", "Fredoka", sans-serif;
     --font-body: "Nunito", "Plus Jakarta Sans", sans-serif;
-    --card-radius: 20px;
-    --inset-radius: 14px;
-    --btn-radius: 14px;
-    --box-border-w: 2px;
-    --box-shadow-style: 0 4px 0 0 var(--shadow-ink);
-    --btn-shadow-style: 0 3px 0 0 var(--shadow-ink);
-    --header-pattern: radial-gradient(rgba(78, 42, 30, 0.08) 2px, transparent 2px);
+    --card-radius: 6px;
+    --inset-radius: 4px;
+    --btn-radius: 5px;
+    --box-border-w: 2.5px;
+    --box-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.72), 3px 3px 0 0 rgba(78, 42, 30, 0.38);
+    --btn-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.35), 2px 3px 0 0 rgba(78, 42, 30, 0.45);
+    --header-pattern: repeating-conic-gradient(rgba(78, 42, 30, 0.06) 0% 25%, transparent 0% 50%);
     --board-ink: #3f2117;
     --board-muted: #683c2b;
     --board-accent: #c82a36;
     --board-chip-bg: #fff8eb;
-    --board-chip-border: rgba(78, 42, 30, 0.4);
+    --board-chip-border: rgba(78, 42, 30, 0.45);
     --board-divider: rgba(78, 42, 30, 0.16);
     --board-edit-bg: #fef3c7;
   }
 
   [data-theme="nes_classic"] {
-    /* Theme 3: Sprout Pixel Village — Cozy Pastel Pixel Farming Island */
+    /* Theme 3: Sprout Pixel Village — 16-Bit Pastel Farming Island */
     --bg-outer: #8ad6cf;
     --bg-canvas: #fbf6e3;
     --bg-surface: #fffdf6;
@@ -140,7 +140,7 @@
     --inset-radius: 3px;
     --btn-radius: 4px;
     --box-border-w: 2.5px;
-    --box-shadow-style: 3px 3px 0 0 #5c3822;
+    --box-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.55), 3px 3px 0 0 #5c3822;
     --btn-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.35), 2px 2px 0 0 #5c3822;
     --header-pattern: repeating-linear-gradient(
       90deg,
@@ -159,7 +159,7 @@
   }
 
   [data-theme="cyber_retro"] {
-    /* Theme 4: Mobile Legends: Bang Bang — Land of Dawn Sapphire, Imperial Gold & Arcane Cyan */
+    /* Theme 4: Mobile Legends: Bang Bang — 16-Bit Land of Dawn Sapphire, Armor Gold & Cyan */
     --bg-outer: #091428;
     --bg-canvas: #f0f5fc;
     --bg-surface: #ffffff;
@@ -168,7 +168,7 @@
     --surface-tint: #dbeafe;
     --border-pixel: #1e3a6e;
     --border-highlight: #d4a94f;
-    --shadow-ink: #0c1830;
+    --shadow-ink: #071022;
     --text-primary: #0b1730;
     --text-secondary: #243b61;
     --text-muted: #4b628a;
@@ -189,16 +189,16 @@
     --outer-sub: #7dd3fc;
     --grid-line: rgba(92, 225, 230, 0.14);
     --comic-glow: linear-gradient(135deg, #091428 0%, #132b59 50%, #0b2447 100%);
-    --font-display: "Bungee", "Chakra Petch", sans-serif;
+    --font-display: "Pixelify Sans", "Chakra Petch", sans-serif;
     --font-ui: "Chakra Petch", "Plus Jakarta Sans", sans-serif;
     --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
-    --card-radius: 7px;
-    --inset-radius: 5px;
-    --btn-radius: 6px;
-    --box-border-w: 2px;
-    --box-shadow-style: 0 4px 0 0 rgba(12, 24, 48, 0.25);
-    --btn-shadow-style: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 0 0 #0c1830;
-    --header-pattern: radial-gradient(rgba(30, 58, 110, 0.08) 1.5px, transparent 1.5px);
+    --card-radius: 4px;
+    --inset-radius: 3px;
+    --btn-radius: 4px;
+    --box-border-w: 2.5px;
+    --box-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.55), 4px 4px 0 0 #071022;
+    --btn-shadow-style: inset 0 2px 0 rgba(255, 255, 255, 0.28), 3px 3px 0 0 #071022;
+    --header-pattern: repeating-conic-gradient(rgba(30, 58, 110, 0.08) 0% 25%, transparent 0% 50%);
     --board-ink: #0b1730;
     --board-muted: #243b61;
     --board-accent: #1b4db3;
@@ -209,7 +209,7 @@
   }
 
   [data-theme="gameboy_green"] {
-    /* Theme 5: Phantom Persona Pop — Crimson, Ink Black & Comic Cutouts */
+    /* Theme 5: Phantom Persona Pop — 16-Bit Crimson, Ink Black & Stepped Pixel Cutouts */
     --bg-outer: #c90010;
     --bg-canvas: #f5f4f6;
     --bg-surface: #ffffff;
@@ -239,7 +239,7 @@
     --outer-sub: #ffe600;
     --grid-line: rgba(9, 9, 15, 0.22);
     --comic-glow: linear-gradient(135deg, #e60012 0%, #b8000f 52%, #09090f 100%);
-    --font-display: "Bungee", "Chakra Petch", sans-serif;
+    --font-display: "Pixelify Sans", "Bungee", sans-serif;
     --font-ui: "Chakra Petch", "Plus Jakarta Sans", sans-serif;
     --font-body: "Plus Jakarta Sans", "Nunito", sans-serif;
     --card-radius: 2px;
@@ -248,7 +248,7 @@
     --box-border-w: 2.5px;
     --box-shadow-style: 5px 5px 0 0 var(--shadow-ink);
     --btn-shadow-style: 3px 3px 0 0 #09090f;
-    --header-pattern: radial-gradient(rgba(9, 9, 15, 0.14) 1.5px, transparent 1.5px);
+    --header-pattern: repeating-conic-gradient(rgba(9, 9, 15, 0.12) 0% 25%, transparent 0% 50%);
     --board-ink: #09090f;
     --board-muted: #27272a;
     --board-accent: #e60012;
@@ -307,13 +307,18 @@
 
   [data-theme="sunny_quest"] .pixel-box {
     box-shadow:
-      inset 0 0 0 2px #ffffff,
-      0 4px 0 0 rgba(46, 29, 20, 0.85);
+      inset 0 2px 0 0 #ffffff,
+      inset 0 -2px 0 0 rgba(46, 29, 20, 0.12),
+      4px 4px 0 0 rgba(46, 29, 20, 0.85);
   }
 
   [data-theme="gameboy_green"] .pixel-box {
     border-color: #09090f;
     box-shadow: 5px 5px 0 0 #e60012;
+  }
+
+  .pixelated-sprite {
+    image-rendering: pixelated;
   }
 
   .pixel-box-inset {
@@ -323,12 +328,12 @@
     max-width: 100%;
     min-width: 0;
     overflow-wrap: anywhere;
-    box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.08);
   }
 
   [data-theme="gameboy_green"] .pixel-box-inset {
     border-color: #09090f;
-    box-shadow: inset 0 2px 0 rgba(9, 9, 15, 0.06);
+    box-shadow: inset 0 2px 0 rgba(9, 9, 15, 0.08);
   }
 
   .pixel-btn {
@@ -339,8 +344,8 @@
   }
 
   .pixel-btn:active:not(:disabled) {
-    transform: translateY(2px);
-    box-shadow: 0 1px 0 0 var(--shadow-ink);
+    transform: translate(1px, 2px);
+    box-shadow: 1px 1px 0 0 var(--shadow-ink);
   }
 
   [data-theme="gameboy_green"] .pixel-btn:active:not(:disabled) {
@@ -354,36 +359,39 @@
     outline-offset: 2px;
   }
 
-  /* Theme-Driven Outer Backdrop */
+  /* Theme-Driven 16-Bit Pixel Grid Outer Backdrop */
   .pixel-grid-bg {
     background-color: var(--bg-outer);
     background-image:
-      radial-gradient(var(--grid-line) 1.5px, transparent 1.5px),
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px),
       var(--comic-glow);
-    background-size: 16px 16px, 100% 100%;
+    background-size: 16px 16px, 16px 16px, 100% 100%;
   }
 
   .comic-halftone {
     background-image: var(--header-pattern);
-    background-size: 9px 9px;
+    background-size: 8px 8px;
   }
 
-  /* Theme-Specific Console Bezel Textures */
+  /* Theme-Specific 16-Bit Console Bezel Textures */
   [data-theme="sunny_quest"] .console-bezel {
-    border-radius: 20px;
+    border-radius: 6px;
     background-image: repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.06) 0px,
-      rgba(255, 255, 255, 0.06) 10px,
-      rgba(0, 0, 0, 0.12) 10px,
-      rgba(0, 0, 0, 0.12) 22px
+      rgba(255, 255, 255, 0.07) 0px,
+      rgba(255, 255, 255, 0.07) 8px,
+      rgba(0, 0, 0, 0.14) 8px,
+      rgba(0, 0, 0, 0.14) 16px
     );
     box-shadow:
-      inset 0 0 0 2px rgba(251, 191, 36, 0.45),
-      0 8px 0 0 #6b0f0f;
+      inset 0 2px 0 rgba(255, 255, 255, 0.35),
+      inset 0 0 0 2px rgba(251, 191, 36, 0.55),
+      6px 6px 0 0 #6b0f0f;
   }
 
   [data-theme="nes_classic"] .console-bezel {
+    border-radius: 6px;
     background-image: repeating-linear-gradient(
       0deg,
       rgba(92, 56, 34, 0.12) 0px,
@@ -392,22 +400,20 @@
       transparent 16px
     );
     box-shadow:
-      inset 0 2px 0 rgba(255, 248, 223, 0.4),
+      inset 0 2px 0 rgba(255, 248, 223, 0.45),
       6px 6px 0 0 #5c3822;
   }
 
   [data-theme="daylight_rpg"] .console-bezel {
-    border-radius: 26px;
-    background-image: repeating-linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.08) 0px,
-      rgba(255, 255, 255, 0.08) 12px,
-      transparent 12px,
-      transparent 24px
+    border-radius: 6px;
+    background-image: repeating-conic-gradient(
+      rgba(255, 255, 255, 0.12) 0% 25%,
+      transparent 0% 50%
     );
+    background-size: 16px 16px;
     box-shadow:
-      inset 0 0 0 2px rgba(255, 255, 255, 0.35),
-      0 8px 0 0 rgba(78, 42, 30, 0.35);
+      inset 0 2px 0 rgba(255, 255, 255, 0.4),
+      6px 6px 0 0 rgba(78, 42, 30, 0.45);
   }
 
   [data-theme="gameboy_green"] .console-bezel {
@@ -418,28 +424,29 @@
   }
 
   [data-theme="cyber_retro"] .console-bezel {
-    border-radius: 12px;
+    border-radius: 6px;
     background-image: linear-gradient(
       180deg,
-      rgba(212, 169, 79, 0.14) 0%,
+      rgba(212, 169, 79, 0.16) 0%,
       rgba(17, 34, 68, 0.08) 45%,
-      rgba(38, 182, 255, 0.1) 100%
+      rgba(38, 182, 255, 0.12) 100%
     );
     box-shadow:
-      inset 0 0 0 1.5px rgba(245, 215, 130, 0.48),
-      0 8px 0 0 #071022;
+      inset 0 2px 0 rgba(255, 255, 255, 0.2),
+      inset 0 0 0 2px rgba(245, 215, 130, 0.5),
+      6px 6px 0 0 #071022;
   }
 
-  /* Paper Mario TTYD Coral & Cream Papercraft Dialogue Card */
+  /* 16-Bit Paper Mario TTYD Coral & Cream Dialogue Card */
   .rpg-dialogue-card {
     background-color: #fce8e8;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.6) 2px, transparent 2px);
-    background-size: 18px 18px;
+    background-image: repeating-conic-gradient(rgba(255, 255, 255, 0.55) 0% 25%, transparent 0% 50%);
+    background-size: 12px 12px;
     border: 2.5px solid #2e1d14;
-    border-radius: 18px;
+    border-radius: 6px;
     box-shadow:
-      inset 0 0 0 2.5px #ffffff,
-      0 4px 0 0 rgba(46, 29, 20, 0.85);
+      inset 0 2px 0 0 #ffffff,
+      4px 4px 0 0 rgba(46, 29, 20, 0.85);
   }
 
   /* Cozy Wooden Quest Board Card (Materi & Tugas) */

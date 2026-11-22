@@ -21,7 +21,7 @@ interface AboutViewProps {
   currentTheme: PixelTheme;
 }
 
-const APP_VERSION = '3.7';
+const APP_VERSION = '3.8';
 const APP_DEVELOPER = 'Amin Wayudi, S.Pd.';
 
 interface VersionLog {
@@ -34,10 +34,19 @@ interface VersionLog {
 
 const CHANGELOG: VersionLog[] = [
   {
-    version: '3.7',
-    title: 'Tema Dunia Baru: Mobile Legends: Bang Bang (Land of Dawn)',
+    version: '3.8',
+    title: 'Standarisasi Visual 16-Bit Pixel Art di Seluruh 5 Tema Dunia',
     badge: 'TERBARU · SAAT INI',
     isCurrent: true,
+    changes: [
+      'Peningkatan 16-Bit Pixel Art Universal: seluruh 5 tema game (Super Paper Stage, Pokémon Café ReMix, Sprout Pixel Village, Mobile Legends: Bang Bang, dan Phantom Persona Pop) kini menggunakan tipografi piksel 16-bit (Pixelify Sans & Chakra Petch), sudut kotak berundak (4px–6px), efek bevel cahaya-bayangan khas SNES/GBA, serta tekstur papan & bingkai konsol piksel.',
+      'Ilustrasi & Sprites 16-Bit Penuh: latar belakang dunia, maskot tiap tema (Topi Mario Paper, Cangkir Pokémon Café, Kucing Sprout, Perisai Mythic MLBB, & Bintang Persona), ikon Empty State, serta seluruh Avatar Hero/GM ditingkatkan menjadi sprite piksel multi-warna 24×24 berketajaman crispEdges.',
+    ],
+  },
+  {
+    version: '3.7',
+    title: 'Tema Dunia Baru: Mobile Legends: Bang Bang (Land of Dawn)',
+    badge: 'PEMBARUAN BESAR',
     changes: [
       'Pembaruan Tema MLBB: mengganti tema Comic-Pop Arcade menjadi tema Mobile Legends: Bang Bang dengan latar Land of Dawn biru safir malam, pancaran menara energi cyan, bingkai emas Mythic, perisai lencana Rank (Warrior–Mythical Immortal), peti medali, dan aksen tombol Rank merah.',
       'Penyesuaian menyeluruh pada tampilan Guru & Siswa (sidebar & header lobi safir-emas, kartu pengumuman ala pengumuman arena, papan tugas/materi berbingkai emas, kartu pencapaian Rank, modal, serta halaman login).',

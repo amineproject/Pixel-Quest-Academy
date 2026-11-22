@@ -13,22 +13,24 @@ export const RPGDialogueCard: React.FC<{
   className?: string;
 }> = ({ speaker, metaRight, children, className = '' }) => (
   <div className={`rpg-dialogue-card relative p-4 space-y-2.5 overflow-hidden ${className}`}>
+    <span aria-hidden="true" className="absolute top-0 left-0 w-2 h-2 bg-[#ffd000] border-r border-b border-[#2e1d14]" />
+    <span aria-hidden="true" className="absolute top-0 right-0 w-2 h-2 bg-[#ffd000] border-l border-b border-[#2e1d14]" />
     {(speaker || metaRight) && (
-      <div className="flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[12px] leading-none">
+      <div className="flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[11.5px] leading-none">
         {speaker && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#e52521] text-white border-2 border-[#2e1d14] shadow-[0_2px_0_0_#7f1d1d] font-bold">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[4px] bg-[#e52521] text-white border-2 border-[#2e1d14] shadow-[2px_2px_0_0_#7f1d1d] font-bold">
             <Star size={11} className="text-[#ffd000]" fill="currentColor" />
             {speaker}
           </span>
         )}
         {metaRight && (
-          <span className="px-2 py-0.5 rounded-full bg-white/90 border border-[#2e1d14]/40 text-[#433025] font-bold tabular-nums">
+          <span className="px-2 py-0.5 rounded-[4px] bg-white border-2 border-[#2e1d14]/60 text-[#433025] font-bold tabular-nums">
             {metaRight}
           </span>
         )}
       </div>
     )}
-    <div className="bg-white/95 border-2 border-[#2e1d14]/80 rounded-[14px] p-3 space-y-2 shadow-[0_3px_0_0_rgba(46,29,20,0.18)]">
+    <div className="bg-white/95 border-2 border-[#2e1d14] rounded-[4px] p-3 space-y-2 shadow-[2px_3px_0_0_rgba(46,29,20,0.24)]">
       {children}
     </div>
   </div>
@@ -66,16 +68,18 @@ export const ChibiWelcomeCard: React.FC<{
   className?: string;
 }> = ({ children, className = '' }) => (
   <div
-    className={`relative rounded-[22px] border-[2.5px] border-[#4e2a1e] bg-[#26b6b0] p-2 shadow-[0_5px_0_0_rgba(78,42,30,0.3)] overflow-hidden ${className}`}
+    className={`relative rounded-[6px] border-[2.5px] border-[#4e2a1e] bg-[#26b6b0] p-2 shadow-[4px_4px_0_0_rgba(78,42,30,0.42)] overflow-hidden ${className}`}
   >
-    <div className="rounded-[15px] border-2 border-[#4e2a1e]/70 bg-[#fffaf2] p-3.5 sm:p-4 space-y-2">
+    <span aria-hidden="true" className="absolute top-0 left-0 w-2 h-2 bg-[#ffe169] border-r border-b border-[#4e2a1e]" />
+    <span aria-hidden="true" className="absolute top-0 right-0 w-2 h-2 bg-[#ffe169] border-l border-b border-[#4e2a1e]" />
+    <div className="rounded-[4px] border-2 border-[#4e2a1e] bg-[#fffaf2] p-3.5 sm:p-4 space-y-2 shadow-[inset_0_2px_0_#ffffff]">
       <div
         aria-hidden="true"
         className="flex items-center justify-center gap-1.5 text-[#f58220]"
       >
-        <span className="h-[2px] w-8 bg-[#e6c9ad] rounded-full" />
+        <span className="h-[2px] w-8 bg-[#d9b899]" />
         <Star size={13} className="text-[#facc15] drop-shadow-[0_1px_0_#4e2a1e]" fill="currentColor" />
-        <span className="h-[2px] w-8 bg-[#e6c9ad] rounded-full" />
+        <span className="h-[2px] w-8 bg-[#d9b899]" />
       </div>
       {children}
     </div>
@@ -91,16 +95,16 @@ export const StickerAchievement: React.FC<{
   className?: string;
 }> = ({ unlocked, title, description, statusLabel, icon, className = '' }) => (
   <div
-    className={`relative p-3 rounded-[18px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
+    className={`relative p-3 rounded-[5px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
       unlocked
-        ? 'bg-[#fffaf2] border-[#4e2a1e] shadow-[0_4px_0_0_rgba(78,42,30,0.25)] hover:-translate-y-0.5'
-        : 'bg-[#f6eadc]/80 border-[#4e2a1e]/35 opacity-75'
+        ? 'bg-[#fffaf2] border-[#4e2a1e] shadow-[3px_3px_0_0_rgba(78,42,30,0.35)] hover:-translate-y-0.5'
+        : 'bg-[#f6eadc]/80 border-[#4e2a1e]/40 opacity-75'
     } ${className}`}
   >
     <span
-      className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0 ${
+      className={`w-10 h-10 rounded-[4px] border-2 flex items-center justify-center shrink-0 ${
         unlocked
-          ? 'bg-[#ffe169] text-[#3f2117] border-[#4e2a1e] ring-2 ring-[#26b6b0]/50'
+          ? 'bg-[#ffe169] text-[#3f2117] border-[#4e2a1e] shadow-[2px_2px_0_0_rgba(78,42,30,0.35)]'
           : 'bg-stone-200 text-stone-500 border-stone-400'
       }`}
     >
@@ -108,7 +112,7 @@ export const StickerAchievement: React.FC<{
     </span>
     <div className="min-w-0 flex-1">
       <div className="flex items-center justify-between gap-1.5">
-        <p className="text-[13px] font-bold text-[#3f2117] leading-tight truncate">
+        <p className="font-pixel-ui text-[12.5px] font-bold text-[#3f2117] leading-tight truncate">
           {title}
         </p>
         <span className="text-[10.5px] font-bold text-[#c82a36] shrink-0">
@@ -128,9 +132,9 @@ export const MascotEmptyState: React.FC<{
   description: string;
   action?: React.ReactNode;
 }> = ({ illustration, title, description, action }) => (
-  <div className="rounded-[22px] border-[2.5px] border-[#4e2a1e] bg-[#26b6b0] p-2 shadow-[0_5px_0_0_rgba(78,42,30,0.28)]">
-    <div className="rounded-[16px] border-2 border-[#4e2a1e]/70 bg-[#fffaf2] p-6 flex flex-col items-center text-center gap-3">
-      <div className="w-24 h-24 rounded-full bg-[#d6f5f3] border-2 border-[#4e2a1e] flex items-center justify-center shadow-[0_3px_0_0_rgba(78,42,30,0.2)]">
+  <div className="rounded-[6px] border-[2.5px] border-[#4e2a1e] bg-[#26b6b0] p-2 shadow-[4px_4px_0_0_rgba(78,42,30,0.4)]">
+    <div className="rounded-[4px] border-2 border-[#4e2a1e] bg-[#fffaf2] p-6 flex flex-col items-center text-center gap-3">
+      <div className="w-24 h-24 rounded-[6px] bg-[#d6f5f3] border-2 border-[#4e2a1e] flex items-center justify-center shadow-[3px_3px_0_0_rgba(78,42,30,0.28)]">
         {illustration}
       </div>
       <h3 className="font-pixel-display text-[15px] text-[#3f2117]">{title}</h3>
@@ -224,14 +228,16 @@ export const ComicPanel: React.FC<{
   className?: string;
 }> = ({ children, halftone = false, className = '' }) => (
   <div
-    className={`relative bg-white border-2 border-[#1e3a6e] rounded-[8px] p-4 shadow-[0_4px_0_0_rgba(12,24,48,0.22)] overflow-hidden ${
+    className={`relative bg-white border-[2.5px] border-[#1e3a6e] rounded-[4px] p-4 shadow-[inset_0_2px_0_rgba(255,255,255,0.6),4px_4px_0_0_#071022] overflow-hidden ${
       halftone ? 'comic-halftone' : ''
     } ${className}`}
   >
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1b4db3] via-[#d4a94f] to-[#1b4db3]"
+      className="pointer-events-none absolute top-0 left-0 right-0 h-1 bg-[#d4a94f]"
     />
+    <span aria-hidden="true" className="absolute top-1 left-0 w-2 h-2 bg-[#d4a94f] border-r border-b border-[#071022]" />
+    <span aria-hidden="true" className="absolute top-1 right-0 w-2 h-2 bg-[#d4a94f] border-l border-b border-[#071022]" />
     {children}
   </div>
 );
@@ -243,9 +249,9 @@ export const SpeechBubble: React.FC<{
   className?: string;
 }> = ({ speaker, metaRight, children, className = '' }) => (
   <div className={`relative ${className}`}>
-    <div className="bg-white border-2 border-[#1e3a6e] rounded-[8px] overflow-hidden shadow-[0_4px_0_0_rgba(12,24,48,0.22)]">
+    <div className="bg-white border-[2.5px] border-[#1e3a6e] rounded-[4px] overflow-hidden shadow-[4px_4px_0_0_#071022]">
       {(speaker || metaRight) && (
-        <div className="px-3.5 py-2 bg-gradient-to-r from-[#0e1f40] via-[#173368] to-[#0e1f40] border-b-2 border-[#d4a94f] flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[11px]">
+        <div className="px-3.5 py-2 bg-[#102347] border-b-2 border-[#d4a94f] flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[11px]">
           {speaker && (
             <span className="inline-flex items-center gap-1.5 font-bold text-[#fde68a] tracking-wide">
               <Zap size={12} className="text-[#5ce1e6]" /> {speaker}
@@ -399,7 +405,7 @@ export const ThemedNoticeCard: React.FC<{
         {(speaker || metaRight) && (
           <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] font-bold">
             {speaker && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#c82a36] text-white border border-[#4e2a1e]">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[4px] bg-[#c82a36] text-white border-2 border-[#4e2a1e] shadow-[2px_2px_0_0_#7f1d1d]">
                 {speaker}
               </span>
             )}
@@ -565,16 +571,16 @@ export const ThemedAchievementCard: React.FC<{
   if (theme === 'sunny_quest') {
     return (
       <div
-        className={`p-3 rounded-[16px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
+        className={`p-3 rounded-[5px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
           unlocked
-            ? 'bg-white border-[#2e1d14] shadow-[inset_0_0_0_1.5px_#ffffff,0_4px_0_0_rgba(46,29,20,0.7)] hover:-translate-y-0.5'
-            : 'bg-[#efeadd]/85 border-[#2e1d14]/40 opacity-75'
+            ? 'bg-white border-[#2e1d14] shadow-[inset_0_2px_0_#ffffff,3px_3px_0_0_rgba(46,29,20,0.8)] hover:-translate-y-0.5'
+            : 'bg-[#efeadd]/85 border-[#2e1d14]/45 opacity-75'
         }`}
       >
         <span
-          className={`w-10 h-10 rounded-full border-2 border-[#2e1d14] flex items-center justify-center shrink-0 shadow-[0_2px_0_0_#2e1d14] ${
+          className={`w-10 h-10 rounded-[4px] border-2 border-[#2e1d14] flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#2e1d14] ${
             unlocked
-              ? 'bg-[#ffd000] text-[#1e140e] ring-2 ring-white'
+              ? 'bg-[#ffd000] text-[#1e140e]'
               : 'bg-stone-200 text-stone-500'
           }`}
         >
@@ -582,7 +588,7 @@ export const ThemedAchievementCard: React.FC<{
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1.5">
-            <p className="text-[13px] font-bold text-[#1e140e] leading-tight truncate">
+            <p className="font-pixel-ui text-[12.5px] font-bold text-[#1e140e] leading-tight truncate">
               {title}
             </p>
             <span
@@ -601,19 +607,19 @@ export const ThemedAchievementCard: React.FC<{
     );
   }
 
-  // cyber_retro: Mobile Legends: Bang Bang Armored Rank Crest Achievement
+  // cyber_retro: 16-Bit Mobile Legends: Bang Bang Armored Rank Crest Achievement
   return (
     <div
-      className={`p-3 rounded-[7px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
+      className={`p-3 rounded-[4px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
         unlocked
-          ? 'bg-white border-[#1e3a6e] shadow-[0_3px_0_0_rgba(12,24,48,0.22)] hover:-translate-y-0.5'
-          : 'bg-[#e8f0fb]/80 border-[#1e3a6e]/35 opacity-75'
+          ? 'bg-white border-[#1e3a6e] shadow-[3px_3px_0_0_#071022] hover:-translate-y-0.5'
+          : 'bg-[#e8f0fb]/80 border-[#1e3a6e]/40 opacity-75'
       }`}
     >
       <span
-        className={`w-9 h-9 rounded-[6px] border-2 flex items-center justify-center shrink-0 ${
+        className={`w-9 h-9 rounded-[4px] border-2 flex items-center justify-center shrink-0 ${
           unlocked
-            ? 'bg-[#102347] text-[#f5c84c] border-[#d4a94f] shadow-[0_2px_0_0_#071022]'
+            ? 'bg-[#102347] text-[#f5c84c] border-[#d4a94f] shadow-[2px_2px_0_0_#071022]'
             : 'bg-slate-200 text-slate-500 border-slate-400'
         }`}
       >

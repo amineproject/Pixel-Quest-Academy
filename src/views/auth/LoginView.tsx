@@ -391,14 +391,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
           <span>
             {activeTheme === 'sunny_quest'
-              ? '★ SUPER PAPER STAGE · MARIO PAPER EDITION ★'
+              ? '★ 16-BIT PIXEL · SUPER PAPER STAGE ★'
               : activeTheme === 'daylight_rpg'
-                ? '★ POKÉMON CAFÉ REMIX · PATISSERIE EDITION ★'
+                ? '★ 16-BIT PIXEL · POKÉMON CAFÉ REMIX ★'
                 : activeTheme === 'nes_classic'
-                  ? '★ SPROUT PIXEL VILLAGE · PIXEL GAME ★'
+                  ? '★ 16-BIT PIXEL · SPROUT VILLAGE ★'
                   : activeTheme === 'gameboy_green'
-                    ? '★ PHANTOM PERSONA POP · CONFIDANT EDITION ★'
-                    : '★ MOBILE LEGENDS · LAND OF DAWN EDITION ★'}
+                    ? '★ 16-BIT PIXEL · PHANTOM PERSONA ★'
+                    : '★ 16-BIT PIXEL · MOBILE LEGENDS ★'}
           </span>
           <div className="flex items-center gap-1.5" aria-hidden="true">
             <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
@@ -416,11 +416,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
         {/* Screen Viewport */}
         <div
           className={`relative w-full min-h-screen sm:min-h-[780px] flex flex-col bg-[var(--bg-canvas)] overflow-y-auto pixel-scroll ${
-            activeTheme === 'daylight_rpg'
-              ? 'sm:rounded-[20px] sm:border-2 sm:border-[var(--border-pixel)]'
-              : activeTheme === 'gameboy_green'
-                ? 'sm:rounded-[2px] sm:border-2 sm:border-[var(--border-pixel)]'
-                : 'sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)]'
+            activeTheme === 'gameboy_green'
+              ? 'sm:rounded-[2px] sm:border-2 sm:border-[var(--border-pixel)]'
+              : 'sm:rounded-[6px] sm:border-2 sm:border-[var(--border-pixel)]'
           } ${state.settings.crtScanlines ? 'crt-scanlines' : ''}`}
         >
           {/* Top Audio & Brand Bar */}
@@ -499,33 +497,33 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </ComicPanel>
             ) : activeTheme === 'sunny_quest' ? (
               <div className="space-y-0">
-                {/* Paper Mario TTYD Iconic 5-Color Folder Tabs */}
+                {/* 16-Bit Paper Mario TTYD Iconic 5-Color Folder Tabs */}
                 <div
                   aria-hidden="true"
                   className="flex items-end gap-1.5 px-3 overflow-hidden"
                 >
-                  <span className="px-3 py-1 rounded-t-[10px] bg-[#e52521] text-white border-2 border-b-0 border-[#2e1d14] ring-2 ring-inset ring-white font-pixel-ui text-[11px] font-bold shadow-[0_-2px_0_rgba(0,0,0,0.12)]">
+                  <span className="px-3 py-1 rounded-t-[5px] bg-[#e52521] text-white border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[11px] font-bold shadow-[inset_0_2px_0_rgba(255,255,255,0.45)]">
                     Hero
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#7e3f73] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold">
+                  <span className="px-2.5 py-0.5 rounded-t-[4px] bg-[#7e3f73] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold">
                     Party
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#a16207] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold">
+                  <span className="px-2.5 py-0.5 rounded-t-[4px] bg-[#a16207] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold">
                     Quests
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#15803d] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold hidden xs:inline-block sm:inline-block">
+                  <span className="px-2.5 py-0.5 rounded-t-[4px] bg-[#15803d] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold hidden xs:inline-block sm:inline-block">
                     Badges
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#1d4ed8] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold hidden sm:inline-block">
+                  <span className="px-2.5 py-0.5 rounded-t-[4px] bg-[#1d4ed8] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold hidden sm:inline-block">
                     Journal
                   </span>
                 </div>
                 <RPGDialogueCard
                   speaker="Stage Guide"
-                  metaRight="Mario Paper"
+                  metaRight="16-Bit Paper"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl border-2 border-[#2e1d14] bg-gradient-to-b from-[#60a5fa] via-[#bae6fd] to-[#4ade80] flex items-center justify-center shrink-0 shadow-[0_3px_0_0_rgba(46,29,20,0.2)]">
+                    <div className="w-14 h-14 rounded-[6px] border-2 border-[#2e1d14] bg-gradient-to-b from-[#60a5fa] via-[#bae6fd] to-[#4ade80] flex items-center justify-center shrink-0 shadow-[3px_3px_0_0_rgba(46,29,20,0.3)]">
                       <div className="animate-pixel-bounce">
                         <ThemeMascotIllustration theme="sunny_quest" size={46} />
                       </div>
@@ -535,7 +533,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         Pixel Quest Academy
                       </h1>
                       <p className="text-[13px] font-bold text-[#433025] leading-snug mt-0.5">
-                        Selamat datang di panggung kertas! Pilih peranmu untuk memulai petualangan belajar.
+                        Panggung Mario Paper 16-bit! Pilih peranmu untuk memulai petualangan belajar.
                       </p>
                     </div>
                   </div>
@@ -544,20 +542,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
             ) : activeTheme === 'daylight_rpg' ? (
               <ChibiWelcomeCard className="text-center">
                 <div className="flex items-center justify-center gap-2">
-                  <span className="px-3 py-0.5 rounded-full bg-[#c82a36] text-white border border-[#4e2a1e] font-pixel-ui text-[10.5px] font-bold uppercase tracking-wide shadow-[0_2px_0_0_#7f1d1d]">
-                    Café Order #1
+                  <span className="px-3 py-0.5 rounded-[4px] bg-[#c82a36] text-white border-2 border-[#4e2a1e] font-pixel-ui text-[10.5px] font-bold uppercase tracking-wide shadow-[2px_2px_0_0_#7f1d1d]">
+                    Café Order · 16-Bit
                   </span>
                 </div>
                 <div className="flex items-center justify-center gap-3 text-left pt-1">
-                  <div className="w-15 h-15 rounded-full bg-[#d6f5f3] border-2 border-[#4e2a1e] flex items-center justify-center shrink-0 animate-pixel-bounce shadow-[0_3px_0_0_rgba(78,42,30,0.22)]">
+                  <div className="w-15 h-15 rounded-[6px] bg-[#d6f5f3] border-2 border-[#4e2a1e] flex items-center justify-center shrink-0 animate-pixel-bounce shadow-[3px_3px_0_0_rgba(78,42,30,0.28)]">
                     <ThemeMascotIllustration theme="daylight_rpg" size={46} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h1 className="inline-block font-pixel-display text-[20px] sm:text-[22px] text-[#3f2117] leading-tight bg-gradient-to-t from-[#ffe169] via-[#ffe169]/65 to-transparent px-1 rounded">
+                    <h1 className="inline-block font-pixel-display text-[20px] sm:text-[22px] text-[#3f2117] leading-tight bg-gradient-to-t from-[#ffe169] via-[#ffe169]/65 to-transparent px-1 rounded-[3px]">
                       Pixel Quest Academy
                     </h1>
                     <p className="text-[13px] font-bold text-[#683c2b] leading-snug mt-1">
-                      Selamat datang di Café Belajar! Pilih peranmu untuk sajikan materi &amp; selesaikan misi.
+                      Selamat datang di Café Piksel 16-bit! Pilih peranmu untuk sajikan materi &amp; selesaikan misi.
                     </p>
                   </div>
                 </div>

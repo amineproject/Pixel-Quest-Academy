@@ -34,35 +34,35 @@ interface BoardThemeStyle {
 const BOARD_THEME_STYLES: Record<PixelTheme, BoardThemeStyle> = {
   sunny_quest: {
     frame:
-      'bg-[#f8e7ce] border-[2.5px] border-[#2e1d14] rounded-[18px] shadow-[inset_0_0_0_2px_#ffffff,0_5px_0_0_rgba(46,29,20,0.85)]',
+      'bg-[#f8e7ce] border-[2.5px] border-[#2e1d14] rounded-[6px] shadow-[inset_0_2px_0_#ffffff,4px_4px_0_0_rgba(46,29,20,0.85)]',
     banner:
-      'bg-[#e52521] border-2 border-[#2e1d14] rounded-[12px] shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.8),0_3px_0_0_#7f1d1d]',
-    bannerTitle: 'text-white drop-shadow-[0_1.5px_0_#7f1d1d]',
-    band: 'bg-[#fce7e7] border-2 border-[#2e1d14]/65 rounded-[14px]',
+      'bg-[#e52521] border-2 border-[#2e1d14] rounded-[4px] shadow-[inset_0_2px_0_rgba(255,255,255,0.45),2px_3px_0_0_#7f1d1d]',
+    bannerTitle: 'text-white drop-shadow-[1px_2px_0_#7f1d1d]',
+    band: 'bg-[#fce7e7] border-2 border-[#2e1d14]/70 rounded-[4px]',
     statLabel: 'text-[#991b1b]',
     inner:
-      'bg-white border-2 border-[#2e1d14]/85 rounded-[13px] text-[#1e140e] shadow-[0_2px_0_0_rgba(46,29,20,0.12)]',
+      'bg-white border-2 border-[#2e1d14] rounded-[4px] text-[#1e140e] shadow-[2px_2px_0_0_rgba(46,29,20,0.18)]',
     tones: {
-      default: 'bg-white text-[#1e140e] border-[#2e1d14] rounded-full',
-      success: 'bg-[#4ade80] text-[#052e16] border-[#166534] rounded-full',
-      warning: 'bg-[#ffd000] text-[#1e140e] border-[#2e1d14] rounded-full',
-      danger: 'bg-[#fb7185] text-white border-[#881337] rounded-full',
+      default: 'bg-white text-[#1e140e] border-[#2e1d14] rounded-[3px]',
+      success: 'bg-[#4ade80] text-[#052e16] border-[#166534] rounded-[3px]',
+      warning: 'bg-[#ffd000] text-[#1e140e] border-[#2e1d14] rounded-[3px]',
+      danger: 'bg-[#fb7185] text-white border-[#881337] rounded-[3px]',
     },
   },
   daylight_rpg: {
     frame:
-      'bg-[#26b6b0] border-[2.5px] border-[#4e2a1e] rounded-[22px] shadow-[0_5px_0_0_rgba(78,42,30,0.3)]',
+      'bg-[#26b6b0] border-[2.5px] border-[#4e2a1e] rounded-[6px] shadow-[inset_0_2px_0_rgba(255,255,255,0.4),4px_4px_0_0_rgba(78,42,30,0.42)]',
     banner:
-      'bg-[#c82a36] border-2 border-[#4e2a1e] rounded-[13px] shadow-[0_2px_0_0_#7f1d1d]',
-    bannerTitle: 'text-white drop-shadow-[0_1px_0_#7f1d1d]',
-    band: 'bg-[#fef3c7] border-2 border-[#4e2a1e]/60 rounded-[14px]',
+      'bg-[#c82a36] border-2 border-[#4e2a1e] rounded-[4px] shadow-[inset_0_2px_0_rgba(255,255,255,0.3),2px_2px_0_0_#7f1d1d]',
+    bannerTitle: 'text-white drop-shadow-[1px_1px_0_#7f1d1d]',
+    band: 'bg-[#fef3c7] border-2 border-[#4e2a1e]/70 rounded-[4px]',
     statLabel: 'text-[#683c2b]',
-    inner: 'bg-[#fffaf2] border-2 border-[#4e2a1e]/80 rounded-[14px] text-[#3f2117]',
+    inner: 'bg-[#fffaf2] border-2 border-[#4e2a1e] rounded-[4px] text-[#3f2117]',
     tones: {
-      default: 'bg-white text-[#3f2117] border-[#4e2a1e]/65 rounded-full',
-      success: 'bg-[#a7f3d0] text-[#064e3b] border-[#16948e] rounded-full',
-      warning: 'bg-[#ffe169] text-[#3f2117] border-[#4e2a1e] rounded-full',
-      danger: 'bg-[#ffe4e6] text-[#9f1239] border-[#c82a36] rounded-full',
+      default: 'bg-white text-[#3f2117] border-[#4e2a1e]/75 rounded-[3px]',
+      success: 'bg-[#a7f3d0] text-[#064e3b] border-[#16948e] rounded-[3px]',
+      warning: 'bg-[#ffe169] text-[#3f2117] border-[#4e2a1e] rounded-[3px]',
+      danger: 'bg-[#ffe4e6] text-[#9f1239] border-[#c82a36] rounded-[3px]',
     },
   },
   nes_classic: {
@@ -83,18 +83,18 @@ const BOARD_THEME_STYLES: Record<PixelTheme, BoardThemeStyle> = {
   },
   cyber_retro: {
     frame:
-      'bg-[#102347] border-[2.5px] border-[#d4a94f] rounded-[8px] shadow-[0_5px_0_0_#071022]',
+      'bg-[#102347] border-[2.5px] border-[#d4a94f] rounded-[4px] shadow-[4px_4px_0_0_#071022]',
     banner:
-      'bg-gradient-to-r from-[#163466] via-[#1f498c] to-[#163466] border-2 border-[#d4a94f] rounded-[5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]',
-    bannerTitle: 'text-[#fde68a] drop-shadow-[0_1px_0_#071022]',
-    band: 'bg-[#162d59] border border-[#3b66ab] rounded-[6px]',
+      'bg-[#163466] border-2 border-[#d4a94f] rounded-[3px] shadow-[inset_0_2px_0_rgba(255,255,255,0.2)]',
+    bannerTitle: 'text-[#fde68a] drop-shadow-[1px_1px_0_#071022]',
+    band: 'bg-[#162d59] border-2 border-[#3b66ab] rounded-[3px]',
     statLabel: 'text-[#93c5fd]',
-    inner: 'bg-white border-2 border-[#d4a94f]/85 rounded-[5px] text-[#0b1730]',
+    inner: 'bg-white border-2 border-[#d4a94f] rounded-[3px] text-[#0b1730]',
     tones: {
-      default: 'bg-[#f0f5fc] text-[#0b1730] border-[#60a5fa] rounded-[4px]',
-      success: 'bg-[#ccfbf1] text-[#134e4a] border-[#0d9488] rounded-[4px]',
-      warning: 'bg-[#fef3c7] text-[#78350f] border-[#d4a94f] rounded-[4px]',
-      danger: 'bg-[#fee2e2] text-[#7f1d1d] border-[#c83218] rounded-[4px]',
+      default: 'bg-[#f0f5fc] text-[#0b1730] border-[#60a5fa] rounded-[3px]',
+      success: 'bg-[#ccfbf1] text-[#134e4a] border-[#0d9488] rounded-[3px]',
+      warning: 'bg-[#fef3c7] text-[#78350f] border-[#d4a94f] rounded-[3px]',
+      danger: 'bg-[#fee2e2] text-[#7f1d1d] border-[#c83218] rounded-[3px]',
     },
   },
   gameboy_green: {

@@ -237,14 +237,10 @@ export const PixelExpBar: React.FC<{
           <span>{labelRight}</span>
         </div>
       )}
-      <div
-        className={`pixel-box-inset h-4 w-full p-0.5 ${
-          theme === 'daylight_rpg' ? '!rounded-full overflow-hidden' : ''
-        }`}
-      >
+      <div className="pixel-box-inset h-4 w-full p-0.5 overflow-hidden">
         <div
-          className={`h-full transition-all duration-200 ${
-            theme === 'daylight_rpg' ? 'rounded-full candy-progress-fill' : ''
+          className={`h-full transition-all duration-200 rounded-[2px] ${
+            theme === 'daylight_rpg' ? 'candy-progress-fill' : ''
           }`}
           style={{
             width: `${safePercent}%`,
@@ -332,11 +328,7 @@ export const PixelModal: React.FC<{
       aria-modal="true"
       aria-label={title}
     >
-      <div
-        className={`pixel-box w-full max-w-[480px] sm:max-w-[580px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)] overflow-hidden ${
-          theme === 'daylight_rpg' ? '!rounded-t-[24px] sm:!rounded-[24px]' : ''
-        }`}
-      >
+      <div className="pixel-box w-full max-w-[480px] sm:max-w-[580px] max-h-[88vh] flex flex-col bg-[var(--bg-canvas)] overflow-hidden">
         <div
           className={`flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] min-w-0 ${
             theme === 'gameboy_green'
@@ -482,7 +474,7 @@ export const PixelToast: React.FC<{
       <div
         className={`border-2 px-3.5 py-2.5 flex items-center justify-center gap-2 text-[12.5px] sm:text-[13px] font-semibold leading-snug text-center ${
           theme === 'daylight_rpg'
-            ? 'rounded-2xl shadow-[0_4px_0_rgba(30,78,104,0.25)]'
+            ? 'rounded-[6px] shadow-[3px_3px_0_0_rgba(78,42,30,0.45)]'
             : theme === 'gameboy_green'
               ? 'rounded-[2px] shadow-[4px_4px_0_0_#e60012]'
               : 'rounded-[var(--btn-radius)] shadow-[3px_3px_0_0_#18181b]'
