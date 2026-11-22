@@ -346,7 +346,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                     checked={isSelected}
                     onChange={() => toggleSelect(tome.id)}
                     aria-label={`Pilih materi ${tome.title}`}
-                    className="w-4 h-4 accent-[#f6c445] shrink-0 cursor-pointer"
+                    className="w-4 h-4 accent-[var(--comic-gold)] shrink-0 cursor-pointer"
                   />
                 }
                 stats={[
@@ -363,13 +363,13 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                 <button
                   type="button"
                   onClick={() => setPreviewTome(tome)}
-                  className="text-left text-[16px] sm:text-[17px] font-bold text-[#261006] hover:text-[#7c2d12] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
+                  className="text-left text-[16px] sm:text-[17px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
                 >
                   {tome.title}
                 </button>
 
                 {tome.summary && (
-                  <p className="text-[14.5px] sm:text-[15px] text-[#45230e] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+                  <p className="text-[14.5px] sm:text-[15px] text-[var(--board-muted)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
                     {tome.summary}
                   </p>
                 )}
@@ -379,7 +379,7 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                     {targetedDungeons.map((d) => (
                       <span
                         key={d.id}
-                        className="px-1.5 py-0.5 text-[10.5px] font-semibold bg-[#fff7eb]/80 border border-[#3d1b0c]/30 text-[#45230e]"
+                        className="px-1.5 py-0.5 text-[10.5px] font-semibold bg-[var(--board-chip-bg)] border border-[var(--board-chip-border)] text-[var(--board-ink)]"
                       >
                         {d.guildCode} ({d.name})
                       </span>
@@ -387,18 +387,18 @@ export const GmScrolls: React.FC<GmScrollsProps> = ({
                   </div>
                 )}
 
-                <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#563018]">
-                  <CalendarClock size={14} className="shrink-0" />
+                <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--board-muted)]">
+                  <CalendarClock size={14} className="shrink-0 text-[var(--board-accent)]" />
                   <span className="truncate">{sched.label}</span>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#3d1b0c]/20">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--board-divider)]">
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => openEdit(tome)}
                       aria-label={`Edit ${tome.title}`}
-                      className="pixel-btn min-w-[40px] min-h-[40px] px-2.5 flex items-center justify-center gap-1 bg-[#fff7eb] text-[#261006] text-[12.5px] font-bold cursor-pointer"
+                      className="pixel-btn min-w-[40px] min-h-[40px] px-2.5 flex items-center justify-center gap-1 bg-[var(--board-edit-bg)] text-[#09090f] text-[12.5px] font-bold cursor-pointer"
                     >
                       <Pencil size={14} />
                       <span>Edit</span>

@@ -60,7 +60,7 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'guild_chronicles', label: 'Guild Chronicles', shortLabel: 'Chronicles', standardName: 'Statistik' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'settings', label: 'System Settings', shortLabel: 'Config', standardName: 'Pengaturan' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.0' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.7' },
 ];
 
 export const HERO_NAV_ITEMS: {
@@ -75,7 +75,7 @@ export const HERO_NAV_ITEMS: {
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.0' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.7' },
 ];
 
 export function getGmMenuIcon(id: GmMenuId, size = 18) {
@@ -220,7 +220,8 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   const quickGmTabs: GmMenuId[] = ['hq', 'dungeons', 'active_quests', 'exp_loot'];
   const quickHeroTabs: HeroMenuId[] = ['notice', 'quest_list', 'scroll_library', 'hall_of_fame'];
 
-  const isMinimalPaper = theme === 'gameboy_green';
+  const isPersonaTheme = theme === 'gameboy_green';
+  const isMlbbTheme = theme === 'cyber_retro';
   const totalUnreadGuild = unreadNoticeCount + unreadQuestCount;
 
   const getBadgeCountForGm = (id: GmMenuId): number => {
@@ -250,11 +251,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
         }`}
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          {!isMinimalPaper && (
-            <div className="w-9 h-9 rounded-[var(--btn-radius)] bg-[var(--comic-gold)] border-2 border-[var(--border-pixel)] shadow-[3px_3px_0_var(--shadow-ink)] flex items-center justify-center shrink-0">
-              <PixelStar size={19} className="animate-pixel-float" />
-            </div>
-          )}
+          <div className="w-9 h-9 rounded-[var(--btn-radius)] bg-[var(--comic-gold)] border-2 border-[var(--border-pixel)] shadow-[3px_3px_0_var(--shadow-ink)] flex items-center justify-center shrink-0">
+            <PixelStar size={19} className="animate-pixel-float" />
+          </div>
           <div className="min-w-0">
             <p className="font-pixel-display text-[14px] text-[var(--outer-title)] tracking-wide truncate">
               PIXEL QUEST ACADEMY
@@ -285,27 +284,24 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           isWindowMaximized
             ? 'max-w-[1380px]'
             : 'max-w-[560px] sm:max-w-[640px] md:max-w-[960px] lg:max-w-[1080px]'
-        } ${
-          isMinimalPaper
-            ? 'sm:p-0 sm:rounded-xl sm:border sm:border-[#d6d1c7] sm:bg-white'
-            : 'sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]'
-        }`}
+        } sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]`}
       >
-        {/* Console Hardware Top Trim (Desktop only — hidden in Clean Paper Studio) */}
-        {!isMinimalPaper && (
-          <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-bold">
-            <div className="flex items-center gap-2 font-pixel-ui text-[11px] tracking-wider uppercase">
-              <PixelCoin size={15} className="animate-coin-shine" />
-              <span>
-                {theme === 'sunny_quest'
-                  ? 'COZY PIXEL QUEST · PARCHMENT RPG'
-                  : theme === 'daylight_rpg'
-                    ? 'SOFT CHIBI CLASSROOM · PASTEL EDITION'
-                    : theme === 'nes_classic'
-                      ? '16-BIT ROYAL CHRONICLE · RPG LMS'
-                      : 'COMIC-POP ARCADE EDITION'}
-              </span>
-            </div>
+        {/* Console Hardware Top Trim */}
+        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-bold">
+          <div className="flex items-center gap-2 font-pixel-ui text-[11px] tracking-wider uppercase">
+            <PixelCoin size={15} className="animate-coin-shine" />
+            <span>
+              {theme === 'sunny_quest'
+                ? 'SUPER PAPER STAGE · MARIO PAPER EDITION'
+                : theme === 'daylight_rpg'
+                  ? 'POKÉMON CAFÉ REMIX · PATISSERIE EDITION'
+                  : theme === 'nes_classic'
+                    ? 'SPROUT PIXEL VILLAGE · PIXEL GAME'
+                    : theme === 'gameboy_green'
+                      ? 'PHANTOM PERSONA POP · CONFIDANT EDITION'
+                      : 'MOBILE LEGENDS · LAND OF DAWN EDITION'}
+            </span>
+          </div>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -339,7 +335,6 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               </button>
             </div>
           </div>
-        )}
 
         {isWindowMinimized ? (
           <div className="hidden sm:flex items-center justify-between gap-3 p-4 bg-[var(--bg-canvas)] rounded-lg border-2 border-[var(--border-pixel)]">
@@ -371,34 +366,36 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               ? 'sm:h-[calc(100dvh-110px)] sm:min-h-[500px]'
               : 'sm:h-[calc(100dvh-150px)] sm:min-h-[460px] sm:max-h-[860px]'
           } ${
-            isMinimalPaper
-              ? 'sm:rounded-xl'
-              : theme === 'daylight_rpg'
-                ? 'sm:rounded-[20px] sm:border-2 sm:border-[var(--border-pixel)]'
+            theme === 'daylight_rpg'
+              ? 'sm:rounded-[20px] sm:border-2 sm:border-[var(--border-pixel)]'
+              : theme === 'gameboy_green'
+                ? 'sm:rounded-[2px] sm:border-2 sm:border-[var(--border-pixel)]'
                 : 'sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)]'
-          } ${crtScanlines && !isMinimalPaper ? 'crt-scanlines' : ''}`}
+          } ${crtScanlines ? 'crt-scanlines' : ''}`}
         >
           {/* Persistent Sidebar Navigation (Desktop & Tablet >= 768px) */}
           <aside
             aria-label={isGm ? 'Game Master Sidebar Navigation' : 'Hero Sidebar Navigation'}
             className={`hidden md:flex md:flex-col md:w-[236px] lg:w-[258px] shrink-0 overflow-hidden ${
-              isMinimalPaper
-                ? 'bg-white border-r border-[#d6d1c7]'
-                : theme === 'sunny_quest'
-                  ? 'bg-[#f6ead0] border-r-2 border-[var(--border-pixel)]'
-                  : theme === 'daylight_rpg'
-                    ? 'bg-white border-r-2 border-[var(--border-pixel)]'
-                    : theme === 'nes_classic'
-                      ? 'bg-[#f8f1e0] border-r-2 border-[var(--border-pixel)]'
-                      : 'bg-white border-r-[2.5px] border-[#09090f]'
+              isPersonaTheme
+                ? 'bg-[#0d0d14] text-white border-r-[3px] border-[#09090f]'
+                : isMlbbTheme
+                  ? 'bg-[#0b1730] text-white border-r-2 border-[#d4a94f]'
+                  : theme === 'sunny_quest'
+                    ? 'bg-[#fde8e8] border-r-2 border-[var(--border-pixel)]'
+                    : theme === 'daylight_rpg'
+                      ? 'bg-[#fff5e8] border-r-2 border-[var(--border-pixel)]'
+                      : 'bg-[#f4ebd0] border-r-2 border-[var(--border-pixel)]'
             }`}
           >
             {/* Sidebar User Identity Block */}
             <div
               className={`p-3.5 shrink-0 ${
-                isMinimalPaper
-                  ? 'border-b border-[#ece7dd]'
-                  : 'border-b-2 border-[var(--border-pixel)]/30 bg-[var(--surface-tint)]/35 comic-halftone'
+                isPersonaTheme
+                  ? 'border-b-[3px] border-[#e60012] bg-[#09090f] persona-stripes'
+                  : isMlbbTheme
+                    ? 'border-b-2 border-[#d4a94f] bg-gradient-to-r from-[#102347] to-[#163466]'
+                    : 'border-b-2 border-[var(--border-pixel)]/30 bg-[var(--surface-tint)]/35 comic-halftone'
               }`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
@@ -408,11 +405,23 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   className="shrink-0 animate-pixel-bounce"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="font-pixel-ui text-[10px] uppercase tracking-wider flex items-center gap-1 text-[var(--accent-warning)]">
+                  <p
+                    className={`font-pixel-ui text-[10px] uppercase tracking-wider flex items-center gap-1 ${
+                      isPersonaTheme
+                        ? 'text-[#ffe600]'
+                        : isMlbbTheme
+                          ? 'text-[#f5c84c]'
+                          : 'text-[var(--accent-warning)]'
+                    }`}
+                  >
                     {isGm ? <Crown size={11} /> : <Shield size={11} />}
                     <span>{isGm ? 'Game Master' : 'Hero · Read-Only'}</span>
                   </p>
-                  <p className="text-[13.5px] font-bold text-[var(--text-primary)] truncate mt-0.5">
+                  <p
+                    className={`text-[13.5px] font-bold truncate mt-0.5 ${
+                      isPersonaTheme || isMlbbTheme ? 'text-white' : 'text-[var(--text-primary)]'
+                    }`}
+                  >
                     {isGm ? gmName : activeHeroName}
                   </p>
                 </div>
@@ -421,28 +430,38 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
 
             {/* Sidebar Menu Links */}
             <nav className="flex-1 overflow-y-auto pixel-scroll p-2.5 space-y-1">
-              <p className="px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wider text-[var(--text-muted)]">
+              <p
+                className={`px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wider ${
+                  isPersonaTheme
+                    ? 'text-[#ffe600]'
+                    : isMlbbTheme
+                      ? 'text-[#7dd3fc]'
+                      : 'text-[var(--text-muted)]'
+                }`}
+              >
                 {isGm ? 'Menu Pengelola' : 'Menu Petualang'}
               </p>
 
               {isGm
                 ? GM_NAV_ITEMS.map((item) => {
                     const active = gmMenu === item.id;
-                    const activeBtnClass = isMinimalPaper
-                      ? 'bg-[#f2eee6] text-[#18181b] border border-[#d6d1c7] font-bold'
+                    const activeBtnClass = isPersonaTheme
+                      ? 'persona-slant bg-[#e60012] text-white border-2 border-white shadow-[3px_3px_0_0_#ffe600] font-bold'
                       : theme === 'daylight_rpg'
-                        ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] rounded-[14px] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold'
+                        ? 'bg-[#c75008] text-white border-2 border-[#4e2a1e] rounded-[14px] shadow-[0_3px_0_0_#4e2a1e] font-bold'
                         : theme === 'nes_classic'
-                          ? 'bg-[#5b21b6] text-white border-2 border-[#fbbf24] shadow-[2px_2px_0_0_#311b63] font-bold'
-                          : theme === 'cyber_retro'
-                            ? 'bg-[#00d8ff] text-[#09090f] border-2 border-[#09090f] shadow-[3px_3px_0_0_#09090f] font-bold'
-                            : 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold';
+                          ? 'bg-[#3f7d28] text-white border-2 border-[#5c3822] shadow-[2px_2px_0_0_#5c3822] font-bold'
+                          : isMlbbTheme
+                            ? 'bg-gradient-to-r from-[#c83218] to-[#df4a26] text-white border-2 border-[#f5c84c] rounded-[6px] shadow-[0_3px_0_0_#071022] font-bold'
+                            : 'bg-[#e52521] text-white border-2 border-white ring-2 ring-[#2e1d14] rounded-[14px] shadow-[0_4px_0_0_#7f1d1d] font-bold';
 
-                    const idleBtnClass = isMinimalPaper
-                      ? 'text-[#3f3f46] border border-transparent hover:bg-[#faf8f4] hover:text-[#18181b]'
-                      : theme === 'daylight_rpg'
-                        ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
-                        : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
+                    const idleBtnClass = isPersonaTheme
+                      ? 'text-[#f4f4f5] border-2 border-transparent hover:bg-[#1b1b26] hover:border-[#e60012]/70 hover:text-white'
+                      : isMlbbTheme
+                        ? 'text-slate-100 border-2 border-transparent rounded-[6px] hover:bg-[#163466] hover:border-[#d4a94f]/60 hover:text-white'
+                        : theme === 'daylight_rpg'
+                          ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
+                          : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
 
                     const badgeCount = getBadgeCountForGm(item.id);
                     return (
@@ -456,29 +475,51 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       >
                         <span
                           className={`shrink-0 ${
+                            isPersonaTheme && active ? 'persona-unslant' : ''
+                          } ${
                             active
                               ? theme === 'nes_classic'
-                                ? 'text-[#fbbf24]'
-                                : 'text-current'
-                              : 'text-[var(--accent-warning)]'
+                                ? 'text-[#f6c445]'
+                                : isMlbbTheme
+                                  ? 'text-[#fde68a]'
+                                  : 'text-current'
+                              : isPersonaTheme
+                                ? 'text-[#ffe600]'
+                                : isMlbbTheme
+                                  ? 'text-[#5ce1e6]'
+                                  : 'text-[var(--accent-warning)]'
                           }`}
                         >
                           {getGmMenuIcon(item.id, 18)}
                         </span>
-                        <span className="min-w-0 flex-1">
+                        <span
+                          className={`min-w-0 flex-1 ${
+                            isPersonaTheme && active ? 'persona-unslant' : ''
+                          }`}
+                        >
                           <span className="block text-[12.5px] leading-tight truncate">
                             {item.shortLabel}
                           </span>
                           <span
                             className={`block text-[10.5px] leading-tight truncate ${
-                              active ? 'opacity-90' : 'text-[var(--text-muted)]'
+                              active
+                                ? 'opacity-90'
+                                : isPersonaTheme
+                                  ? 'text-[#a1a1aa]'
+                                  : isMlbbTheme
+                                    ? 'text-[#93c5fd]'
+                                    : 'text-[var(--text-muted)]'
                             }`}
                           >
                             {item.standardName}
                           </span>
                         </span>
                         {badgeCount > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums">
+                          <span
+                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums ${
+                              isPersonaTheme ? 'border border-white' : ''
+                            }`}
+                          >
                             {badgeCount}
                           </span>
                         )}
@@ -487,21 +528,23 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   })
                 : HERO_NAV_ITEMS.map((item) => {
                     const active = heroMenu === item.id;
-                    const activeBtnClass = isMinimalPaper
-                      ? 'bg-[#f2eee6] text-[#18181b] border border-[#d6d1c7] font-bold'
+                    const activeBtnClass = isPersonaTheme
+                      ? 'persona-slant bg-[#e60012] text-white border-2 border-white shadow-[3px_3px_0_0_#ffe600] font-bold'
                       : theme === 'daylight_rpg'
-                        ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] rounded-[14px] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold'
+                        ? 'bg-[#c75008] text-white border-2 border-[#4e2a1e] rounded-[14px] shadow-[0_3px_0_0_#4e2a1e] font-bold'
                         : theme === 'nes_classic'
-                          ? 'bg-[#5b21b6] text-white border-2 border-[#fbbf24] shadow-[2px_2px_0_0_#311b63] font-bold'
-                          : theme === 'cyber_retro'
-                            ? 'bg-[#00d8ff] text-[#09090f] border-2 border-[#09090f] shadow-[3px_3px_0_0_#09090f] font-bold'
-                            : 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] border-2 border-[var(--border-pixel)] shadow-[0_3px_0_0_var(--shadow-ink)] font-bold';
+                          ? 'bg-[#3f7d28] text-white border-2 border-[#5c3822] shadow-[2px_2px_0_0_#5c3822] font-bold'
+                          : isMlbbTheme
+                            ? 'bg-gradient-to-r from-[#c83218] to-[#df4a26] text-white border-2 border-[#f5c84c] rounded-[6px] shadow-[0_3px_0_0_#071022] font-bold'
+                            : 'bg-[#e52521] text-white border-2 border-white ring-2 ring-[#2e1d14] rounded-[14px] shadow-[0_4px_0_0_#7f1d1d] font-bold';
 
-                    const idleBtnClass = isMinimalPaper
-                      ? 'text-[#3f3f46] border border-transparent hover:bg-[#faf8f4] hover:text-[#18181b]'
-                      : theme === 'daylight_rpg'
-                        ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
-                        : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
+                    const idleBtnClass = isPersonaTheme
+                      ? 'text-[#f4f4f5] border-2 border-transparent hover:bg-[#1b1b26] hover:border-[#e60012]/70 hover:text-white'
+                      : isMlbbTheme
+                        ? 'text-slate-100 border-2 border-transparent rounded-[6px] hover:bg-[#163466] hover:border-[#d4a94f]/60 hover:text-white'
+                        : theme === 'daylight_rpg'
+                          ? 'text-[var(--text-secondary)] border-2 border-transparent rounded-[14px] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]'
+                          : 'text-[var(--text-secondary)] border-2 border-transparent rounded-[var(--btn-radius)] hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)]';
 
                     const badgeCount = getBadgeCountForHero(item.id);
                     return (
@@ -515,29 +558,51 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       >
                         <span
                           className={`shrink-0 ${
+                            isPersonaTheme && active ? 'persona-unslant' : ''
+                          } ${
                             active
                               ? theme === 'nes_classic'
-                                ? 'text-[#fbbf24]'
-                                : 'text-current'
-                              : 'text-[var(--accent-warning)]'
+                                ? 'text-[#f6c445]'
+                                : isMlbbTheme
+                                  ? 'text-[#fde68a]'
+                                  : 'text-current'
+                              : isPersonaTheme
+                                ? 'text-[#ffe600]'
+                                : isMlbbTheme
+                                  ? 'text-[#5ce1e6]'
+                                  : 'text-[var(--accent-warning)]'
                           }`}
                         >
                           {getHeroMenuIcon(item.id, 18)}
                         </span>
-                        <span className="min-w-0 flex-1">
+                        <span
+                          className={`min-w-0 flex-1 ${
+                            isPersonaTheme && active ? 'persona-unslant' : ''
+                          }`}
+                        >
                           <span className="block text-[13px] leading-tight truncate">
                             {item.shortLabel}
                           </span>
                           <span
                             className={`block text-[11px] leading-tight truncate ${
-                              active ? 'opacity-90' : 'text-[var(--text-muted)]'
+                              active
+                                ? 'opacity-90'
+                                : isPersonaTheme
+                                  ? 'text-[#a1a1aa]'
+                                  : isMlbbTheme
+                                    ? 'text-[#93c5fd]'
+                                    : 'text-[var(--text-muted)]'
                             }`}
                           >
                             {item.standardName}
                           </span>
                         </span>
                         {badgeCount > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums">
+                          <span
+                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums ${
+                              isPersonaTheme ? 'border border-white' : ''
+                            }`}
+                          >
                             {badgeCount}
                           </span>
                         )}
@@ -549,9 +614,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             {/* Sidebar Bottom Actions */}
             <div
               className={`p-2.5 shrink-0 space-y-2 ${
-                isMinimalPaper
-                  ? 'border-t border-[#ece7dd]'
-                  : 'border-t-2 border-[var(--border-pixel)]/30'
+                isPersonaTheme
+                  ? 'border-t-2 border-[#e60012]/60 bg-[#09090f]'
+                  : isMlbbTheme
+                    ? 'border-t-2 border-[#d4a94f]/60 bg-[#091428]'
+                    : 'border-t-2 border-[var(--border-pixel)]/30'
               }`}
             >
               <button
@@ -569,10 +636,12 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           <div className="flex-1 flex flex-col min-w-0 min-h-0">
             {/* Top App Bar */}
             <header
-              className={`z-30 min-h-[56px] shrink-0 bg-[var(--surface-tint)] comic-halftone px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2 ${
-                isMinimalPaper
-                  ? 'border-b border-[#d6d1c7] bg-white'
-                  : 'border-b-2 border-[var(--border-pixel)]'
+              className={`z-30 min-h-[56px] shrink-0 px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2 ${
+                isPersonaTheme
+                  ? 'bg-[#09090f] text-white border-b-[3px] border-[#e60012] persona-stripes'
+                  : isMlbbTheme
+                    ? 'bg-gradient-to-r from-[#0b1730] via-[#132952] to-[#0b1730] text-white border-b-2 border-[#d4a94f]'
+                    : 'bg-[var(--surface-tint)] comic-halftone border-b-2 border-[var(--border-pixel)]'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -582,17 +651,45 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   className="md:hidden shrink-0 animate-pixel-bounce"
                 />
                 <div className="min-w-0 flex-1">
-                  <h1 className="font-pixel-display text-[13px] sm:text-[14.5px] text-[var(--text-primary)] truncate leading-snug">
+                  <h1
+                    className={`font-pixel-display text-[13px] sm:text-[14.5px] truncate leading-snug ${
+                      isPersonaTheme
+                        ? 'text-white uppercase tracking-wide'
+                        : isMlbbTheme
+                          ? 'text-[#fde68a] uppercase tracking-wide'
+                          : 'text-[var(--text-primary)]'
+                    }`}
+                  >
                     {activeTitle}
                   </h1>
-                  <div className="text-[12px] text-[var(--text-secondary)] leading-tight mt-0.5 flex items-center gap-1.5 flex-wrap">
+                  <div
+                    className={`text-[12px] leading-tight mt-0.5 flex items-center gap-1.5 flex-wrap ${
+                      isPersonaTheme || isMlbbTheme ? 'text-zinc-200' : 'text-[var(--text-secondary)]'
+                    }`}
+                  >
                     <span className="inline-flex items-center gap-1 min-w-0">
                       {isGm ? (
-                        <span className="text-[var(--accent-warning)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
+                        <span
+                          className={`flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0 ${
+                            isPersonaTheme
+                              ? 'text-[#ffe600]'
+                              : isMlbbTheme
+                                ? 'text-[#f5c84c]'
+                                : 'text-[var(--accent-warning)]'
+                          }`}
+                        >
                           <Crown size={12} /> GM
                         </span>
                       ) : (
-                        <span className="text-[var(--accent-success)] flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0">
+                        <span
+                          className={`flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0 ${
+                            isPersonaTheme
+                              ? 'text-[#ffe600]'
+                              : isMlbbTheme
+                                ? 'text-[#5ce1e6]'
+                                : 'text-[var(--accent-success)]'
+                          }`}
+                        >
                           <Shield size={12} /> HERO
                         </span>
                       )}
@@ -723,7 +820,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             {/* Mobile Bottom Tab Bar Navigation (hidden on md+ where Persistent Sidebar is active) */}
             <nav
               aria-label={isGm ? 'Game Master Navigation' : 'Hero Navigation'}
-              className="md:hidden z-30 h-[62px] shrink-0 bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)]"
+              className={`md:hidden z-30 h-[62px] shrink-0 ${
+                isPersonaTheme
+                  ? 'bg-[#09090f] text-white border-t-[3px] border-[#e60012]'
+                  : 'bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)]'
+              }`}
             >
               {isGm ? (
                 <div className="grid grid-cols-5 h-full">
@@ -736,10 +837,16 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         key={tabId}
                         type="button"
                         onClick={() => onSelectGmMenu(tabId)}
-                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
+                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
+                          isPersonaTheme
+                            ? 'border-r border-[#e60012]/35'
+                            : 'border-r-2 border-[var(--border-pixel)]/20'
+                        } ${
                           active
                             ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                            : isPersonaTheme
+                              ? 'text-zinc-200 hover:text-white hover:bg-[#1b1b26]'
+                              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                         }`}
                       >
                         {getGmMenuIcon(tabId, 19)}
@@ -760,7 +867,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                     className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
                       !quickGmTabs.includes(gmMenu)
                         ? 'bg-[var(--comic-gold)] text-[#09090f] font-bold'
-                        : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
+                        : isPersonaTheme
+                          ? 'text-[#ffe600] hover:bg-[#1b1b26]'
+                          : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
                     }`}
                   >
                     <Grid size={19} />
@@ -785,10 +894,16 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         key={tabId}
                         type="button"
                         onClick={() => onSelectHeroMenu(tabId)}
-                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors border-r-2 border-[var(--border-pixel)]/20 ${
+                        className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
+                          isPersonaTheme
+                            ? 'border-r border-[#e60012]/35'
+                            : 'border-r-2 border-[var(--border-pixel)]/20'
+                        } ${
                           active
                             ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                            : isPersonaTheme
+                              ? 'text-zinc-200 hover:text-white hover:bg-[#1b1b26]'
+                              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                         }`}
                       >
                         {getHeroMenuIcon(tabId, 19)}
@@ -812,7 +927,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                     className={`relative flex flex-col items-center justify-center gap-1 min-h-[44px] px-0.5 cursor-pointer transition-colors ${
                       !quickHeroTabs.includes(heroMenu)
                         ? 'bg-[var(--comic-gold)] text-[#09090f] font-bold'
-                        : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
+                        : isPersonaTheme
+                          ? 'text-[#ffe600] hover:bg-[#1b1b26]'
+                          : 'text-[var(--accent-warning)] hover:bg-[var(--bg-surface-alt)]'
                     }`}
                   >
                     <Grid size={19} />
@@ -827,16 +944,14 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
         </div>
         )}
 
-        {/* Handheld Console Footer Trim (Desktop only — hidden in Clean Paper Studio) */}
-        {!isMinimalPaper && (
-          <div className="hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
-            <div className="flex items-center gap-1.5">
-              <PixelStar size={12} />
-              <span>PIXEL QUEST ACADEMY</span>
-            </div>
+        {/* Handheld Console Footer Trim */}
+        <div className="hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
+          <div className="flex items-center gap-1.5">
+            <PixelStar size={12} />
             <span>PIXEL QUEST ACADEMY</span>
           </div>
-        )}
+          <span>PIXEL QUEST ACADEMY</span>
+        </div>
       </div>
 
       {/* Window Close Button Logout Confirmation Modal (Item 1.2) */}

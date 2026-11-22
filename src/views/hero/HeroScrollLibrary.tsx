@@ -95,7 +95,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
             <PixelRealmGlyph
               icon={realm.icon}
               color={
-                selectedRealmId === realm.id ? '#1A1C2C' : realm.accentColor
+                selectedRealmId === realm.id ? 'currentColor' : realm.accentColor
               }
               size={16}
             />
@@ -134,7 +134,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                 bannerTitle={`${formatChapterLabel(tome.chapter)} · ${realm?.code || 'TOME'}`}
                 bannerLeft={
                   realm ? (
-                    <div className="w-7 h-7 rounded bg-[#f8e3ba] border border-[#3d1b0c] flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-[var(--btn-radius)] bg-white border border-[var(--border-pixel)] flex items-center justify-center">
                       <PixelRealmGlyph
                         icon={realm.icon}
                         color={realm.accentColor}
@@ -151,16 +151,16 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                 <button
                   type="button"
                   onClick={() => setReadingTome(tome)}
-                  className="text-left text-[16px] sm:text-[17px] font-bold text-[#261006] hover:text-[#7c2d12] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
+                  className="text-left text-[16px] sm:text-[17px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
                 >
                   {tome.title}
                 </button>
                 {tome.summary && (
-                  <p className="text-[14.5px] sm:text-[15px] text-[#45230e] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+                  <p className="text-[14.5px] sm:text-[15px] text-[var(--board-muted)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
                     {tome.summary}
                   </p>
                 )}
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[#3d1b0c]/20">
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[var(--board-divider)]">
                   <PixelButton
                     type="button"
                     size="sm"

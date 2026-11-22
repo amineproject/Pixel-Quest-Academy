@@ -21,7 +21,7 @@ interface AboutViewProps {
   currentTheme: PixelTheme;
 }
 
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.7';
 const APP_DEVELOPER = 'Amin Wayudi, S.Pd.';
 
 interface VersionLog {
@@ -34,10 +34,40 @@ interface VersionLog {
 
 const CHANGELOG: VersionLog[] = [
   {
-    version: '3.0',
-    title: 'Gamifikasi Lanjutan, Sinkronisasi Nyata, Mode Offline & Polesan UI',
+    version: '3.7',
+    title: 'Tema Dunia Baru: Mobile Legends: Bang Bang (Land of Dawn)',
     badge: 'TERBARU · SAAT INI',
     isCurrent: true,
+    changes: [
+      'Pembaruan Tema MLBB: mengganti tema Comic-Pop Arcade menjadi tema Mobile Legends: Bang Bang dengan latar Land of Dawn biru safir malam, pancaran menara energi cyan, bingkai emas Mythic, perisai lencana Rank (Warrior–Mythical Immortal), peti medali, dan aksen tombol Rank merah.',
+      'Penyesuaian menyeluruh pada tampilan Guru & Siswa (sidebar & header lobi safir-emas, kartu pengumuman ala pengumuman arena, papan tugas/materi berbingkai emas, kartu pencapaian Rank, modal, serta halaman login).',
+    ],
+  },
+  {
+    version: '3.6',
+    title: 'Tema Dunia Baru: Sprout Pixel Village (Pixel Game)',
+    badge: 'PEMBARUAN BESAR',
+    changes: [
+      'Pembaruan Tema Pixel Game: mengganti tema 16-Bit Royal menjadi Sprout Pixel Village bergaya RPG pertanian pastel (air toska beriak, pulau rumput hijau, pohon buah apel, peti harta pixel, maskot kucing petani, & papan kayu kabin).',
+      'Penyesuaian penuh seluruh komponen UI pada akun Guru & Siswa (sidebar, bingkai konsol, kartu pengumuman, papan tugas/materi, kartu pencapaian, dan halaman login) agar serasi dengan palet kayu hangat dan hijau tunas.',
+    ],
+  },
+  {
+    version: '3.5',
+    title: 'Analitik Grafik Guru, Penilaian Kolektif Lanjutan & 3 Tema Dunia Baru',
+    badge: 'PEMBARUAN BESAR',
+    changes: [
+      'Pembaruan Tema Visual Lintas Akun Guru & Siswa: hadir tema Super Paper Stage (Mario Paper), Pokémon Café ReMix (Patisserie), dan Phantom Persona Pop (Crimson Ink), serta penyesuaian kartu Papan Tugas & Perpustakaan Materi agar selalu serasi mengikuti tema aktif.',
+      'Peningkatan Dashboard Guru (HQ): mengganti ringkasan statis dengan 3 grafik analitik interaktif (Donut Status Ketuntasan, Histogram Peringkat Hero, dan Grafik Perbandingan per Kelas, Mapel, & Kategori Quest) lengkap dengan filter Tingkat, Kelas, dan Mapel.',
+      'Penilaian Kolektif Lebih Lengkap & Mobile-Friendly: guru dapat mengubah Nilai, Status (Tuntas, Belum, Proses Dinilai, Remidial), dan Catatan secara kolektif; urutan tugas dikelompokkan rapi berdasarkan kategori Quest; serta perbaikan input nilai di layar HP/mobile dan disambiguasi judul Quest kembar saat ekspor/impor Excel.',
+      'Isolasi Mapel Siswa & Penyederhanaan Status: tugas & materi pada akun siswa kini terkunci ketat sesuai mapel yang diikuti kelasnya, dengan tampilan Hero Log yang lebih ringkas.',
+      'Konsolidasi Menu Pengelolaan Tugas Guru: menyatukan pengelolaan Tugas & Papan Pantau agar lebih ringkas tanpa menu ganda.',
+    ],
+  },
+  {
+    version: '3.0',
+    title: 'Gamifikasi Lanjutan, Sinkronisasi Nyata, Mode Offline & Polesan UI',
+    badge: 'PEMBARUAN BESAR',
     changes: [
       'Penambahan 3 menu baru ringan: Quest Board (pantau status & tenggat tugas), Guild Chronicles (statistik kelas & ekspor CSV untuk Guru), dan Hall of Fame (Top 10 EXP mingguan dengan opsi Sembunyikan Nama).',
       'Gamifikasi lanjutan untuk Siswa (Hero): sistem EXP & kenaikan Level otomatis (Lv.[n]), Leaderboard Guild antar Hero aktif, serta 10 Lencana Achievement termasuk First Quest dan Dungeon Master.',
@@ -53,7 +83,7 @@ const CHANGELOG: VersionLog[] = [
     title: '5 Identitas Tema Visual, Sidebar Permanen & Cloud Sync',
     badge: 'PEMBARUAN BESAR',
     changes: [
-      'Hadir dengan 5 dunia tema visual berbeda: Cozy Pixel Quest, Soft Chibi Classroom, 16-Bit Royal Chronicle, Comic-Pop Arcade, dan Clean Paper Studio.',
+      'Hadir dengan 5 dunia tema visual berbeda: Super Paper Stage, Pokémon Café ReMix, Sprout Pixel Village, Mobile Legends: Bang Bang, dan Phantom Persona Pop.',
       'Navigasi sidebar permanen untuk tampilan tablet & desktop serta sinkronisasi Cloud real-time.',
       'Dukungan Progressive Web App (PWA) agar aplikasi dapat dipasang dan tetap stabil di berbagai perangkat.',
     ],

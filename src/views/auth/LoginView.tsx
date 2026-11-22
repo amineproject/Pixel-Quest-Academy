@@ -39,7 +39,6 @@ import {
 import {
   ChibiWelcomeCard,
   ComicPanel,
-  EditorialCard,
   KingdomQuestBoard,
   RPGDialogueCard,
 } from '../../components/ThemePrimitives';
@@ -374,7 +373,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
   };
 
   const activeTheme = state.settings.theme;
-  const isMinimalPaper = activeTheme === 'gameboy_green';
+  const isPersonaTheme = activeTheme === 'gameboy_green';
+  const isMlbbTheme = activeTheme === 'cyber_retro';
 
   return (
     <div
@@ -385,59 +385,65 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
       {/* Theme-Adaptive Exterior Cabinet / Frame */}
       <div
-        className={`relative z-10 w-full max-w-[560px] sm:max-w-[640px] md:max-w-[700px] console-bezel transition-all ${
-          isMinimalPaper
-            ? 'sm:p-0 sm:rounded-xl sm:border sm:border-[#d6d1c7] sm:bg-white'
-            : 'sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]'
-        }`}
+        className="relative z-10 w-full max-w-[560px] sm:max-w-[640px] md:max-w-[700px] console-bezel transition-all sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]"
       >
-        {/* Hardware Trim Top (Hidden in Clean Paper Studio) */}
-        {!isMinimalPaper && (
-          <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
-            <span>
-              {activeTheme === 'sunny_quest'
-                ? '★ COZY PIXEL QUEST · PARCHMENT RPG ★'
-                : activeTheme === 'daylight_rpg'
-                  ? '★ SOFT CHIBI CLASSROOM · PASTEL ★'
-                  : activeTheme === 'nes_classic'
-                    ? '★ 16-BIT ROYAL CHRONICLE ★'
-                    : '★ COMIC-POP ARCADE CONSOLE ★'}
+        {/* Hardware Trim Top */}
+        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
+          <span>
+            {activeTheme === 'sunny_quest'
+              ? '★ SUPER PAPER STAGE · MARIO PAPER EDITION ★'
+              : activeTheme === 'daylight_rpg'
+                ? '★ POKÉMON CAFÉ REMIX · PATISSERIE EDITION ★'
+                : activeTheme === 'nes_classic'
+                  ? '★ SPROUT PIXEL VILLAGE · PIXEL GAME ★'
+                  : activeTheme === 'gameboy_green'
+                    ? '★ PHANTOM PERSONA POP · CONFIDANT EDITION ★'
+                    : '★ MOBILE LEGENDS · LAND OF DAWN EDITION ★'}
+          </span>
+          <div className="flex items-center gap-1.5" aria-hidden="true">
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+              −
             </span>
-            <div className="flex items-center gap-1.5" aria-hidden="true">
-              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
-                −
-              </span>
-              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[8px] flex items-center justify-center leading-none font-bold">
-                □
-              </span>
-              <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
-                ×
-              </span>
-            </div>
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[8px] flex items-center justify-center leading-none font-bold">
+              □
+            </span>
+            <span className="w-4 h-4 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold">
+              ×
+            </span>
           </div>
-        )}
+        </div>
 
         {/* Screen Viewport */}
         <div
           className={`relative w-full min-h-screen sm:min-h-[780px] flex flex-col bg-[var(--bg-canvas)] overflow-y-auto pixel-scroll ${
-            isMinimalPaper
-              ? 'sm:rounded-xl'
-              : activeTheme === 'daylight_rpg'
-                ? 'sm:rounded-[20px] sm:border-2 sm:border-[var(--border-pixel)]'
+            activeTheme === 'daylight_rpg'
+              ? 'sm:rounded-[20px] sm:border-2 sm:border-[var(--border-pixel)]'
+              : activeTheme === 'gameboy_green'
+                ? 'sm:rounded-[2px] sm:border-2 sm:border-[var(--border-pixel)]'
                 : 'sm:rounded-lg sm:border-2 sm:border-[var(--border-pixel)]'
-          } ${state.settings.crtScanlines && !isMinimalPaper ? 'crt-scanlines' : ''}`}
+          } ${state.settings.crtScanlines ? 'crt-scanlines' : ''}`}
         >
           {/* Top Audio & Brand Bar */}
           <div
-            className={`flex items-center justify-between px-3 py-2 bg-[var(--surface-tint)] comic-halftone shrink-0 ${
-              isMinimalPaper
-                ? 'border-b border-[#d6d1c7] bg-white'
-                : 'border-b-2 border-[var(--border-pixel)]'
+            className={`flex items-center justify-between px-3 py-2 shrink-0 ${
+              isPersonaTheme
+                ? 'bg-[#09090f] text-white border-b-[3px] border-[#e60012] persona-stripes'
+                : isMlbbTheme
+                  ? 'bg-[#0b1730] text-[#fde68a] border-b-2 border-[#d4a94f]'
+                  : 'bg-[var(--surface-tint)] comic-halftone border-b-2 border-[var(--border-pixel)]'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
-              {!isMinimalPaper && <PixelStar size={16} className="animate-pixel-float shrink-0" />}
-              <span className="font-pixel-ui text-[10.5px] font-bold text-[var(--text-primary)] truncate">
+              <PixelStar size={16} className="animate-pixel-float shrink-0" />
+              <span
+                className={`font-pixel-ui text-[10.5px] font-bold truncate ${
+                  isPersonaTheme
+                    ? 'text-white tracking-wider'
+                    : isMlbbTheme
+                      ? 'text-[#fde68a] tracking-wider'
+                      : 'text-[var(--text-primary)]'
+                }`}
+              >
                 PIXEL QUEST ACADEMY
               </span>
             </div>
@@ -464,100 +470,145 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <div className="p-4 space-y-4 flex-1 flex flex-col justify-between">
             {/* 5 Distinct Theme-Specific Title Cards */}
             {activeTheme === 'cyber_retro' ? (
-              <ComicPanel halftone className="!bg-[#1b0d42] text-white text-center space-y-2.5">
-                <div className="flex items-center justify-center gap-2.5">
-                  <PixelStar size={20} className="animate-pixel-float" />
+              <ComicPanel className="!bg-gradient-to-b !from-[#12264d] !to-[#0b1730] !border-[#d4a94f] text-white text-center space-y-2.5">
+                <div className="flex items-center justify-center gap-3">
+                  <PixelStar size={18} className="animate-pixel-float" />
                   <div className="animate-pixel-bounce">
-                    <ThemeMascotIllustration theme="cyber_retro" size={50} />
+                    <ThemeMascotIllustration theme="cyber_retro" size={56} />
                   </div>
-                  <PixelCoin size={22} className="animate-coin-shine" />
+                  <PixelCoin size={20} className="animate-coin-shine" />
                 </div>
-                <div className="space-y-1">
-                  <div className="inline-block comic-slant bg-[#00d8ff] text-[#09090f] border-2 border-[#09090f] shadow-[3px_3px_0_0_#09090f] px-3.5 py-1">
-                    <h1 className="comic-unslant font-pixel-display text-[17px] sm:text-[19px] tracking-wide">
+                <div className="space-y-1.5">
+                  <div className="inline-block bg-gradient-to-r from-[#f5c84c] via-[#fef08a] to-[#d4a94f] text-[#0b1730] border-2 border-[#78350f] shadow-[0_3px_0_0_#071022] px-4 py-1 rounded-[5px]">
+                    <h1 className="font-pixel-display text-[17px] sm:text-[19px] tracking-wide">
                       PIXEL QUEST
                     </h1>
                   </div>
-                  <p className="font-pixel-display text-[12px] text-white tracking-wider pt-0.5">
-                    ACADEMY LMS
+                  <p className="font-pixel-display text-[11.5px] text-[#fde68a] tracking-widest uppercase">
+                    LAND OF DAWN · ACADEMY LMS
                   </p>
-                  <p className="text-[12.5px] font-semibold text-[#00d8ff]">
-                    ✦ Select Your Adventure Role ✦
+                  <p className="text-[12.5px] font-semibold text-[#7dd3fc]">
+                    ✦ Select Your Hero Role &amp; Push Rank ✦
                   </p>
                 </div>
                 <div className="pt-0.5">
-                  <span className="comic-slant font-pixel-ui text-[11px] font-bold text-[#09090f] animate-press-start bg-[#ffd000] px-3.5 py-1 rounded-md border-2 border-[#09090f] shadow-[2px_2px_0_#09090f] inline-block">
-                    <span className="comic-unslant inline-block">▶ PRESS START TO BEGIN</span>
+                  <span className="font-pixel-ui text-[11px] font-bold text-white bg-gradient-to-r from-[#c83218] to-[#df4a26] px-4 py-1 rounded-[5px] border-2 border-[#f5c84c] shadow-[0_3px_0_0_#071022] inline-block">
+                    ▶ RANK BATTLE START
                   </span>
                 </div>
               </ComicPanel>
             ) : activeTheme === 'sunny_quest' ? (
-              <RPGDialogueCard
-                speaker="Guild Guide"
-                metaRight="Parchment RPG"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-xl border-2 border-[#4a3525] bg-gradient-to-b from-[#74ccf0] via-[#bae6fd] to-[#48bb78] flex items-center justify-center shrink-0">
-                    <div className="animate-pixel-bounce">
-                      <ThemeMascotIllustration theme="sunny_quest" size={44} />
+              <div className="space-y-0">
+                {/* Paper Mario TTYD Iconic 5-Color Folder Tabs */}
+                <div
+                  aria-hidden="true"
+                  className="flex items-end gap-1.5 px-3 overflow-hidden"
+                >
+                  <span className="px-3 py-1 rounded-t-[10px] bg-[#e52521] text-white border-2 border-b-0 border-[#2e1d14] ring-2 ring-inset ring-white font-pixel-ui text-[11px] font-bold shadow-[0_-2px_0_rgba(0,0,0,0.12)]">
+                    Hero
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#7e3f73] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold">
+                    Party
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#a16207] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold">
+                    Quests
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#15803d] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold hidden xs:inline-block sm:inline-block">
+                    Badges
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-t-[8px] bg-[#1d4ed8] text-white/95 border-2 border-b-0 border-[#2e1d14] font-pixel-ui text-[10px] font-bold hidden sm:inline-block">
+                    Journal
+                  </span>
+                </div>
+                <RPGDialogueCard
+                  speaker="Stage Guide"
+                  metaRight="Mario Paper"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl border-2 border-[#2e1d14] bg-gradient-to-b from-[#60a5fa] via-[#bae6fd] to-[#4ade80] flex items-center justify-center shrink-0 shadow-[0_3px_0_0_rgba(46,29,20,0.2)]">
+                      <div className="animate-pixel-bounce">
+                        <ThemeMascotIllustration theme="sunny_quest" size={46} />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h1 className="font-pixel-display text-[20px] sm:text-[22px] text-[#1e140e] leading-tight">
+                        Pixel Quest Academy
+                      </h1>
+                      <p className="text-[13px] font-bold text-[#433025] leading-snug mt-0.5">
+                        Selamat datang di panggung kertas! Pilih peranmu untuk memulai petualangan belajar.
+                      </p>
                     </div>
                   </div>
+                </RPGDialogueCard>
+              </div>
+            ) : activeTheme === 'daylight_rpg' ? (
+              <ChibiWelcomeCard className="text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="px-3 py-0.5 rounded-full bg-[#c82a36] text-white border border-[#4e2a1e] font-pixel-ui text-[10.5px] font-bold uppercase tracking-wide shadow-[0_2px_0_0_#7f1d1d]">
+                    Café Order #1
+                  </span>
+                </div>
+                <div className="flex items-center justify-center gap-3 text-left pt-1">
+                  <div className="w-15 h-15 rounded-full bg-[#d6f5f3] border-2 border-[#4e2a1e] flex items-center justify-center shrink-0 animate-pixel-bounce shadow-[0_3px_0_0_rgba(78,42,30,0.22)]">
+                    <ThemeMascotIllustration theme="daylight_rpg" size={46} />
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <h1 className="font-pixel-display text-[20px] sm:text-[22px] text-[#2b1d12] leading-tight">
+                    <h1 className="inline-block font-pixel-display text-[20px] sm:text-[22px] text-[#3f2117] leading-tight bg-gradient-to-t from-[#ffe169] via-[#ffe169]/65 to-transparent px-1 rounded">
                       Pixel Quest Academy
                     </h1>
-                    <p className="font-pixel-ui text-[14.5px] text-[#543c29] leading-snug mt-0.5">
-                      &ldquo;Selamat datang, Petualang! Pilih peranmu untuk mulai belajar.&rdquo;
+                    <p className="text-[13px] font-bold text-[#683c2b] leading-snug mt-1">
+                      Selamat datang di Café Belajar! Pilih peranmu untuk sajikan materi &amp; selesaikan misi.
                     </p>
                   </div>
                 </div>
-              </RPGDialogueCard>
-            ) : activeTheme === 'daylight_rpg' ? (
-              <ChibiWelcomeCard className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-14 h-14 rounded-full bg-[#e0f4fc] border-2 border-[#a7f3d0] flex items-center justify-center animate-pixel-bounce">
-                    <ThemeMascotIllustration theme="daylight_rpg" size={44} />
-                  </div>
-                </div>
-                <h1 className="font-pixel-display text-[21px] text-[#133142]">
-                  Pixel Quest Academy
-                </h1>
-                <p className="text-[13.5px] font-semibold text-[#2d5368]">
-                  Selamat datang di kelas ceria! Masuk untuk membaca materi &amp; cek tugasmu.
-                </p>
               </ChibiWelcomeCard>
             ) : activeTheme === 'nes_classic' ? (
-              <KingdomQuestBoard headerTitle="Royal Academy Gate">
+              <KingdomQuestBoard headerTitle="Sprout Village Gate">
                 <div className="flex items-center gap-3">
-                  <div className="w-13 h-13 border-2 border-[#311b63] bg-[#3b1d72] flex items-center justify-center shrink-0">
-                    <ThemeMascotIllustration theme="nes_classic" size={40} />
+                  <div className="w-13 h-13 border-2 border-[#5c3822] rounded-[4px] bg-[#8ad6cf] flex items-center justify-center shrink-0 shadow-[2px_2px_0_0_#5c3822] animate-pixel-bounce">
+                    <ThemeMascotIllustration theme="nes_classic" size={44} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h1 className="font-pixel-display text-[19px] sm:text-[21px] text-[#1e113a] leading-tight">
+                    <h1 className="font-pixel-display text-[19px] sm:text-[21px] text-[#3b2214] leading-tight">
                       Pixel Quest Academy
                     </h1>
-                    <p className="text-[12.5px] font-semibold text-[#442b78] mt-0.5">
-                      Gerbang Kerajaan 16-Bit · Pilih Peran Petualanganmu
+                    <p className="text-[12.5px] font-semibold text-[#5c3822] mt-0.5">
+                      Desa Game Pixel Pastel · Pilih Peran Petualanganmu
                     </p>
                   </div>
                 </div>
               </KingdomQuestBoard>
             ) : (
-              <EditorialCard className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-lg border border-[#d6d1c7] bg-[#faf8f4] flex items-center justify-center shrink-0">
-                    <ThemeMascotIllustration theme="gameboy_green" size={26} />
+              <div className="relative bg-[#09090f] text-white border-[2.5px] border-[#09090f] rounded-[2px] p-4 shadow-[6px_6px_0_0_#e60012] overflow-hidden space-y-3">
+                {/* Diagonal Crimson Ribbon Cutout */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -top-6 -right-8 w-32 h-36 bg-[#e60012] rotate-12 border-l-4 border-white/90"
+                />
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="w-13 h-13 border-2 border-white bg-[#e60012] shadow-[3px_3px_0_0_#ffe600] flex items-center justify-center shrink-0 animate-pixel-bounce">
+                    <ThemeMascotIllustration theme="gameboy_green" size={38} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h1 className="font-pixel-display text-[19px] text-[#18181b] leading-tight">
-                      Pixel Quest Academy
-                    </h1>
-                    <p className="text-[13px] text-[#52525b] mt-0.5">
-                      Ruang Belajar Terfokus · Pilih akun siswa atau pengajar untuk melanjutkan.
+                    <div className="inline-block persona-slant bg-[#e60012] border-2 border-white px-2.5 py-0.5 shadow-[2px_2px_0_0_#ffe600]">
+                      <h1 className="persona-unslant font-pixel-display text-[17px] sm:text-[19px] text-white tracking-wide leading-tight">
+                        PIXEL QUEST
+                      </h1>
+                    </div>
+                    <p className="font-pixel-ui text-[11px] font-bold text-[#ffe600] tracking-widest uppercase mt-1">
+                      ACADEMY · PHANTOM EDITION
                     </p>
                   </div>
                 </div>
-              </EditorialCard>
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <p className="text-[12.5px] font-medium text-zinc-200">
+                    Pilih peranmu &amp; taklukkan setiap misi kelas!
+                  </p>
+                  <span className="persona-slant inline-block bg-[#ffe600] text-[#09090f] border-2 border-[#09090f] px-2.5 py-0.5 font-pixel-ui text-[10px] font-bold uppercase shadow-[2px_2px_0_0_#e60012]">
+                    <span className="persona-unslant inline-block">★ TAKE YOUR QUEST</span>
+                  </span>
+                </div>
+              </div>
             )}
 
             {/* Role Tabs: Hero (Siswa) vs Game Master (Guru) */}
@@ -864,13 +915,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
         </div>
 
-        {/* Hardware Trim Bottom (Hidden in Clean Paper Studio) */}
-        {!isMinimalPaper && (
-          <div className="hidden sm:flex items-center justify-between px-2 pt-2 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
-            <span>© 2026 PIXEL QUEST ACADEMY</span>
-            <span>SELECT / START</span>
-          </div>
-        )}
+        {/* Hardware Trim Bottom */}
+        <div className="hidden sm:flex items-center justify-between px-2 pt-2 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
+          <span>© 2026 PIXEL QUEST ACADEMY</span>
+          <span>SELECT / START</span>
+        </div>
       </div>
 
       {/* Modal Connect New Device to Cloud (Game Master / Admin Only) */}

@@ -60,7 +60,7 @@ export const PixelButton: React.FC<PixelButtonProps> = ({
       : theme === 'daylight_rpg'
         ? 'font-semibold'
         : theme === 'gameboy_green'
-          ? 'font-semibold shadow-none'
+          ? 'uppercase tracking-wider font-bold'
           : '';
 
   return (
@@ -84,10 +84,12 @@ export const PixelSectionTitle: React.FC<{
     <div
       className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 sm:gap-3 mb-3.5 min-w-0 ${
         theme === 'gameboy_green'
-          ? 'pb-2 border-b border-[#e2ddd3]'
+          ? 'pb-2.5 border-b-[3px] border-[#09090f]'
           : theme === 'nes_classic'
-            ? 'pb-2 border-b-2 border-[#fbbf24]/70'
-            : ''
+            ? 'pb-2 border-b-2 border-[#8ec252]'
+            : theme === 'cyber_retro'
+              ? 'pb-2 border-b-2 border-[#d4a94f]/75'
+              : ''
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -336,18 +338,38 @@ export const PixelModal: React.FC<{
         }`}
       >
         <div
-          className={`flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] bg-[var(--surface-tint)] min-w-0 ${
-            theme === 'gameboy_green' ? '!border-b border-[#d6d1c7]' : ''
+          className={`flex items-center justify-between gap-2 px-4 py-3 border-b-2 border-[var(--border-pixel)] min-w-0 ${
+            theme === 'gameboy_green'
+              ? '!border-b-[3px] !border-[#e60012] bg-[#09090f] text-white'
+              : theme === 'cyber_retro'
+                ? '!border-b-2 !border-[#d4a94f] bg-[#0d1c3a] text-[#f5d782]'
+                : 'bg-[var(--surface-tint)]'
           }`}
         >
-          <h3 className="font-pixel-display text-[13px] sm:text-[14px] text-[var(--text-primary)] truncate min-w-0">
+          <h3
+            className={`font-pixel-display text-[13px] sm:text-[14px] truncate min-w-0 ${
+              theme === 'gameboy_green'
+                ? 'text-white uppercase tracking-wide'
+                : theme === 'cyber_retro'
+                  ? 'text-[#f5d782] uppercase tracking-wide'
+                  : 'text-[var(--text-primary)]'
+            }`}
+          >
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="pixel-btn min-w-[38px] min-h-[38px] shrink-0 flex items-center justify-center bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+            className={`pixel-btn min-w-[38px] min-h-[38px] shrink-0 flex items-center justify-center cursor-pointer ${
+              theme === 'gameboy_green'
+                ? 'bg-[#e60012] text-white border-[#ffffff]'
+                : theme === 'cyber_retro'
+                  ? 'bg-[#c83218] text-white border-[#d4a94f]'
+                  : theme === 'daylight_rpg'
+                    ? 'bg-[#c82a36] text-white border-[#4e2a1e]'
+                    : 'bg-[var(--bg-surface-alt)] text-[var(--text-primary)]'
+            }`}
           >
             <X size={18} />
           </button>
@@ -462,7 +484,7 @@ export const PixelToast: React.FC<{
           theme === 'daylight_rpg'
             ? 'rounded-2xl shadow-[0_4px_0_rgba(30,78,104,0.25)]'
             : theme === 'gameboy_green'
-              ? 'rounded-lg shadow-sm'
+              ? 'rounded-[2px] shadow-[4px_4px_0_0_#e60012]'
               : 'rounded-[var(--btn-radius)] shadow-[3px_3px_0_0_#18181b]'
         } ${toneStyles}`}
       >

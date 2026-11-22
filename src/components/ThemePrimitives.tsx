@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, Crown, Sparkles, Star, Zap } from 'lucide-react';
+import { Award, Sprout, Star, Zap } from 'lucide-react';
 import { useActiveTheme } from '../context/ThemeContext';
 
 /* ============================================================================
@@ -12,17 +12,25 @@ export const RPGDialogueCard: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ speaker, metaRight, children, className = '' }) => (
-  <div className={`rpg-dialogue-card relative p-4 space-y-2 overflow-hidden ${className}`}>
-    {/* Subtle wooden corner rivets */}
-    <span aria-hidden="true" className="hidden sm:block absolute top-1.5 left-1.5 w-1.5 h-1.5 bg-[#4a3525]/60" />
-    <span aria-hidden="true" className="hidden sm:block absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#4a3525]/60" />
+  <div className={`rpg-dialogue-card relative p-4 space-y-2.5 overflow-hidden ${className}`}>
     {(speaker || metaRight) && (
       <div className="flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[12px] leading-none">
-        {speaker && <span className="font-bold text-[#9a3412]">{speaker}</span>}
-        {metaRight && <span className="text-[#563d28] tabular-nums">{metaRight}</span>}
+        {speaker && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#e52521] text-white border-2 border-[#2e1d14] shadow-[0_2px_0_0_#7f1d1d] font-bold">
+            <Star size={11} className="text-[#ffd000]" fill="currentColor" />
+            {speaker}
+          </span>
+        )}
+        {metaRight && (
+          <span className="px-2 py-0.5 rounded-full bg-white/90 border border-[#2e1d14]/40 text-[#433025] font-bold tabular-nums">
+            {metaRight}
+          </span>
+        )}
       </div>
     )}
-    {children}
+    <div className="bg-white/95 border-2 border-[#2e1d14]/80 rounded-[14px] p-3 space-y-2 shadow-[0_3px_0_0_rgba(46,29,20,0.18)]">
+      {children}
+    </div>
   </div>
 );
 
@@ -50,7 +58,7 @@ export const QuestCard: React.FC<{
 );
 
 /* ============================================================================
- * 2. SOFT CHIBI CLASSROOM (Pastel) Components
+ * 2. POKÉMON CAFÉ REMIX (Patisserie & Turquoise Tray) Components
  * ==========================================================================*/
 
 export const ChibiWelcomeCard: React.FC<{
@@ -58,16 +66,19 @@ export const ChibiWelcomeCard: React.FC<{
   className?: string;
 }> = ({ children, className = '' }) => (
   <div
-    className={`relative rounded-[22px] border-2 border-[#1e4e68] bg-gradient-to-br from-[#ffffff] via-[#f0f9ff] to-[#ecfdf5] p-4 shadow-[0_5px_0_0_rgba(30,78,104,0.2)] overflow-hidden ${className}`}
+    className={`relative rounded-[22px] border-[2.5px] border-[#4e2a1e] bg-[#26b6b0] p-2 shadow-[0_5px_0_0_rgba(78,42,30,0.3)] overflow-hidden ${className}`}
   >
-    <div
-      aria-hidden="true"
-      className="flex items-center gap-1 text-[#0284c7]/40 mb-1"
-    >
-      <Star size={11} fill="currentColor" />
-      <Sparkles size={11} />
+    <div className="rounded-[15px] border-2 border-[#4e2a1e]/70 bg-[#fffaf2] p-3.5 sm:p-4 space-y-2">
+      <div
+        aria-hidden="true"
+        className="flex items-center justify-center gap-1.5 text-[#f58220]"
+      >
+        <span className="h-[2px] w-8 bg-[#e6c9ad] rounded-full" />
+        <Star size={13} className="text-[#facc15] drop-shadow-[0_1px_0_#4e2a1e]" fill="currentColor" />
+        <span className="h-[2px] w-8 bg-[#e6c9ad] rounded-full" />
+      </div>
+      {children}
     </div>
-    {children}
   </div>
 );
 
@@ -80,31 +91,31 @@ export const StickerAchievement: React.FC<{
   className?: string;
 }> = ({ unlocked, title, description, statusLabel, icon, className = '' }) => (
   <div
-    className={`p-3 rounded-[18px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
+    className={`relative p-3 rounded-[18px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
       unlocked
-        ? 'bg-white border-[#1e4e68] shadow-[0_4px_0_0_rgba(30,78,104,0.22)] hover:-translate-y-0.5'
-        : 'bg-[#edf7fa]/80 border-[#1e4e68]/35 opacity-75'
+        ? 'bg-[#fffaf2] border-[#4e2a1e] shadow-[0_4px_0_0_rgba(78,42,30,0.25)] hover:-translate-y-0.5'
+        : 'bg-[#f6eadc]/80 border-[#4e2a1e]/35 opacity-75'
     } ${className}`}
   >
     <span
       className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0 ${
         unlocked
-          ? 'bg-[#a7f3d0] text-[#133142] border-[#1e4e68]'
-          : 'bg-slate-200 text-slate-500 border-slate-400'
+          ? 'bg-[#ffe169] text-[#3f2117] border-[#4e2a1e] ring-2 ring-[#26b6b0]/50'
+          : 'bg-stone-200 text-stone-500 border-stone-400'
       }`}
     >
       {icon}
     </span>
     <div className="min-w-0 flex-1">
       <div className="flex items-center justify-between gap-1.5">
-        <p className="text-[13px] font-bold text-[#133142] leading-tight truncate">
+        <p className="text-[13px] font-bold text-[#3f2117] leading-tight truncate">
           {title}
         </p>
-        <span className="text-[10.5px] font-bold text-[#0284c7] shrink-0">
+        <span className="text-[10.5px] font-bold text-[#c82a36] shrink-0">
           {statusLabel}
         </span>
       </div>
-      <p className="text-[11.5px] text-[#2d5368] leading-snug mt-0.5 break-words">
+      <p className="text-[11.5px] text-[#683c2b] leading-snug mt-0.5 break-words">
         {description}
       </p>
     </div>
@@ -117,18 +128,20 @@ export const MascotEmptyState: React.FC<{
   description: string;
   action?: React.ReactNode;
 }> = ({ illustration, title, description, action }) => (
-  <div className="rounded-[24px] border-2 border-[#1e4e68] bg-white p-6 flex flex-col items-center text-center gap-3 shadow-[0_5px_0_0_rgba(30,78,104,0.18)]">
-    <div className="w-24 h-24 rounded-full bg-[#e0f4fc] border-2 border-[#a7f3d0] flex items-center justify-center">
-      {illustration}
+  <div className="rounded-[22px] border-[2.5px] border-[#4e2a1e] bg-[#26b6b0] p-2 shadow-[0_5px_0_0_rgba(78,42,30,0.28)]">
+    <div className="rounded-[16px] border-2 border-[#4e2a1e]/70 bg-[#fffaf2] p-6 flex flex-col items-center text-center gap-3">
+      <div className="w-24 h-24 rounded-full bg-[#d6f5f3] border-2 border-[#4e2a1e] flex items-center justify-center shadow-[0_3px_0_0_rgba(78,42,30,0.2)]">
+        {illustration}
+      </div>
+      <h3 className="font-pixel-display text-[15px] text-[#3f2117]">{title}</h3>
+      <p className="text-[14px] text-[#683c2b] max-w-[32ch]">{description}</p>
+      {action && <div className="mt-1">{action}</div>}
     </div>
-    <h3 className="font-pixel-display text-[15px] text-[#133142]">{title}</h3>
-    <p className="text-[14px] text-[#2d5368] max-w-[32ch]">{description}</p>
-    {action && <div className="mt-1">{action}</div>}
   </div>
 );
 
 /* ============================================================================
- * 3. 16-BIT ROYAL CHRONICLE Components
+ * 3. SPROUT PIXEL VILLAGE (Pixel Game Farming Island) Components
  * ==========================================================================*/
 
 export const RoyalFrameCard: React.FC<{
@@ -136,13 +149,13 @@ export const RoyalFrameCard: React.FC<{
   className?: string;
 }> = ({ children, className = '' }) => (
   <div
-    className={`royal-frame-card relative bg-white border-[2.5px] border-[#311b63] p-4 shadow-[3px_3px_0_0_#311b63] overflow-hidden ${className}`}
+    className={`royal-frame-card relative bg-[#fffdf6] border-[2.5px] border-[#5c3822] rounded-[4px] p-4 shadow-[3px_3px_0_0_#5c3822] overflow-hidden ${className}`}
   >
-    {/* 4 Golden 16-bit Pixel Corner Ornaments */}
-    <span aria-hidden="true" className="absolute top-0 left-0 w-2.5 h-2.5 bg-[#fbbf24] border-r-2 border-b-2 border-[#311b63]" />
-    <span aria-hidden="true" className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#fbbf24] border-l-2 border-b-2 border-[#311b63]" />
-    <span aria-hidden="true" className="absolute bottom-0 left-0 w-2.5 h-2.5 bg-[#fbbf24] border-r-2 border-t-2 border-[#311b63]" />
-    <span aria-hidden="true" className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#fbbf24] border-l-2 border-t-2 border-[#311b63]" />
+    {/* 4 Pixel Sprout-Meadow & Timber Corner Rivets */}
+    <span aria-hidden="true" className="absolute top-0 left-0 w-2.5 h-2.5 bg-[#8ec252] border-r-2 border-b-2 border-[#5c3822]" />
+    <span aria-hidden="true" className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#8ec252] border-l-2 border-b-2 border-[#5c3822]" />
+    <span aria-hidden="true" className="absolute bottom-0 left-0 w-2.5 h-2.5 bg-[#8ec252] border-r-2 border-t-2 border-[#5c3822]" />
+    <span aria-hidden="true" className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#8ec252] border-l-2 border-t-2 border-[#5c3822]" />
     {children}
   </div>
 );
@@ -155,31 +168,31 @@ export const RoyalMedallion: React.FC<{
   icon: React.ReactNode;
 }> = ({ unlocked, title, description, statusLabel, icon }) => (
   <div
-    className={`p-3 border-2 flex items-start gap-2.5 min-w-0 ${
+    className={`p-3 border-2 rounded-[4px] flex items-start gap-2.5 min-w-0 ${
       unlocked
-        ? 'bg-[#fef9e7] border-[#311b63] shadow-[3px_3px_0_0_#311b63]'
-        : 'bg-[#f5eedc]/80 border-[#311b63]/40 opacity-75'
+        ? 'bg-[#fffdf6] border-[#5c3822] shadow-[3px_3px_0_0_#5c3822]'
+        : 'bg-[#eee2c2]/85 border-[#5c3822]/40 opacity-75'
     }`}
   >
     <span
-      className={`w-9 h-9 border-2 flex items-center justify-center shrink-0 ${
+      className={`w-9 h-9 border-2 rounded-[3px] flex items-center justify-center shrink-0 ${
         unlocked
-          ? 'bg-[#fbbf24] text-[#1e113a] border-[#311b63]'
+          ? 'bg-[#8ec252] text-[#2f1a0d] border-[#5c3822]'
           : 'bg-stone-300 text-stone-600 border-stone-500'
       }`}
     >
-      {unlocked ? <Crown size={17} /> : icon}
+      {unlocked ? <Sprout size={17} /> : icon}
     </span>
     <div className="min-w-0 flex-1">
       <div className="flex items-center justify-between gap-1.5">
-        <p className="font-pixel-ui text-[12px] font-bold text-[#1e113a] truncate">
+        <p className="font-pixel-ui text-[12px] font-bold text-[#3b2214] truncate">
           {title}
         </p>
-        <span className="text-[10.5px] font-bold text-[#5b21b6] shrink-0">
+        <span className="text-[10.5px] font-bold text-[#3f7d28] shrink-0">
           {statusLabel}
         </span>
       </div>
-      <p className="text-[11.5px] text-[#442b78] leading-snug mt-0.5 break-words">
+      <p className="text-[11.5px] text-[#5c3822] leading-snug mt-0.5 break-words">
         {description}
       </p>
     </div>
@@ -191,9 +204,9 @@ export const KingdomQuestBoard: React.FC<{
   children: React.ReactNode;
 }> = ({ headerTitle, children }) => (
   <RoyalFrameCard className="space-y-2.5">
-    <div className="flex items-center gap-2 pb-1.5 border-b-2 border-[#fbbf24]">
-      <Crown size={14} className="text-[#b45309] shrink-0" />
-      <span className="font-pixel-ui text-[11px] uppercase tracking-wider text-[#311b63]">
+    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[#b87c4b] border-2 border-[#5c3822] rounded-[3px] shadow-[inset_0_2px_0_rgba(255,248,223,0.3)]">
+      <Sprout size={14} className="text-[#d9f99d] shrink-0" />
+      <span className="font-pixel-ui text-[11px] font-bold uppercase tracking-wider text-[#fff8df] truncate">
         {headerTitle}
       </span>
     </div>
@@ -202,7 +215,7 @@ export const KingdomQuestBoard: React.FC<{
 );
 
 /* ============================================================================
- * 4. COMIC-POP ARCADE Components
+ * 4. MOBILE LEGENDS: BANG BANG (Land of Dawn Armory) Components
  * ==========================================================================*/
 
 export const ComicPanel: React.FC<{
@@ -211,10 +224,14 @@ export const ComicPanel: React.FC<{
   className?: string;
 }> = ({ children, halftone = false, className = '' }) => (
   <div
-    className={`relative bg-white border-[2.5px] border-[#09090f] rounded-[5px] p-4 shadow-[5px_5px_0_0_#09090f] overflow-hidden ${
+    className={`relative bg-white border-2 border-[#1e3a6e] rounded-[8px] p-4 shadow-[0_4px_0_0_rgba(12,24,48,0.22)] overflow-hidden ${
       halftone ? 'comic-halftone' : ''
     } ${className}`}
   >
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1b4db3] via-[#d4a94f] to-[#1b4db3]"
+    />
     {children}
   </div>
 );
@@ -225,31 +242,22 @@ export const SpeechBubble: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ speaker, metaRight, children, className = '' }) => (
-  <div className={`relative pb-2 ${className}`}>
-    <div className="bg-white border-[2.5px] border-[#09090f] rounded-[6px] p-4 shadow-[4px_4px_0_0_#09090f] space-y-2">
+  <div className={`relative ${className}`}>
+    <div className="bg-white border-2 border-[#1e3a6e] rounded-[8px] overflow-hidden shadow-[0_4px_0_0_rgba(12,24,48,0.22)]">
       {(speaker || metaRight) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[11px]">
+        <div className="px-3.5 py-2 bg-gradient-to-r from-[#0e1f40] via-[#173368] to-[#0e1f40] border-b-2 border-[#d4a94f] flex flex-wrap items-center justify-between gap-2 font-pixel-ui text-[11px]">
           {speaker && (
-            <span className="inline-flex items-center gap-1 font-bold text-[#5b21b6]">
-              <Zap size={12} /> {speaker}
+            <span className="inline-flex items-center gap-1.5 font-bold text-[#fde68a] tracking-wide">
+              <Zap size={12} className="text-[#5ce1e6]" /> {speaker}
             </span>
           )}
-          {metaRight && <span className="text-[#524b7a] tabular-nums">{metaRight}</span>}
+          {metaRight && (
+            <span className="text-[#bae6fd] font-semibold tabular-nums">{metaRight}</span>
+          )}
         </div>
       )}
-      {children}
+      <div className="p-4 space-y-2">{children}</div>
     </div>
-    {/* Comic Speech Tail */}
-    <svg
-      aria-hidden="true"
-      width="22"
-      height="12"
-      viewBox="0 0 22 12"
-      className="ml-6 -mt-[2.5px] block"
-    >
-      <polygon points="2,0 18,0 6,11" fill="#ffffff" />
-      <polyline points="2,0 6,11 18,0" fill="none" stroke="#09090f" strokeWidth="2.5" />
-    </svg>
   </div>
 );
 
@@ -260,22 +268,22 @@ export const ArcadeActionButton: React.FC<
 > = ({ tone = 'cyan', className = '', children, ...rest }) => {
   const toneClass =
     tone === 'gold'
-      ? 'bg-[#ffd000] text-[#09090f]'
+      ? 'bg-gradient-to-b from-[#f5c84c] to-[#d4a94f] text-[#0b1730] border-[#78350f]'
       : tone === 'magenta'
-        ? 'bg-[#e11d74] text-white'
-        : 'bg-[#00d8ff] text-[#09090f]';
+        ? 'bg-gradient-to-b from-[#dc4520] to-[#b5250c] text-white border-[#f5c84c]'
+        : 'bg-gradient-to-b from-[#1e56c2] to-[#123780] text-white border-[#d4a94f]';
   return (
     <button
-      className={`pixel-btn comic-slant font-pixel-display text-[12px] px-4 py-2 min-h-[42px] inline-flex items-center justify-center gap-2 cursor-pointer ${toneClass} ${className}`}
+      className={`pixel-btn font-pixel-display text-[12px] px-4 py-2 min-h-[42px] inline-flex items-center justify-center gap-2 cursor-pointer ${toneClass} ${className}`}
       {...rest}
     >
-      <span className="comic-unslant inline-flex items-center gap-2">{children}</span>
+      <span className="inline-flex items-center gap-2">{children}</span>
     </button>
   );
 };
 
 /* ============================================================================
- * 5. CLEAN PAPER STUDIO (Minimalist Editorial) Components
+ * 5. PHANTOM PERSONA POP (Crimson Ink & Comic Cutouts) Components
  * ==========================================================================*/
 
 export const EditorialCard: React.FC<{
@@ -283,8 +291,13 @@ export const EditorialCard: React.FC<{
   className?: string;
 }> = ({ children, className = '' }) => (
   <div
-    className={`bg-white border border-[#d6d1c7] rounded-lg p-4 sm:p-5 shadow-[0_1px_2px_rgba(24,24,27,0.05)] overflow-hidden ${className}`}
+    className={`relative bg-white border-[2.5px] border-[#09090f] rounded-[2px] p-4 sm:p-5 shadow-[5px_5px_0_0_#e60012] overflow-hidden ${className}`}
   >
+    {/* Subtle top-right crimson & ink diagonal Persona cut accent */}
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 right-0 w-10 h-2.5 bg-[#e60012] border-b-2 border-l-2 border-[#09090f]"
+    />
     {children}
   </div>
 );
@@ -294,8 +307,12 @@ export const MinimalReadingCanvas: React.FC<{
   className?: string;
 }> = ({ children, className = '' }) => (
   <div
-    className={`bg-[#fffefb] border border-[#e2ddd3] rounded-lg p-5 sm:p-6 text-[15px] sm:text-[16px] leading-[1.8] text-[#18181b] whitespace-pre-line break-words [overflow-wrap:anywhere] ${className}`}
+    className={`relative bg-white border-[2.5px] border-[#09090f] rounded-[2px] p-5 sm:p-6 shadow-[4px_4px_0_0_#e60012] text-[15px] sm:text-[16px] leading-[1.8] text-[#09090f] whitespace-pre-line break-words [overflow-wrap:anywhere] ${className}`}
   >
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 left-0 right-0 h-1.5 bg-[#e60012]"
+    />
     {children}
   </div>
 );
@@ -309,16 +326,23 @@ export const CleanProgressIndicator: React.FC<{
   return (
     <div className="space-y-1.5">
       {(labelLeft || labelRight) && (
-        <div className="flex items-center justify-between text-[12.5px] font-semibold text-[#3f3f46] tabular-nums">
-          <span>{labelLeft}</span>
-          <span>{labelRight}</span>
+        <div className="flex items-center justify-between text-[12.5px] font-bold text-[#09090f] tabular-nums">
+          <span className="uppercase tracking-wide">{labelLeft}</span>
+          <span className="text-[#e60012]">{labelRight}</span>
         </div>
       )}
-      <div className="h-2 w-full rounded-full bg-[#e8e3d9] overflow-hidden">
+      <div className="h-3.5 w-full rounded-[2px] border-2 border-[#09090f] bg-[#f0edf2] p-0.5 overflow-hidden">
         <div
-          className="h-full rounded-full bg-[#15803d] transition-all duration-200"
+          className="h-full bg-[#e60012] relative transition-all duration-200"
           style={{ width: `${safe}%` }}
-        />
+        >
+          {safe > 6 && (
+            <span
+              aria-hidden="true"
+              className="absolute right-0 top-0 bottom-0 w-1.5 bg-[#ffe600]"
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -357,9 +381,9 @@ export const ThemedNoticeCard: React.FC<{
 
   if (theme === 'nes_classic') {
     return (
-      <KingdomQuestBoard headerTitle={speaker || 'Royal Proclamation'}>
+      <KingdomQuestBoard headerTitle={speaker || 'Papan Desa Pixel'}>
         {metaRight && (
-          <p className="text-[11.5px] font-semibold text-[#634a94] tabular-nums">
+          <p className="text-[11.5px] font-semibold text-[#5c3822] tabular-nums">
             {metaRight}
           </p>
         )}
@@ -373,9 +397,13 @@ export const ThemedNoticeCard: React.FC<{
     return (
       <ChibiWelcomeCard className="space-y-2">
         {(speaker || metaRight) && (
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] font-bold text-[#0284c7]">
-            <span>{speaker}</span>
-            <span className="text-[#4a6f85] font-semibold tabular-nums">{metaRight}</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] font-bold">
+            {speaker && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#c82a36] text-white border border-[#4e2a1e]">
+                {speaker}
+              </span>
+            )}
+            <span className="text-[#683c2b] font-semibold tabular-nums">{metaRight}</span>
           </div>
         )}
         {children}
@@ -384,17 +412,41 @@ export const ThemedNoticeCard: React.FC<{
     );
   }
 
+  // Phantom Persona Pop: Slanted speaker bar + jagged comic speech cutout
   return (
-    <EditorialCard className="space-y-2">
-      {(speaker || metaRight) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-[#52525b] pb-1.5 border-b border-[#ece7dd]">
-          <span>{speaker}</span>
-          <span className="tabular-nums">{metaRight}</span>
-        </div>
-      )}
-      {children}
-      {footer}
-    </EditorialCard>
+    <div className="relative pb-2">
+      <div className="bg-white border-[2.5px] border-[#09090f] rounded-[2px] p-4 shadow-[5px_5px_0_0_#e60012] space-y-2.5">
+        {(speaker || metaRight) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+            {speaker && (
+              <span className="persona-slant inline-flex items-center gap-1.5 bg-[#09090f] text-white border-2 border-[#09090f] shadow-[3px_3px_0_0_#e60012] px-2.5 py-1 font-pixel-ui text-[11px] font-bold uppercase tracking-wider">
+                <span className="persona-unslant inline-flex items-center gap-1">
+                  <Star size={11} className="text-[#ffe600]" fill="currentColor" />
+                  {speaker}
+                </span>
+              </span>
+            )}
+            {metaRight && (
+              <span className="font-pixel-ui text-[11px] font-bold text-[#e60012] tabular-nums">
+                {metaRight}
+              </span>
+            )}
+          </div>
+        )}
+        {children}
+        {footer}
+      </div>
+      <svg
+        aria-hidden="true"
+        width="26"
+        height="13"
+        viewBox="0 0 26 13"
+        className="ml-6 -mt-[2.5px] block"
+      >
+        <polygon points="3,0 22,0 6,12" fill="#ffffff" />
+        <polyline points="3,0 6,12 22,0" fill="none" stroke="#09090f" strokeWidth="2.5" />
+      </svg>
+    </div>
   );
 };
 
@@ -472,27 +524,37 @@ export const ThemedAchievementCard: React.FC<{
   if (theme === 'gameboy_green') {
     return (
       <div
-        className={`p-3 rounded-lg border flex items-start gap-2.5 min-w-0 ${
+        className={`p-3 rounded-[2px] border-[2.5px] flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
           unlocked
-            ? 'bg-white border-[#d6d1c7]'
-            : 'bg-[#f4f1ea] border-[#e2ddd3] opacity-70'
+            ? 'bg-white border-[#09090f] shadow-[3px_3px_0_0_#e60012]'
+            : 'bg-[#f0edf2] border-[#09090f]/40 opacity-75'
         }`}
       >
         <span
-          className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
-            unlocked ? 'bg-[#15803d] text-white' : 'bg-[#e5e0d5] text-[#52525b]'
+          className={`persona-slant w-9 h-9 border-2 border-[#09090f] flex items-center justify-center shrink-0 ${
+            unlocked
+              ? 'bg-[#09090f] text-[#ffe600] shadow-[2px_2px_0_0_#e60012]'
+              : 'bg-zinc-300 text-zinc-600'
           }`}
         >
-          {unlocked ? icon : <Award size={15} />}
+          <span className="persona-unslant">
+            {unlocked ? icon : <Award size={15} />}
+          </span>
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1.5">
-            <p className="text-[13px] font-bold text-[#18181b] truncate">{title}</p>
-            <span className="text-[11px] font-semibold text-[#15803d] shrink-0">
+            <p className="font-pixel-ui text-[12.5px] font-bold text-[#09090f] truncate">
+              {title}
+            </p>
+            <span
+              className={`font-pixel-ui text-[10.5px] font-bold shrink-0 ${
+                unlocked ? 'text-[#e60012]' : 'text-[#52525b]'
+              }`}
+            >
               {statusLabel}
             </span>
           </div>
-          <p className="text-[12px] text-[#52525b] leading-snug mt-0.5 break-words">
+          <p className="text-[12px] text-[#27272a] leading-snug mt-0.5 break-words">
             {description}
           </p>
         </div>
@@ -500,28 +562,77 @@ export const ThemedAchievementCard: React.FC<{
     );
   }
 
-  // sunny_quest & cyber_retro
+  if (theme === 'sunny_quest') {
+    return (
+      <div
+        className={`p-3 rounded-[16px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
+          unlocked
+            ? 'bg-white border-[#2e1d14] shadow-[inset_0_0_0_1.5px_#ffffff,0_4px_0_0_rgba(46,29,20,0.7)] hover:-translate-y-0.5'
+            : 'bg-[#efeadd]/85 border-[#2e1d14]/40 opacity-75'
+        }`}
+      >
+        <span
+          className={`w-10 h-10 rounded-full border-2 border-[#2e1d14] flex items-center justify-center shrink-0 shadow-[0_2px_0_0_#2e1d14] ${
+            unlocked
+              ? 'bg-[#ffd000] text-[#1e140e] ring-2 ring-white'
+              : 'bg-stone-200 text-stone-500'
+          }`}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-1.5">
+            <p className="text-[13px] font-bold text-[#1e140e] leading-tight truncate">
+              {title}
+            </p>
+            <span
+              className={`text-[10.5px] font-bold shrink-0 ${
+                unlocked ? 'text-[#e52521]' : 'text-[#664d3e]'
+              }`}
+            >
+              {statusLabel}
+            </span>
+          </div>
+          <p className="text-[11.5px] text-[#433025] leading-snug mt-0.5 break-words">
+            {description}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // cyber_retro: Mobile Legends: Bang Bang Armored Rank Crest Achievement
   return (
     <div
-      className={`p-2.5 rounded-[var(--inset-radius)] border-2 flex items-start gap-2.5 min-w-0 ${
-        theme === 'cyber_retro' && unlocked ? 'shadow-[3px_3px_0_0_#09090f]' : ''
-      } ${fallbackToneClass}`}
+      className={`p-3 rounded-[7px] border-2 flex items-start gap-2.5 min-w-0 transition-transform duration-150 ${
+        unlocked
+          ? 'bg-white border-[#1e3a6e] shadow-[0_3px_0_0_rgba(12,24,48,0.22)] hover:-translate-y-0.5'
+          : 'bg-[#e8f0fb]/80 border-[#1e3a6e]/35 opacity-75'
+      }`}
     >
       <span
-        className={`w-9 h-9 rounded-[var(--btn-radius)] border-2 flex items-center justify-center shrink-0 ${fallbackIconClass}`}
+        className={`w-9 h-9 rounded-[6px] border-2 flex items-center justify-center shrink-0 ${
+          unlocked
+            ? 'bg-[#102347] text-[#f5c84c] border-[#d4a94f] shadow-[0_2px_0_0_#071022]'
+            : 'bg-slate-200 text-slate-500 border-slate-400'
+        }`}
       >
         {icon}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-1.5">
-          <p className="text-[12.5px] font-bold text-[var(--text-primary)] leading-tight truncate">
+          <p className="font-pixel-ui text-[12.5px] font-bold text-[#0b1730] leading-tight truncate">
             {title}
           </p>
-          <span className="text-[10.5px] font-bold text-[var(--text-secondary)] shrink-0">
+          <span
+            className={`text-[10.5px] font-bold shrink-0 ${
+              unlocked ? 'text-[#1b4db3]' : 'text-[#4b628a]'
+            }`}
+          >
             {statusLabel}
           </span>
         </div>
-        <p className="text-[11.5px] text-[var(--text-secondary)] leading-snug mt-0.5 break-words">
+        <p className="text-[11.5px] text-[#243b61] leading-snug mt-0.5 break-words">
           {description}
         </p>
       </div>

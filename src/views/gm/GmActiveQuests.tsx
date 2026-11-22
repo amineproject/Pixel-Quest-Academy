@@ -548,7 +548,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
             checked={isSelected}
             onChange={() => toggleSelect(quest.id)}
             aria-label={`Pilih tugas ${quest.title}`}
-            className="w-4 h-4 accent-[#f6c445] shrink-0 cursor-pointer"
+            className="w-4 h-4 accent-[var(--comic-gold)] shrink-0 cursor-pointer"
           />
         }
         stats={[
@@ -571,11 +571,11 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
         <div className="flex flex-wrap items-center gap-1.5">
           <QuestCategoryBadge category={quest.category} compact />
           {chapterText && (
-            <span className="px-2 py-0.5 text-[10.5px] font-bold border border-[#3d1b0c]/50 bg-[#fff7eb] text-[#45230e]">
+            <span className="px-2 py-0.5 text-[10.5px] font-bold border border-[var(--board-chip-border)] bg-[var(--board-chip-bg)] text-[var(--board-ink)]">
               {chapterText}
             </span>
           )}
-          <span className="text-[11px] font-semibold text-[#563018]">
+          <span className="text-[11px] font-semibold text-[var(--board-muted)]">
             {catMeta.description}
           </span>
         </div>
@@ -583,19 +583,19 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
         <button
           type="button"
           onClick={() => setPreviewQuest(quest)}
-          className="text-left text-[16px] sm:text-[17px] font-bold text-[#261006] hover:text-[#7c2d12] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
+          className="text-left text-[16px] sm:text-[17px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
         >
           {quest.title}
         </button>
 
         {quest.description?.trim() && (
-          <p className="text-[13.5px] font-semibold text-[#563018] leading-snug line-clamp-2 break-words [overflow-wrap:anywhere]">
+          <p className="text-[13.5px] font-semibold text-[var(--board-muted)] leading-snug line-clamp-2 break-words [overflow-wrap:anywhere]">
             {quest.description}
           </p>
         )}
 
-        <p className="text-[14px] sm:text-[14.5px] text-[#45230e] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
-          <strong className="text-[#261006]">Objek Misi / Instruksi:</strong>{' '}
+        <p className="text-[14px] sm:text-[14.5px] text-[var(--board-muted)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+          <strong className="text-[var(--board-ink)]">Objek Misi / Instruksi:</strong>{' '}
           {quest.instructions}
         </p>
 
@@ -604,7 +604,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
             {targetedDungeons.map((d) => (
               <span
                 key={d.id}
-                className="px-1.5 py-0.5 text-[10.5px] font-semibold bg-[#fff7eb]/80 border border-[#3d1b0c]/30 text-[#45230e]"
+                className="px-1.5 py-0.5 text-[10.5px] font-semibold bg-[var(--board-chip-bg)] border border-[var(--board-chip-border)] text-[var(--board-ink)]"
               >
                 {d.guildCode} ({d.name})
               </span>
@@ -612,9 +612,9 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] font-semibold text-[#563018]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] font-semibold text-[var(--board-muted)]">
           <span className="inline-flex items-center gap-1">
-            <CalendarClock size={14} className="shrink-0" />
+            <CalendarClock size={14} className="shrink-0 text-[var(--board-accent)]" />
             <span>{sched.label}</span>
           </span>
           <span aria-hidden="true">·</span>
@@ -623,7 +623,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
 
         {/* Submission breakdown strip */}
         {counts && (
-          <div className="pt-2 border-t border-[#3d1b0c]/20 flex flex-wrap items-center gap-2 text-[12.5px]">
+          <div className="pt-2 border-t border-[var(--board-divider)] flex flex-wrap items-center gap-2 text-[12.5px]">
             <span className="px-2 py-0.5 rounded border border-[#78350f] bg-[#fef3c7] text-[#451a03] font-bold tabular-nums">
               Belum: {counts.belum}
             </span>
@@ -633,19 +633,19 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
             <span className="px-2 py-0.5 rounded border border-[#9f1239] bg-[#ffe4e6] text-[#881337] font-bold tabular-nums">
               Terlambat: {counts.terlambat}
             </span>
-            <span className="text-[12px] font-semibold text-[#563018] ml-auto tabular-nums">
+            <span className="text-[12px] font-semibold text-[var(--board-muted)] ml-auto tabular-nums">
               Total Hero Target: {counts.total}
             </span>
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#3d1b0c]/20">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--board-divider)]">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => openEdit(quest)}
               aria-label={`Edit ${quest.title}`}
-              className="pixel-btn min-w-[40px] min-h-[40px] px-2.5 flex items-center justify-center gap-1 bg-[#fff7eb] text-[#261006] text-[12.5px] font-bold cursor-pointer"
+              className="pixel-btn min-w-[40px] min-h-[40px] px-2.5 flex items-center justify-center gap-1 bg-[var(--board-edit-bg)] text-[#09090f] text-[12.5px] font-bold cursor-pointer"
             >
               <Pencil size={14} />
               <span>Edit</span>

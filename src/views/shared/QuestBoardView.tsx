@@ -388,7 +388,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                   >
                     <PixelRealmGlyph
                       icon={realm.icon}
-                      color={selected ? '#1A1C2C' : realm.accentColor}
+                      color={selected ? 'currentColor' : realm.accentColor}
                       size={15}
                     />
                     <span>{realm.name}</span>
@@ -550,31 +550,31 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <QuestCategoryBadge category={quest.category} compact />
                       {chapterText && (
-                        <span className="px-2 py-0.5 text-[10.5px] font-bold border border-[#3d1b0c]/50 bg-[#fff7eb] text-[#45230e]">
+                        <span className="px-2 py-0.5 text-[10.5px] font-bold border border-[var(--board-chip-border)] bg-[var(--board-chip-bg)] text-[var(--board-ink)]">
                           {chapterText}
                         </span>
                       )}
-                      <span className="text-[11px] font-semibold text-[#563018]">
+                      <span className="text-[11px] font-semibold text-[var(--board-muted)]">
                         {getQuestCategoryMeta(quest.category).description}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setDetailQuest(quest)}
-                      className="text-left text-[16px] sm:text-[17px] font-bold text-[#261006] hover:text-[#7c2d12] leading-snug break-words cursor-pointer block w-full"
+                      className="text-left text-[16px] sm:text-[17px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words cursor-pointer block w-full"
                     >
                       {quest.title}
                     </button>
 
                     {quest.description?.trim() && (
-                      <p className="text-[13.5px] text-[#563018] leading-snug line-clamp-2 break-words">
+                      <p className="text-[13.5px] text-[var(--board-muted)] leading-snug line-clamp-2 break-words">
                         {quest.description}
                       </p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-2 text-[14px] text-[#45230e]">
+                    <div className="flex flex-wrap items-center gap-2 text-[14px] text-[var(--board-ink)]">
                       <span className="inline-flex items-center gap-1.5 font-medium">
-                        <Clock size={15} className="shrink-0 text-[#6d2e17]" />
+                        <Clock size={15} className="shrink-0 text-[var(--board-accent)]" />
                         <span>Batas: {formatRetroDate(quest.deadline)}</span>
                       </span>
                       {targetIds.length > 0 && (
@@ -603,7 +603,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
 
                 {/* Admin submission breakdown strip */}
                 {isGm && counts && (
-                  <div className="pt-2.5 border-t border-[#3d1b0c]/20 flex flex-wrap items-center gap-2 text-[13.5px]">
+                  <div className="pt-2.5 border-t border-[var(--board-divider)] flex flex-wrap items-center gap-2 text-[13.5px]">
                     <span className="px-2.5 py-1 rounded border border-[#78350f] bg-[#fef3c7] text-[#451a03] font-bold tabular-nums">
                       Belum: {counts.belum}
                     </span>
@@ -613,7 +613,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                     <span className="px-2.5 py-1 rounded border border-[#9f1239] bg-[#ffe4e6] text-[#881337] font-bold tabular-nums">
                       Terlambat: {counts.terlambat}
                     </span>
-                    <span className="text-[13px] font-semibold text-[#563018] ml-auto tabular-nums">
+                    <span className="text-[13px] font-semibold text-[var(--board-muted)] ml-auto tabular-nums">
                       Total Hero Target: {counts.total}
                     </span>
                   </div>
