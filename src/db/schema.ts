@@ -92,6 +92,8 @@ export const tomes = pgTable('tomes', {
   scheduledAt: text('scheduled_at').default(''),
   classSchedules: text('class_schedules').default('{}'),
   publishedDate: text('published_date').notNull(),
+  academicYearId: text('academic_year_id').references(() => academicYears.id, { onDelete: 'set null' }),
+  season: text('season').default('ganjil'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

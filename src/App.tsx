@@ -64,9 +64,16 @@ import {
 } from './utils/offlineCache';
 import { playRetroSound, playThrottledHoverBlip } from './utils/sound';
 import {
+  EraArchiveBundleV1,
+  MergeArchiveSummary,
+  mergeEraArchiveIntoState,
+  pruneEraFromState,
+} from './utils/archiveAndReport';
+import {
   AcademyFetchContext,
   bootstrapSupabaseFromUrl,
   changeOwnHeroPinCloud,
+  cloudDeleteAcademicYear,
   cloudDeleteDungeon,
   cloudDeleteHero,
   cloudDeleteNotice,
@@ -1571,16 +1578,24 @@ export default function App() {
 
   const handleSaveTome = (tome: AncientTome) => {
     playRetroSound('save', stateRef.current.settings.soundEnabled);
-    const next = { ...stateRef.current, tomes: upsertItem(stateRef.current.tomes, tome) };
+    const taggedTome: AncientTome = {
+      ...tome,
+      academicYearId: tome.academicYearId || activeEraId,
+      season: tome.season || activeSeason,
+    };
+    const next = {
+      ...stateRef.current,
+      tomes: upsertItem(stateRef.current.tomes, taggedTome),
+    };
     stateRef.current = next;
     setState(next);
-    reportCloudSync(cloudSyncTome(tome, getGmAuth()));
+    reportCloudSync(cloudSyncTome(taggedTome, getGmAuth()));
     fetch('/api/tomes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tome),
+      body: JSON.stringify(taggedTome),
     }).catch(() => {});
-    showToast(`Tome "${tome.title}" published!`);
+    showToast(`Tome "${taggedTome.title}" published!`);
   };
 
   const handleDeleteTome = (id: string) => {
@@ -1840,6 +1855,186 @@ export default function App() {
     }).catch(() => {});
   };
 
+  const handleImportEraArchive = async (
+    bundle: EraArchiveBundleV1
+  ): Promise<MergeArchiveSummary> => {
+    playRetroSound('save', stateRef.current.settings.soundEnabled);
+    const prevEraIds = new Set(
+      (stateRef.current.academicYears || []).map((y) => y.id)
+    );
+    const prevRealmIds = new Set(stateRef.current.realms.map((r) => r.id));
+    const prevDungeonIds = new Set(stateRef.current.dungeons.map((d) => d.id));
+    const prevHeroIds = new Set(stateRef.current.heroes.map((h) => h.id));
+    const prevTomeIds = new Set(stateRef.current.tomes.map((t) => t.id));
+    const prevQuestIds = new Set(stateRef.current.quests.map((q) => q.id));
+    const prevNoticeIds = new Set(stateRef.current.notices.map((n) => n.id));
+    const prevGradeIds = new Set(stateRef.current.grades.map((g) => g.id));
+
+    const { nextState, summary } = mergeEraArchiveIntoState(
+      stateRef.current,
+      bundle
+    );
+    stateRef.current = nextState;
+    setState(nextState);
+
+    const gmAuth = getGmAuth();
+    const addedEras = (nextState.academicYears || []).filter(
+      (y) => !prevEraIds.has(y.id)
+    );
+    const addedRealms = nextState.realms.filter((r) => !prevRealmIds.has(r.id));
+    const addedDungeons = nextState.dungeons.filter(
+      (d) => !prevDungeonIds.has(d.id)
+    );
+    const addedHeroes = nextState.heroes.filter((h) => !prevHeroIds.has(h.id));
+    const addedTomes = nextState.tomes.filter((t) => !prevTomeIds.has(t.id));
+    const addedQuests = nextState.quests.filter((q) => !prevQuestIds.has(q.id));
+    const addedNotices = nextState.notices.filter(
+      (n) => !prevNoticeIds.has(n.id)
+    );
+    const addedGrades = nextState.grades.filter((g) => !prevGradeIds.has(g.id));
+
+    // Sync restored Era and Realms/Dungeons first so FK references succeed cleanly
+    await Promise.all([
+      ...addedEras.map((era) => cloudSyncAcademicYear(era, gmAuth)),
+      ...addedRealms.map((realm) => cloudSyncRealm(realm, gmAuth)),
+    ]);
+    await Promise.all(
+      addedDungeons.map((dungeon) => cloudSyncDungeon(dungeon, gmAuth))
+    );
+    await Promise.all([
+      ...addedHeroes.map((hero) => cloudSyncHero(hero, gmAuth)),
+      ...addedTomes.map((tome) => cloudSyncTome(tome, gmAuth)),
+      ...addedQuests.map((quest) => cloudSyncQuest(quest, gmAuth)),
+      ...addedNotices.map((notice) => cloudSyncNotice(notice, gmAuth)),
+    ]);
+    await Promise.all(addedGrades.map((grade) => cloudSyncGrade(grade, gmAuth)));
+
+    addedEras.forEach((era) => {
+      fetch('/api/eras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-pqa-role': 'admin' },
+        body: JSON.stringify(era),
+      }).catch(() => {});
+    });
+    addedRealms.forEach((realm) => {
+      fetch('/api/realms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(realm),
+      }).catch(() => {});
+    });
+    addedDungeons.forEach((dungeon) => {
+      fetch('/api/dungeons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dungeon),
+      }).catch(() => {});
+    });
+    addedHeroes.forEach((hero) => {
+      fetch('/api/heroes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hero),
+      }).catch(() => {});
+    });
+    addedTomes.forEach((tome) => {
+      fetch('/api/tomes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tome),
+      }).catch(() => {});
+    });
+    addedQuests.forEach((quest) => {
+      fetch('/api/quests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quest),
+      }).catch(() => {});
+    });
+    addedNotices.forEach((notice) => {
+      fetch('/api/notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notice),
+      }).catch(() => {});
+    });
+    addedGrades.forEach((grade) => {
+      fetch('/api/grades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(grade),
+      }).catch(() => {});
+    });
+
+    appendSyncLog(
+      'Pulihkan Arsip',
+      'success',
+      `Arsip TP ${summary.eraName} dipulihkan (+${summary.addedDungeons} kelas, +${summary.addedQuests} tugas, +${summary.addedGrades} nilai).`
+    );
+    showToast(`Arsip TP ${summary.eraName} berhasil dipulihkan!`, 'success');
+    return summary;
+  };
+
+  const handlePruneEraArchive = async (
+    academicYearId: string,
+    pruneHeroesInEra: boolean
+  ): Promise<{ ok: boolean; error?: string; summaryText?: string }> => {
+    playRetroSound('confirm', stateRef.current.settings.soundEnabled);
+    const result = pruneEraFromState(stateRef.current, academicYearId, {
+      pruneHeroesInEra,
+    });
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+
+    stateRef.current = result.nextState;
+    setState(result.nextState);
+
+    const { removedIds } = result;
+    const gmAuth = getGmAuth();
+
+    // Delete quests (cascades grades in DB), notices, tomes, dungeons, optional heroes, then Era
+    await Promise.all([
+      ...removedIds.questIds.map((id) => cloudDeleteQuest(id, gmAuth)),
+      ...removedIds.noticeIds.map((id) => cloudDeleteNotice(id, gmAuth)),
+      ...removedIds.tomeIds.map((id) => cloudDeleteTome(id, gmAuth)),
+    ]);
+    await Promise.all(
+      removedIds.dungeonIds.map((id) => cloudDeleteDungeon(id, gmAuth))
+    );
+    if (removedIds.heroIds.length > 0) {
+      await Promise.all(
+        removedIds.heroIds.map((id) => cloudDeleteHero(id, gmAuth))
+      );
+    }
+    await cloudDeleteAcademicYear(removedIds.eraId, gmAuth).catch(() => {});
+
+    removedIds.questIds.forEach((id) => {
+      fetch(`/api/quests/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    removedIds.noticeIds.forEach((id) => {
+      fetch(`/api/notices/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    removedIds.tomeIds.forEach((id) => {
+      fetch(`/api/tomes/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    removedIds.dungeonIds.forEach((id) => {
+      fetch(`/api/dungeons/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    removedIds.heroIds.forEach((id) => {
+      fetch(`/api/heroes/${id}`, { method: 'DELETE' }).catch(() => {});
+    });
+    fetch(`/api/eras/${removedIds.eraId}`, {
+      method: 'DELETE',
+      headers: { 'x-pqa-role': 'admin' },
+    }).catch(() => {});
+
+    const summaryText = `Tahun Pelajaran ${removedIds.eraName} dibersihkan (${removedIds.dungeonIds.length} kelas, ${removedIds.tomeIds.length} materi, ${removedIds.questIds.length} tugas, ${removedIds.gradeIds.length} nilai${removedIds.heroIds.length > 0 ? `, ${removedIds.heroIds.length} siswa` : ''} dihapus dari sesi aktif).`;
+    appendSyncLog('Bersihkan Arsip', 'info', summaryText);
+    showToast(`TP ${removedIds.eraName} telah dibersihkan.`, 'warning');
+    return { ok: true, summaryText };
+  };
+
   const handleResetDemoData = () => {
     playRetroSound('confirm', state.settings.soundEnabled);
     localStorage.removeItem(STORAGE_KEY);
@@ -2001,7 +2196,7 @@ export default function App() {
                 />
               )}
               {gmMenu === 'guild_chronicles' && (
-                <GmGuildChronicles state={eraFilteredState} />
+                <GmGuildChronicles state={state} eraState={eraFilteredState} />
               )}
               {gmMenu === 'hall_of_fame' && (
                 <HallOfFameView state={eraFilteredState} role={UserRole.GAME_MASTER} />
@@ -2018,6 +2213,8 @@ export default function App() {
                     handleTriggerAccessDenied('#/gm/exp-loot/edit')
                   }
                   onRequestGmReauth={openGmReauthModal}
+                  onImportEraArchive={handleImportEraArchive}
+                  onPruneEraArchive={handlePruneEraArchive}
                 />
               )}
               {gmMenu === 'about' && (
@@ -2097,7 +2294,7 @@ export default function App() {
                 type="button"
                 onMouseEnter={() => playThrottledHoverBlip(state.settings.soundEnabled)}
                 onClick={() => handleSelectGmMenu(item.id)}
-                className={`pixel-btn pixel-module-card min-h-[78px] p-2 flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer ${
+                className={`pixel-btn pixel-module-card min-h-[82px] p-2 flex flex-col items-center justify-center text-center gap-1 overflow-hidden cursor-pointer ${
                   active
                     ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
@@ -2106,10 +2303,10 @@ export default function App() {
                 <span className={active ? 'text-[var(--text-on-accent)]' : 'text-[var(--accent-warning)]'}>
                   {getGmMenuIcon(item.id, 22)}
                 </span>
-                <span className="font-pixel-ui text-[9.5px] sm:text-[10px] leading-tight">
+                <span className="font-pixel-ui text-[10.5px] sm:text-[11px] font-bold leading-tight break-words max-w-full">
                   {item.shortLabel}
                 </span>
-                <span className="text-[11px] sm:text-[11.5px] font-medium opacity-85 leading-none">
+                <span className="text-[11px] sm:text-[11.5px] font-medium opacity-85 leading-tight break-words max-w-full">
                   {item.standardName}
                 </span>
               </button>
@@ -2133,7 +2330,7 @@ export default function App() {
                 type="button"
                 onMouseEnter={() => playThrottledHoverBlip(state.settings.soundEnabled)}
                 onClick={() => handleSelectHeroMenu(item.id)}
-                className={`pixel-btn pixel-module-card min-h-[78px] p-2 flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer ${
+                className={`pixel-btn pixel-module-card min-h-[82px] p-2 flex flex-col items-center justify-center text-center gap-1 overflow-hidden cursor-pointer ${
                   active
                     ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
@@ -2142,10 +2339,10 @@ export default function App() {
                 <span className={active ? 'text-[var(--text-on-accent)]' : 'text-[var(--accent-warning)]'}>
                   {getHeroMenuIcon(item.id, 22)}
                 </span>
-                <span className="font-pixel-ui text-[10.5px] leading-tight">
+                <span className="font-pixel-ui text-[10.5px] sm:text-[11px] font-bold leading-tight break-words max-w-full">
                   {item.shortLabel}
                 </span>
-                <span className="text-[12px] font-medium opacity-85 leading-none">
+                <span className="text-[11px] sm:text-[11.5px] font-medium opacity-85 leading-tight break-words max-w-full">
                   {item.standardName}
                 </span>
               </button>

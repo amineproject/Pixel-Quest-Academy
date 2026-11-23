@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { BarChart3, Sword } from 'lucide-react';
 import {
   AcademyState,
   GmMenuId,
@@ -181,10 +182,10 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
                 GM Lv.{gmLevel.level}
               </span>
             </div>
-            <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] break-words [overflow-wrap:anywhere]">
+            <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] break-words">
               {gmName}
             </h2>
-            <p className="text-[12.5px] text-[var(--text-secondary)] break-words [overflow-wrap:anywhere]">
+            <p className="text-[12.5px] text-[var(--text-secondary)] break-words">
               {gmTitle} · {academicTerm}
             </p>
             <div className="pt-0.5">
@@ -212,7 +213,7 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
             <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">QUESTS MENUNGGU</span>
-              <span className="shrink-0 text-[13px]" aria-hidden="true">⚔️</span>
+              <Sword size={14} className="shrink-0 text-[var(--accent-warning)]" />
             </p>
             <p className="font-pixel-display text-[14.5px] sm:text-[16px] text-[var(--accent-warning)] tabular-nums truncate mt-1.5">
               {pendingQuestsCount}/{quests.length}
@@ -221,10 +222,13 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
             <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">KETUNTASAN</span>
-              <span className="shrink-0 text-[13px]" aria-hidden="true">📊</span>
+              <BarChart3 size={14} className="shrink-0 text-[var(--accent-primary)]" />
             </p>
-            <p className="font-pixel-display text-[14.5px] sm:text-[16px] text-[var(--accent-primary)] tabular-nums truncate mt-1.5">
-              {overallCompletion.completionPercent}% · Skor {overallCompletion.averageScore}
+            <p className="font-pixel-display text-[15px] sm:text-[16px] text-[var(--accent-primary)] tabular-nums truncate mt-1.5">
+              {overallCompletion.completionPercent}%
+            </p>
+            <p className="text-[11px] font-semibold text-[var(--text-secondary)] tabular-nums truncate mt-0.5">
+              Rata-rata skor {overallCompletion.averageScore}
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">

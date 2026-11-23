@@ -183,11 +183,11 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
                 {displayName}
               </p>
               {isMe && (
-                <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[9px] font-bold text-[#09090f] leading-none">
+                <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10px] font-bold text-[#09090f] leading-none">
                   KAMU
                 </span>
               )}
-              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[9.5px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
+              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[10px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
                 Lv.{entry.level}
               </span>
             </div>
@@ -229,7 +229,7 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
             type="button"
             onClick={() => setHideNames((prev) => !prev)}
             aria-pressed={hideNames}
-            className={`pixel-btn min-h-[44px] px-4 py-2 text-[14px] font-semibold inline-flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto ${
+            className={`pixel-btn font-pixel-ui min-h-[40px] px-3.5 py-2 text-[11px] sm:text-[11.5px] font-bold inline-flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto ${
               hideNames
                 ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                 : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'

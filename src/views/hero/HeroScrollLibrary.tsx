@@ -151,12 +151,12 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
                 <button
                   type="button"
                   onClick={() => setReadingTome(tome)}
-                  className="text-left text-[16px] sm:text-[17px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
+                  className="text-left text-[15px] sm:text-[16px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words cursor-pointer block w-full"
                 >
                   {tome.title}
                 </button>
                 {tome.summary && (
-                  <p className="text-[14.5px] sm:text-[15px] text-[var(--board-muted)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+                  <p className="text-[13.5px] sm:text-[14px] text-[var(--board-muted)] leading-relaxed line-clamp-2 break-words">
                     {tome.summary}
                   </p>
                 )}

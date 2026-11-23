@@ -193,10 +193,10 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
                     onClick={() => setSelectedNotice(notice)}
                     className="w-full text-left space-y-1.5 hover:opacity-90 transition-opacity cursor-pointer block"
                   >
-                    <h3 className="font-pixel-display text-[14.5px] sm:text-[15.5px] leading-snug break-words [overflow-wrap:anywhere] text-[var(--text-primary)]">
+                    <h3 className="font-pixel-display text-[14.5px] sm:text-[15.5px] leading-snug break-words text-[var(--text-primary)]">
                       {notice.title}
                     </h3>
-                    <p className="text-[13.5px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed break-words [overflow-wrap:anywhere]">
+                    <p className="text-[13.5px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed break-words">
                       {notice.description}
                     </p>
                   </button>
@@ -241,7 +241,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
               {selectedNotice.priority} · {formatRetroDate(selectedNotice.releaseDate)} ·{' '}
               {selectedNotice.author}
             </p>
-            <h3 className="text-[15px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+            <h3 className="text-[14.5px] sm:text-[15px] font-bold text-[var(--text-primary)] leading-snug break-words">
               {selectedNotice.title}
             </h3>
             <div className="pixel-box-inset p-3.5 text-[13.5px] sm:text-[14px] text-[var(--text-primary)] whitespace-pre-line leading-relaxed break-words [overflow-wrap:anywhere]">

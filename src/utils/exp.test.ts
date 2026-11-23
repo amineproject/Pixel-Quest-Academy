@@ -42,6 +42,13 @@ import {
   buildGradesFromImportEntries,
   parseAssessmentExcelFile,
 } from './exportRecap';
+import {
+  filterSemesterReportData,
+  generateEraArchiveBundle,
+  mergeEraArchiveIntoState,
+  parseAndValidateEraArchive,
+  pruneEraFromState,
+} from './archiveAndReport';
 import { AcademyState, ActiveQuest, Dungeon, ExpGrade, HeroStudent, Realm } from '../types/lms';
 
 const sampleHeroes: HeroStudent[] = [
@@ -914,6 +921,309 @@ describe('Mobile/Desktop Score Draft Input Sanitization', () => {
     assert.equal(resolveScoreFromDraft('120', 80), 100);
   });
 });
+
+describe('Semester Report & Academic Year Archive Lifecycle', () => {
+  const sampleState: AcademyState = {
+    gmProfile: {
+      name: 'Amin Wayudi, S.Pd.',
+      title: 'Guild Master',
+      specialty: 'Informatika & Bahasa',
+      avatar: 'guild_master',
+    },
+    settings: {
+      theme: 'sunny_quest',
+      crtScanlines: false,
+      soundEnabled: false,
+      academicTerm: 'Era 2026/2027 — Season 1 (Ganjil)',
+      activeSeason: 'ganjil',
+    },
+    academicYears: [
+      {
+        id: 'era-2025-2026',
+        name: '2025/2026',
+        startDate: '2025-07-14',
+        endDate: '2026-06-20',
+        isActive: false,
+      },
+      {
+        id: 'era-2026-2027',
+        name: '2026/2027',
+        startDate: '2026-07-13',
+        endDate: '2027-06-25',
+        isActive: true,
+      },
+    ],
+    realms: [
+      {
+        id: 'rlm-inf',
+        name: 'Informatika',
+        code: 'INF-8',
+        icon: 'bolt',
+        accentColor: '#3B82F6',
+        description: '',
+      },
+      {
+        id: 'rlm-bin',
+        name: 'Bahasa Indonesia',
+        code: 'BIN-8',
+        icon: 'flask',
+        accentColor: '#10B981',
+        description: '',
+      },
+    ],
+    dungeons: [
+      {
+        id: 'd-2025-8a',
+        name: 'Kelas VIII-A (2025)',
+        tier: 'Kelas VIII',
+        guildCode: 'VIII-A-25',
+        capacity: 30,
+        description: '',
+        realmIds: ['rlm-inf'],
+        academicYearId: 'era-2025-2026',
+      },
+      {
+        id: 'd-2026-8a',
+        name: 'Kelas VIII-A (2026)',
+        tier: 'Kelas VIII',
+        guildCode: 'VIII-A-26',
+        capacity: 30,
+        description: '',
+        realmIds: ['rlm-inf', 'rlm-bin'],
+        academicYearId: 'era-2026-2027',
+      },
+    ],
+    heroes: [
+      {
+        id: 'h-2025-1',
+        name: 'Alumni 2025',
+        username: 'alm25',
+        studentCode: '25001',
+        dungeonId: 'd-2025-8a',
+        avatar: 'knight',
+        heroClass: 'Knight',
+        active: true,
+        joinedDate: '2025-07-15',
+        enrolledRealmIds: ['rlm-inf'],
+        pin: '1234',
+      },
+      {
+        id: 'h-2026-1',
+        name: 'Siswa Aktif 2026',
+        username: 'sis26',
+        studentCode: '26001',
+        dungeonId: 'd-2026-8a',
+        avatar: 'mage',
+        heroClass: 'Mage',
+        active: true,
+        joinedDate: '2026-07-15',
+        enrolledRealmIds: ['rlm-inf'],
+      },
+    ],
+    tomes: [
+      {
+        id: 'tm-2025-gjl',
+        realmId: 'rlm-inf',
+        title: 'Algoritma Dasar 2025',
+        chapter: 'Bab 1',
+        summary: 'Materi ganjil 2025',
+        content: 'Isi materi',
+        publishedDate: '2025-08-10',
+        academicYearId: 'era-2025-2026',
+        season: 'ganjil',
+      },
+      {
+        id: 'tm-2025-gnp',
+        realmId: 'rlm-inf',
+        title: 'Jaringan Komputer 2025',
+        chapter: 'Bab 4',
+        summary: 'Materi genap 2025',
+        content: 'Isi materi',
+        publishedDate: '2026-02-10',
+        academicYearId: 'era-2025-2026',
+        season: 'genap',
+      },
+      {
+        id: 'tm-umum',
+        realmId: 'rlm-inf',
+        title: 'Panduan Umum Literasi Digital',
+        chapter: 'Bab 0',
+        summary: 'Materi lintas tahun',
+        content: 'Isi panduan',
+        publishedDate: '2026-07-15',
+      },
+    ],
+    quests: [
+      {
+        id: 'q-2025-gjl',
+        realmId: 'rlm-inf',
+        dungeonId: 'd-2025-8a',
+        title: 'Tugas Flowchart 2025',
+        instructions: 'Buat flowchart',
+        deadline: '2025-09-01',
+        maxExp: 200,
+        difficulty: 'Normal',
+        category: 'Main',
+        academicYearId: 'era-2025-2026',
+        season: 'ganjil',
+      },
+      {
+        id: 'q-2025-gnp',
+        realmId: 'rlm-inf',
+        dungeonId: 'd-2025-8a',
+        title: 'Tugas Topologi 2025',
+        instructions: 'Gambar topologi',
+        deadline: '2026-03-01',
+        maxExp: 250,
+        difficulty: 'Elite',
+        category: 'Main',
+        academicYearId: 'era-2025-2026',
+        season: 'genap',
+      },
+      {
+        id: 'q-2026-gjl',
+        realmId: 'rlm-inf',
+        dungeonId: 'd-2026-8a',
+        title: 'Tugas Python 2026',
+        instructions: 'Tulis kode',
+        deadline: '2026-09-10',
+        maxExp: 200,
+        difficulty: 'Normal',
+        category: 'Main',
+        academicYearId: 'era-2026-2027',
+        season: 'ganjil',
+      },
+    ],
+    notices: [
+      {
+        id: 'n-2025-1',
+        title: 'Pengumuman 2025',
+        description: 'Info 2025',
+        priority: 'Medium',
+        targetDungeonId: 'd-2025-8a',
+        releaseDate: '2025-08-01',
+        author: 'GM',
+        academicYearId: 'era-2025-2026',
+        season: 'ganjil',
+      },
+    ],
+    grades: [
+      {
+        id: 'g-2025-1',
+        heroId: 'h-2025-1',
+        questId: 'q-2025-gjl',
+        realmId: 'rlm-inf',
+        score: 90,
+        expEarned: 180,
+        status: 'tuntas',
+        feedback: 'Mantap',
+        gradedDate: '2025-09-02',
+      },
+      {
+        id: 'g-2026-1',
+        heroId: 'h-2026-1',
+        questId: 'q-2026-gjl',
+        realmId: 'rlm-inf',
+        score: 88,
+        expEarned: 176,
+        status: 'tuntas',
+        feedback: 'Bagus',
+        gradedDate: '2026-09-11',
+      },
+    ],
+  };
+
+  it('filters semester report accurately across Era, Season, Class, and Subject', () => {
+    const repGanjil2025 = filterSemesterReportData(sampleState, {
+      academicYearId: 'era-2025-2026',
+      season: 'ganjil',
+      dungeonId: 'all',
+      realmId: 'all',
+      includeGeneralTomes: false,
+    });
+
+    assert.equal(repGanjil2025.eraName, '2025/2026');
+    assert.deepEqual(
+      repGanjil2025.tomes.map((t) => t.tome.id),
+      ['tm-2025-gjl']
+    );
+    assert.deepEqual(
+      repGanjil2025.quests.map((q) => q.quest.id),
+      ['q-2025-gjl']
+    );
+    assert.equal(repGanjil2025.studentRows.length, 1);
+    assert.equal(repGanjil2025.studentRows[0].hero.id, 'h-2025-1');
+    assert.equal(repGanjil2025.studentRows[0].avgScore, 90);
+    assert.equal(repGanjil2025.summary.completionPercent, 100);
+
+    const repFull2025 = filterSemesterReportData(sampleState, {
+      academicYearId: 'era-2025-2026',
+      season: 'all',
+      dungeonId: 'd-2025-8a',
+      realmId: 'rlm-inf',
+      includeGeneralTomes: true,
+    });
+    assert.equal(repFull2025.quests.length, 2);
+    assert.ok(repFull2025.tomes.some((t) => t.tome.id === 'tm-2025-gnp'));
+    assert.ok(repFull2025.tomes.some((t) => t.tome.id === 'tm-umum'));
+  });
+
+  it('prevents pruning active Era, then cleanly prunes and restores an inactive Era via JSON bundle', () => {
+    const blocked = pruneEraFromState(sampleState, 'era-2026-2027');
+    assert.equal(blocked.ok, false);
+
+    // 1. Generate & validate JSON archive
+    const bundle = generateEraArchiveBundle(sampleState, 'era-2025-2026');
+    assert.ok(bundle);
+    assert.equal(bundle.counts.dungeons, 1);
+    assert.equal(bundle.counts.quests, 2);
+    assert.equal(bundle.counts.grades, 1);
+    // PIN is stripped from archive export for privacy
+    assert.equal(bundle.heroesSnapshot[0].pin, undefined);
+
+    const parsed = parseAndValidateEraArchive(JSON.stringify(bundle));
+    assert.equal(parsed.ok, true);
+    if (!('bundle' in parsed)) return;
+
+    // 2. Prune inactive 2025/2026 Era
+    const pruned = pruneEraFromState(sampleState, 'era-2025-2026', {
+      pruneHeroesInEra: true,
+    });
+    assert.equal(pruned.ok, true);
+    assert.equal(pruned.nextState.academicYears?.length, 1);
+    assert.equal(pruned.nextState.dungeons.length, 1);
+    assert.equal(pruned.nextState.quests.length, 1);
+    assert.equal(pruned.nextState.grades.length, 1);
+    // Shared untagged tome remains preserved; active hero remains untouched
+    assert.ok(pruned.nextState.tomes.some((t) => t.id === 'tm-umum'));
+    assert.deepEqual(
+      pruned.nextState.heroes.map((h) => h.id),
+      ['h-2026-1']
+    );
+
+    // 3. Re-upload & restore without duplicating active data or changing active Era
+    const restored = mergeEraArchiveIntoState(pruned.nextState, parsed.bundle);
+    assert.equal(restored.summary.eraAdded, true);
+    assert.equal(restored.summary.addedDungeons, 1);
+    assert.equal(restored.summary.addedQuests, 2);
+    assert.equal(restored.summary.addedGrades, 1);
+    assert.equal(
+      restored.nextState.academicYears?.find((y) => y.id === 'era-2026-2027')?.isActive,
+      true
+    );
+    assert.equal(
+      restored.nextState.academicYears?.find((y) => y.id === 'era-2025-2026')?.isActive,
+      false
+    );
+
+    // 4. Re-importing same bundle is idempotent
+    const secondImport = mergeEraArchiveIntoState(restored.nextState, parsed.bundle);
+    assert.equal(secondImport.summary.addedDungeons, 0);
+    assert.equal(secondImport.summary.addedQuests, 0);
+    assert.equal(secondImport.summary.addedGrades, 0);
+  });
+});
+
 
 
 

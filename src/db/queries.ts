@@ -345,6 +345,10 @@ export async function getAllAcademyData() {
           scheduledAt: t.scheduledAt || '',
           classSchedules: cs,
           publishedDate: t.publishedDate,
+          ...(t.academicYearId ? { academicYearId: t.academicYearId } : {}),
+          ...(t.season === 'genap' || t.season === 'ganjil'
+            ? { season: t.season as SeasonId }
+            : {}),
         };
       }),
       quests: questsList.map((q) => {
@@ -431,6 +435,15 @@ export async function setActiveAcademicYear(eraId: string) {
   } catch (error) {
     console.error('Failed to activate academic year:', error);
     throw new Error('Failed to switch active Era.', { cause: error });
+  }
+}
+
+export async function deleteAcademicYear(eraId: string) {
+  try {
+    return await db.delete(academicYears).where(eq(academicYears.id, eraId));
+  } catch (error) {
+    console.error('Failed to delete academic year:', error);
+    throw new Error('Failed to delete Era.', { cause: error });
   }
 }
 
@@ -776,6 +789,8 @@ export async function upsertTome(t: AncientTome) {
         scheduledAt: t.scheduledAt || '',
         classSchedules: csJson,
         publishedDate: t.publishedDate,
+        academicYearId: t.academicYearId || null,
+        season: t.season || null,
       })
       .onConflictDoUpdate({
         target: tomes.id,
@@ -790,6 +805,8 @@ export async function upsertTome(t: AncientTome) {
           targetDungeonId: t.targetDungeonId || 'all',
           scheduledAt: t.scheduledAt || '',
           classSchedules: csJson,
+          academicYearId: t.academicYearId || null,
+          season: t.season || null,
         },
       });
   } catch (error) {

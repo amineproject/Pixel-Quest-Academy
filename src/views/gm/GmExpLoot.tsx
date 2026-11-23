@@ -1130,14 +1130,14 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                             size={15}
                             className="text-[var(--accent-primary)] shrink-0"
                           />
-                          <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
+                          <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)] shrink-0">
                             {group.dungeon?.guildCode || 'LAIN'}
                           </span>
-                          <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] truncate">
+                          <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words">
                             {group.dungeon?.name || 'Kelas Lainnya'}
                           </h3>
                           {group.dungeon?.tier && (
-                            <span className="text-[12px] text-[var(--text-secondary)]">
+                            <span className="text-[11.5px] text-[var(--text-secondary)] shrink-0">
                               ({group.dungeon.tier})
                             </span>
                           )}
@@ -1407,7 +1407,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             <div className="space-y-2.5">
               {parsedExcel.matchedQuestColumns.length > 0 && (
                 <div className="pixel-box-inset p-2.5 space-y-1">
-                  <span className="font-pixel-ui text-[9.5px] text-[var(--accent-success)] block">
+                  <span className="font-pixel-ui text-[10px] text-[var(--accent-success)] block">
                     KOLOM TUGAS TERDETEKSI ({parsedExcel.matchedQuestColumns.length}):
                   </span>
                   <div className="flex flex-wrap gap-1.5">

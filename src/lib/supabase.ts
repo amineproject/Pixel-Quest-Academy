@@ -710,6 +710,8 @@ export async function fetchAcademyFromSupabase(
         scheduledAt: t.scheduled_at || '',
         classSchedules: parseClassSchedules(t.class_schedules),
         publishedDate: t.published_date || '',
+        ...(t.academic_year_id ? { academicYearId: t.academic_year_id } : {}),
+        ...(t.season === 'genap' || t.season === 'ganjil' ? { season: t.season } : {}),
       })),
       quests: qList.map((q: any) => ({
         id: q.id,
@@ -879,6 +881,24 @@ export async function cloudSetActiveEra(
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message || 'Gagal mengganti Era aktif.' };
+  }
+}
+
+export async function cloudDeleteAcademicYear(
+  eraId: string,
+  gmAuth?: GmAuthCredentials
+): Promise<CloudSyncResult> {
+  const client = getSupabase();
+  if (!client) return { ok: true };
+  try {
+    const rpc = await runGmRpc(client, 'gm_delete_academic_year', gmAuth, { p_id: eraId });
+    if (rpc.handled) return rpc.result;
+
+    const { error } = await client.from('academic_years').delete().eq('id', eraId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Gagal menghapus Era di Cloud.' };
   }
 }
 
@@ -1123,6 +1143,8 @@ export async function cloudSyncTome(
       scheduled_at: tome.scheduledAt || '',
       class_schedules: JSON.stringify(tome.classSchedules || {}),
       published_date: tome.publishedDate,
+      academic_year_id: tome.academicYearId || null,
+      season: tome.season || null,
     };
     const rpc = await runGmRpc(client, 'gm_upsert_tome', gmAuth, { p_data: payload });
     if (rpc.handled) return rpc.result;
@@ -1366,6 +1388,8 @@ export async function uploadAllLocalToSupabase(
         scheduled_at: t.scheduledAt || '',
         class_schedules: JSON.stringify(t.classSchedules || {}),
         published_date: t.publishedDate,
+        academic_year_id: t.academicYearId || null,
+        season: t.season || null,
       })),
       quests: state.quests.map((q) => ({
         id: q.id,
@@ -1435,9 +1459,11 @@ export async function uploadAllLocalToSupabase(
       }
     }
 
-    // Legacy fallback if RPCs not deployed yet
+    if (bulkPayload.academic_years.length > 0) {
+      await upsertWithColumnPruning(client, 'academic_years', bulkPayload.academic_years);
+    }
     if (bulkPayload.dungeons.length > 0) {
-      const { error } = await client.from('dungeons').upsert(bulkPayload.dungeons);
+      const { error } = await upsertWithColumnPruning(client, 'dungeons', bulkPayload.dungeons);
       if (error) throw new Error(`Tabel dungeons: ${error.message}`);
     }
     if (bulkPayload.realms.length > 0) {
@@ -1451,7 +1477,7 @@ export async function uploadAllLocalToSupabase(
       if (error) throw new Error(`Tabel heroes: ${error.message}`);
     }
     if (bulkPayload.tomes.length > 0) {
-      const { error } = await client.from('tomes').upsert(bulkPayload.tomes);
+      const { error } = await upsertWithColumnPruning(client, 'tomes', bulkPayload.tomes);
       if (error) throw new Error(`Tabel tomes: ${error.message}`);
     }
     if (bulkPayload.quests.length > 0) {

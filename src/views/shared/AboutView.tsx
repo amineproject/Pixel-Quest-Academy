@@ -21,7 +21,7 @@ interface AboutViewProps {
   currentTheme: PixelTheme;
 }
 
-const APP_VERSION = '3.8';
+const APP_VERSION = '3.10';
 const APP_DEVELOPER = 'Amin Wayudi, S.Pd.';
 
 interface VersionLog {
@@ -34,10 +34,28 @@ interface VersionLog {
 
 const CHANGELOG: VersionLog[] = [
   {
-    version: '3.8',
-    title: 'Standarisasi Visual 16-Bit Pixel Art di Seluruh 5 Tema Dunia',
+    version: '3.10',
+    title: 'Perapihan Tipografi, Ukuran Font & Tata Letak Lintas 5 Tema',
     badge: 'TERBARU · SAAT INI',
     isCurrent: true,
+    changes: [
+      'Standarisasi Skala Font & Pembungkus Teks Lintas Tema: perbaikan menyeluruh pada 5 tema (Super Paper Stage, Pokémon Café ReMix, Sprout Pixel Village, Mobile Legends, dan Phantom Persona Pop) agar kata normal tidak terpotong di tengah huruf, tombol dan judul kartu tidak meluber di layar sempit, serta sudut miring tema Persona lebih proporsional.',
+      'Konsistensi Menu Akun Guru & Siswa: menyeragamkan ukuran teks sidebar, drawer menu mobile, bilah navigasi bawah, kartu KPI Dashboard, tab filter, label pengumuman, serta tampilan modal dan tombol aksi di semua halaman Guru maupun Siswa.',
+    ],
+  },
+  {
+    version: '3.9',
+    title: 'Laporan Cetak Semester Lengkap & Manajemen Arsip Tahun Pelajaran',
+    badge: 'PEMBARUAN BESAR',
+    changes: [
+      'Laporan Pembelajaran Semester Siap Cetak (Akun Guru): di menu Guild Chronicles kini tersedia laporan resmi per Tahun Pelajaran dan Semester (Ganjil, Genap, atau 1 Tahun) yang mencakup rekap Materi (Tomes), Tugas (Quests), Ketuntasan & Nilai Siswa, hingga rincian skor tiap tugas. Mendukung Cetak/Simpan PDF rapi tanpa bingkai aplikasi serta ekspor Excel 4-sheet (.xlsx).',
+      'Manajemen Arsip Tahun Pelajaran (Generate, Bersihkan, & Unggah): di menu System Settings, guru dapat mengunduh paket arsip lengkap Tahun Pelajaran lama ke file .json, membersihkan tahun pelajaran lama yang tidak aktif agar aplikasi tetap ringan, dan mengunggahnya kembali kapan saja untuk dipulihkan atau dicetak ulang.',
+    ],
+  },
+  {
+    version: '3.8',
+    title: 'Standarisasi Visual 16-Bit Pixel Art di Seluruh 5 Tema Dunia',
+    badge: 'PEMBARUAN BESAR',
     changes: [
       'Peningkatan 16-Bit Pixel Art Universal: seluruh 5 tema game (Super Paper Stage, Pokémon Café ReMix, Sprout Pixel Village, Mobile Legends: Bang Bang, dan Phantom Persona Pop) kini menggunakan tipografi piksel 16-bit (Pixelify Sans & Chakra Petch), sudut kotak berundak (4px–6px), efek bevel cahaya-bayangan khas SNES/GBA, serta tekstur papan & bingkai konsol piksel.',
       'Ilustrasi & Sprites 16-Bit Penuh: latar belakang dunia, maskot tiap tema (Topi Mario Paper, Cangkir Pokémon Café, Kucing Sprout, Perisai Mythic MLBB, & Bintang Persona), ikon Empty State, serta seluruh Avatar Hero/GM ditingkatkan menjadi sprite piksel multi-warna 24×24 berketajaman crispEdges.',

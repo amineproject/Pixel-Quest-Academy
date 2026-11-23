@@ -388,8 +388,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
         className="relative z-10 w-full max-w-[560px] sm:max-w-[640px] md:max-w-[700px] console-bezel transition-all sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]"
       >
         {/* Hardware Trim Top */}
-        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wider uppercase font-bold">
-          <span>
+        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-pixel-ui text-[10px] tracking-wide uppercase font-bold gap-2">
+          <span className="min-w-0 truncate">
             {activeTheme === 'sunny_quest'
               ? '★ 16-BIT PIXEL · SUPER PAPER STAGE ★'
               : activeTheme === 'daylight_rpg'
@@ -436,9 +436,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <span
                 className={`font-pixel-ui text-[10.5px] font-bold truncate ${
                   isPersonaTheme
-                    ? 'text-white tracking-wider'
+                    ? 'text-white tracking-wide'
                     : isMlbbTheme
-                      ? 'text-[#fde68a] tracking-wider'
+                      ? 'text-[#fde68a] tracking-wide'
                       : 'text-[var(--text-primary)]'
                 }`}
               >
@@ -477,12 +477,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <PixelCoin size={20} className="animate-coin-shine" />
                 </div>
                 <div className="space-y-1.5">
-                  <div className="inline-block bg-gradient-to-r from-[#f5c84c] via-[#fef08a] to-[#d4a94f] text-[#0b1730] border-2 border-[#78350f] shadow-[0_3px_0_0_#071022] px-4 py-1 rounded-[5px]">
-                    <h1 className="font-pixel-display text-[17px] sm:text-[19px] tracking-wide">
+                  <div className="inline-block bg-gradient-to-r from-[#f5c84c] via-[#fef08a] to-[#d4a94f] text-[#0b1730] border-2 border-[#78350f] shadow-[0_3px_0_0_#071022] px-4 py-1 rounded-[5px] max-w-full">
+                    <h1 className="font-pixel-display text-[15.5px] sm:text-[18px] tracking-wide">
                       PIXEL QUEST
                     </h1>
                   </div>
-                  <p className="font-pixel-display text-[11.5px] text-[#fde68a] tracking-widest uppercase">
+                  <p className="font-pixel-display text-[11px] text-[#fde68a] tracking-wide uppercase">
                     LAND OF DAWN · ACADEMY LMS
                   </p>
                   <p className="text-[12.5px] font-semibold text-[#7dd3fc]">
@@ -529,7 +529,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h1 className="font-pixel-display text-[20px] sm:text-[22px] text-[#1e140e] leading-tight">
+                      <h1 className="font-pixel-display text-[16px] min-[380px]:text-[17.5px] sm:text-[19px] text-[#1e140e] leading-tight">
                         Pixel Quest Academy
                       </h1>
                       <p className="text-[13px] font-bold text-[#433025] leading-snug mt-0.5">
@@ -551,7 +551,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <ThemeMascotIllustration theme="daylight_rpg" size={46} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h1 className="inline-block font-pixel-display text-[20px] sm:text-[22px] text-[#3f2117] leading-tight bg-gradient-to-t from-[#ffe169] via-[#ffe169]/65 to-transparent px-1 rounded-[3px]">
+                    <h1 className="inline-block font-pixel-display text-[16px] min-[380px]:text-[17.5px] sm:text-[19px] text-[#3f2117] leading-tight bg-gradient-to-t from-[#ffe169] via-[#ffe169]/65 to-transparent px-1 rounded-[3px]">
                       Pixel Quest Academy
                     </h1>
                     <p className="text-[13px] font-bold text-[#683c2b] leading-snug mt-1">
@@ -567,7 +567,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <ThemeMascotIllustration theme="nes_classic" size={44} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h1 className="font-pixel-display text-[19px] sm:text-[21px] text-[#3b2214] leading-tight">
+                    <h1 className="font-pixel-display text-[16px] min-[380px]:text-[17.5px] sm:text-[19px] text-[#3b2214] leading-tight">
                       Pixel Quest Academy
                     </h1>
                     <p className="text-[12.5px] font-semibold text-[#5c3822] mt-0.5">
@@ -588,12 +588,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <ThemeMascotIllustration theme="gameboy_green" size={38} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="inline-block persona-slant bg-[#e60012] border-2 border-white px-2.5 py-0.5 shadow-[2px_2px_0_0_#ffe600]">
-                      <h1 className="persona-unslant font-pixel-display text-[17px] sm:text-[19px] text-white tracking-wide leading-tight">
+                    <div className="inline-block persona-slant bg-[#e60012] border-2 border-white px-2.5 py-0.5 shadow-[2px_2px_0_0_#ffe600] max-w-full">
+                      <h1 className="persona-unslant font-pixel-display text-[15.5px] sm:text-[18px] text-white tracking-wide leading-tight">
                         PIXEL QUEST
                       </h1>
                     </div>
-                    <p className="font-pixel-ui text-[11px] font-bold text-[#ffe600] tracking-widest uppercase mt-1">
+                    <p className="font-pixel-ui text-[10.5px] font-bold text-[#ffe600] tracking-wide uppercase mt-1">
                       ACADEMY · PHANTOM EDITION
                     </p>
                   </div>
@@ -653,7 +653,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       <UserCheck size={14} />
                       PORTAL AKUN SISWA
                     </span>
-                    <span className="font-pixel-body text-[14px] text-[var(--text-secondary)]">
+                    <span className="font-pixel-body text-[12.5px] font-semibold text-[var(--text-secondary)]">
                       Mode Read-Only
                     </span>
                   </div>
@@ -714,7 +714,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </div>
 
                   {heroError && (
-                    <p className="font-pixel-body text-[16px] text-[var(--accent-danger)] leading-tight">
+                    <p className="font-pixel-body text-[13px] sm:text-[13.5px] font-semibold text-[var(--accent-danger)] leading-snug">
                       [!] {heroError}
                     </p>
                   )}
@@ -749,18 +749,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       <h3 className="font-pixel-display text-[13px] text-[var(--text-primary)] truncate mt-0.5">
                         {state.gmProfile.name}
                       </h3>
-                      <p className="font-pixel-body text-[16px] text-[var(--text-secondary)] truncate">
+                      <p className="font-pixel-body text-[13px] sm:text-[13.5px] text-[var(--text-secondary)] truncate">
                         {state.gmProfile.title}
                       </p>
                     </div>
                   </div>
 
-                  <div className="pixel-box-inset p-2.5 text-[var(--text-secondary)] font-pixel-body text-[16px] leading-snug">
+                  <div className="pixel-box-inset p-2.5 text-[var(--text-secondary)] font-pixel-body text-[13px] sm:text-[13.5px] leading-relaxed">
                     <p className="flex items-center gap-1.5 text-[var(--accent-success)] font-pixel-ui text-[10px] mb-1">
                       <ShieldCheck size={13} />
                       FULL ACCESS PRIVILEGE
                     </p>
-                    Akses penuh untuk mengelola 9 Modul: Dungeons, Siswa, Quest Board, Realms, Tomes, Quests, & Penilaian.
+                    Akses penuh untuk mengelola 9 Modul: Dungeons, Siswa, Quest Board, Realms, Tomes, Quests, &amp; Penilaian.
                   </div>
 
                   <div className="pixel-box-inset p-2.5 text-center border-2 border-[var(--accent-warning)] bg-[var(--bg-inset)]">
@@ -821,7 +821,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     </div>
                   </div>
                   {gmError && (
-                    <p className="font-pixel-body text-[16px] text-[var(--accent-danger)] leading-tight">
+                    <p className="font-pixel-body text-[13px] sm:text-[13.5px] font-semibold text-[var(--accent-danger)] leading-snug">
                       [!] {gmError}
                     </p>
                   )}
@@ -885,7 +885,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <span className="font-pixel-ui text-[11px] text-[var(--text-secondary)] block text-center">
                 PILIH GAYA TAMPILAN &amp; FONT SESUAI SELERAMU
               </span>
-              <div className="grid grid-cols-5 gap-1 sm:gap-1.5">
+              <div className="grid grid-cols-2 min-[380px]:grid-cols-3 sm:grid-cols-5 gap-1.5">
                 {THEME_STYLES.map((th) => (
                   <button
                     key={th.id}
@@ -895,7 +895,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       playRetroSound('blip', state.settings.soundEnabled);
                     }}
                     title={th.label}
-                    className={`px-1 py-1.5 rounded-md text-center font-pixel-ui text-[9.5px] sm:text-[10.5px] leading-tight cursor-pointer border-2 transition-all overflow-hidden ${
+                    className={`px-1.5 py-1.5 rounded-md text-center font-pixel-ui text-[10px] sm:text-[10.5px] leading-tight cursor-pointer border-2 transition-all overflow-hidden ${
                       state.settings.theme === th.id
                         ? 'border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)] font-bold shadow-[2px_2px_0_var(--shadow-ink)]'
                         : 'border-[var(--border-pixel)]/40 bg-[var(--bg-surface)] text-[var(--text-primary)] opacity-85 hover:opacity-100'

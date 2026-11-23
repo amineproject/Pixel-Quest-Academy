@@ -195,10 +195,10 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                       className="w-4 h-4 mt-1 accent-[var(--accent-danger)] shrink-0 cursor-pointer"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words [overflow-wrap:anywhere]">
+                      <p className="text-[11.5px] font-semibold text-[var(--accent-warning)] break-words">
                         {dungeon.guildCode} · {dungeon.tier}
                       </p>
-                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
+                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words">
                         {dungeon.name}
                       </h3>
                     </div>
@@ -224,7 +224,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                 </div>
 
                 {dungeon.description && (
-                  <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                  <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words">
                     {dungeon.description}
                   </p>
                 )}
@@ -238,7 +238,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
 
                 {/* Linked Realms / Subjects */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--border-pixel)]/30">
-                  <span className="font-pixel-ui text-[9px] text-[var(--accent-warning)] uppercase shrink-0">
+                  <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase shrink-0">
                     Mapel ({dungeon.realmIds?.length || 0}):
                   </span>
                   {dungeon.realmIds && dungeon.realmIds.length > 0 ? (

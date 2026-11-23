@@ -586,7 +586,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                     <PixelAvatar avatar={hero.avatar} size={44} className="shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <h3 className="text-[14px] font-bold text-[var(--text-primary)] break-words [overflow-wrap:anywhere]">
+                        <h3 className="text-[14px] font-bold text-[var(--text-primary)] break-words">
                           {hero.name}
                         </h3>
                         {hero.hasPin && (
@@ -638,7 +638,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
                 {/* Enrolled Subjects Badges */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--border-pixel)]/30">
-                  <span className="font-pixel-ui text-[9px] text-[var(--accent-warning)] uppercase shrink-0">
+                  <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase shrink-0">
                     Mapel ({heroRealmIds.length}):
                   </span>
                   {heroRealmIds.length > 0 ? (
@@ -872,7 +872,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   }`}
                 >
                   <PixelAvatar avatar={item.value} size={34} />
-                  <span className="font-pixel-ui text-[8.5px] text-[var(--text-primary)] capitalize truncate max-w-full">
+                  <span className="font-pixel-ui text-[10px] text-[var(--text-primary)] capitalize truncate max-w-full">
                     {item.value}
                   </span>
                 </button>

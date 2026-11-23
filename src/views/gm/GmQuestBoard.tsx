@@ -360,7 +360,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                     <span className={`text-[10.5px] font-bold ${priorityTextColor(notice.priority)}`}>
                       {notice.priority}
                     </span>
-                    <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+                    <h3 className="text-[14px] sm:text-[14.5px] font-bold text-[var(--text-primary)] leading-snug break-words">
                       {notice.title}
                     </h3>
                   </div>
@@ -384,7 +384,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                     </button>
                   </div>
                 </div>
-                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words">
                   {notice.description}
                 </p>
                 {targetedDungeons.length > 1 && (

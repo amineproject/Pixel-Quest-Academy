@@ -146,6 +146,8 @@ export interface AncientTome {
   publishedDate: string;
   scheduledAt?: string; // '' | 'YYYY-MM-DDTHH:mm' | '__per_class__'
   classSchedules?: Record<string, string>; // dungeonId -> 'YYYY-MM-DDTHH:mm'
+  academicYearId?: string;
+  season?: SeasonId;
 }
 
 export interface ActiveQuest {

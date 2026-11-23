@@ -150,7 +150,7 @@ export const WoodenQuestBoard: React.FC<WoodenQuestBoardProps> = ({
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {bannerLeft && <div className="shrink-0 flex items-center">{bannerLeft}</div>}
           <span
-            className={`font-pixel-display text-[13px] sm:text-[14.5px] tracking-wider uppercase truncate ${style.bannerTitle}`}
+            className={`font-pixel-display text-[12.5px] sm:text-[13.5px] tracking-[0.015em] leading-snug line-clamp-2 break-words uppercase ${style.bannerTitle}`}
           >
             {bannerTitle}
           </span>
@@ -170,12 +170,12 @@ export const WoodenQuestBoard: React.FC<WoodenQuestBoardProps> = ({
                 className="inline-flex items-center gap-1.5 min-w-0"
               >
                 <span
-                  className={`font-pixel-display text-[11px] sm:text-[12px] uppercase tracking-wide shrink-0 ${style.statLabel}`}
+                  className={`font-pixel-ui text-[10px] sm:text-[10.5px] font-bold uppercase tracking-[0.02em] shrink-0 ${style.statLabel}`}
                 >
                   {stat.label}
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 border text-[12px] sm:text-[12.5px] font-extrabold tabular-nums leading-tight truncate max-w-[180px] ${
+                  className={`px-2 py-0.5 border text-[11.5px] sm:text-[12px] font-extrabold tabular-nums leading-tight truncate max-w-[190px] sm:max-w-[230px] ${
                     style.tones[stat.tone || 'default']
                   }`}
                 >

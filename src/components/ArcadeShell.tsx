@@ -60,7 +60,7 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'guild_chronicles', label: 'Guild Chronicles', shortLabel: 'Chronicles', standardName: 'Statistik' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'settings', label: 'System Settings', shortLabel: 'Config', standardName: 'Pengaturan' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.8' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.10' },
 ];
 
 export const HERO_NAV_ITEMS: {
@@ -75,7 +75,7 @@ export const HERO_NAV_ITEMS: {
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.8' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.10' },
 ];
 
 export function getGmMenuIcon(id: GmMenuId, size = 18) {
@@ -238,13 +238,15 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
   return (
     <div
       data-theme={theme}
-      className="relative min-h-[100dvh] w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-4 sm:px-4"
+      className="print-unclip relative min-h-[100dvh] w-full pixel-grid-bg bg-[var(--bg-outer)] text-[var(--text-primary)] flex flex-col items-center justify-start sm:py-4 sm:px-4"
     >
-      <ThemeBackdropIllustration theme={theme} />
+      <div className="no-print print:hidden">
+        <ThemeBackdropIllustration theme={theme} />
+      </div>
 
       {/* Desktop Top Header */}
       <div
-        className={`relative z-10 hidden sm:flex items-center justify-between w-full mb-2.5 px-1 gap-2 transition-all ${
+        className={`no-print print:hidden relative z-10 hidden sm:flex items-center justify-between w-full mb-2.5 px-1 gap-2 transition-all ${
           isWindowMaximized
             ? 'max-w-[1380px]'
             : 'max-w-[640px] md:max-w-[960px] lg:max-w-[1080px]'
@@ -280,17 +282,17 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
 
       {/* Theme-Adaptive Console / Editorial Frame */}
       <div
-        className={`relative z-10 w-full console-bezel transition-all ${
+        className={`print-unclip relative z-10 w-full console-bezel transition-all ${
           isWindowMaximized
             ? 'max-w-[1380px]'
             : 'max-w-[560px] sm:max-w-[640px] md:max-w-[960px] lg:max-w-[1080px]'
         } sm:p-3 sm:rounded-xl sm:bg-[var(--bezel-body)] sm:border-2 sm:border-[var(--bezel-trim)] sm:shadow-[6px_6px_0_0_var(--shadow-ink)]`}
       >
         {/* Console Hardware Top Trim */}
-        <div className="hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-bold">
-          <div className="flex items-center gap-2 font-pixel-ui text-[11px] tracking-wider uppercase">
-            <PixelCoin size={15} className="animate-coin-shine" />
-            <span>
+        <div className="no-print print:hidden hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-bold">
+          <div className="flex items-center gap-2 font-pixel-ui text-[10.5px] tracking-wide uppercase min-w-0 flex-1">
+            <PixelCoin size={15} className="animate-coin-shine shrink-0" />
+            <span className="truncate">
               {theme === 'sunny_quest'
                 ? '16-BIT PIXEL · SUPER PAPER STAGE'
                 : theme === 'daylight_rpg'
@@ -361,7 +363,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
         ) : (
         /* Screen Viewport: Persistent Left Sidebar (md+) + Main Pane */
         <div
-          className={`relative w-full h-[100dvh] flex flex-col md:flex-row bg-[var(--bg-canvas)] overflow-hidden ${
+          className={`print-unclip relative w-full h-[100dvh] flex flex-col md:flex-row bg-[var(--bg-canvas)] overflow-hidden ${
             isWindowMaximized
               ? 'sm:h-[calc(100dvh-110px)] sm:min-h-[500px]'
               : 'sm:h-[calc(100dvh-150px)] sm:min-h-[460px] sm:max-h-[860px]'
@@ -374,7 +376,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           {/* Persistent Sidebar Navigation (Desktop & Tablet >= 768px) */}
           <aside
             aria-label={isGm ? 'Game Master Sidebar Navigation' : 'Hero Sidebar Navigation'}
-            className={`hidden md:flex md:flex-col md:w-[236px] lg:w-[258px] shrink-0 overflow-hidden ${
+            className={`no-print print:hidden hidden md:flex md:flex-col md:w-[236px] lg:w-[258px] shrink-0 overflow-hidden ${
               isPersonaTheme
                 ? 'bg-[#0d0d14] text-white border-r-[3px] border-[#09090f]'
                 : isMlbbTheme
@@ -404,7 +406,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 />
                 <div className="min-w-0 flex-1">
                   <p
-                    className={`font-pixel-ui text-[10px] uppercase tracking-wider flex items-center gap-1 ${
+                    className={`font-pixel-ui text-[10px] uppercase tracking-wide flex items-center gap-1 ${
                       isPersonaTheme
                         ? 'text-[#ffe600]'
                         : isMlbbTheme
@@ -429,7 +431,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             {/* Sidebar Menu Links */}
             <nav className="flex-1 overflow-y-auto pixel-scroll p-2.5 space-y-1">
               <p
-                className={`px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wider ${
+                className={`px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wide ${
                   isPersonaTheme
                     ? 'text-[#ffe600]'
                     : isMlbbTheme
@@ -465,9 +467,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         key={item.id}
                         type="button"
                         onClick={() => onSelectGmMenu(item.id)}
-                        className={`w-full min-h-[42px] px-2.5 py-2 flex items-center gap-2.5 text-left transition-all cursor-pointer ${
-                          active ? activeBtnClass : idleBtnClass
-                        }`}
+                        className={`min-h-[42px] px-2.5 py-2 flex items-center gap-2.5 text-left transition-all cursor-pointer ${
+                          isPersonaTheme && active ? 'mx-0.5 w-[calc(100%-4px)]' : 'w-full'
+                        } ${active ? activeBtnClass : idleBtnClass}`}
                       >
                         <span
                           className={`shrink-0 ${
@@ -493,11 +495,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             isPersonaTheme && active ? 'persona-unslant' : ''
                           }`}
                         >
-                          <span className="block text-[12.5px] leading-tight truncate">
+                          <span className="block font-pixel-ui text-[12px] font-bold leading-tight truncate">
                             {item.shortLabel}
                           </span>
                           <span
-                            className={`block text-[10.5px] leading-tight truncate ${
+                            className={`block text-[10.5px] font-medium leading-tight truncate ${
                               active
                                 ? 'opacity-90'
                                 : isPersonaTheme
@@ -512,9 +514,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         </span>
                         {badgeCount > 0 && (
                           <span
-                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums ${
-                              isPersonaTheme ? 'border border-white' : ''
-                            }`}
+                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9.5px] font-bold shrink-0 tabular-nums ${
+                              isPersonaTheme && active ? 'persona-unslant ' : ''
+                            }${isPersonaTheme ? 'border border-white' : ''}`}
                           >
                             {badgeCount}
                           </span>
@@ -546,9 +548,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         key={item.id}
                         type="button"
                         onClick={() => onSelectHeroMenu(item.id)}
-                        className={`w-full min-h-[44px] px-2.5 py-2 flex items-center gap-2.5 text-left transition-all cursor-pointer ${
-                          active ? activeBtnClass : idleBtnClass
-                        }`}
+                        className={`min-h-[42px] px-2.5 py-2 flex items-center gap-2.5 text-left transition-all cursor-pointer ${
+                          isPersonaTheme && active ? 'mx-0.5 w-[calc(100%-4px)]' : 'w-full'
+                        } ${active ? activeBtnClass : idleBtnClass}`}
                       >
                         <span
                           className={`shrink-0 ${
@@ -574,11 +576,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             isPersonaTheme && active ? 'persona-unslant' : ''
                           }`}
                         >
-                          <span className="block text-[13px] leading-tight truncate">
+                          <span className="block font-pixel-ui text-[12px] font-bold leading-tight truncate">
                             {item.shortLabel}
                           </span>
                           <span
-                            className={`block text-[11px] leading-tight truncate ${
+                            className={`block text-[10.5px] font-medium leading-tight truncate ${
                               active
                                 ? 'opacity-90'
                                 : isPersonaTheme
@@ -593,9 +595,9 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         </span>
                         {badgeCount > 0 && (
                           <span
-                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9px] font-bold shrink-0 tabular-nums ${
-                              isPersonaTheme ? 'border border-white' : ''
-                            }`}
+                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9.5px] font-bold shrink-0 tabular-nums ${
+                              isPersonaTheme && active ? 'persona-unslant ' : ''
+                            }${isPersonaTheme ? 'border border-white' : ''}`}
                           >
                             {badgeCount}
                           </span>
@@ -627,10 +629,10 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
           </aside>
 
           {/* Right Main Column */}
-          <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          <div className="print-unclip flex-1 flex flex-col min-w-0 min-h-0">
             {/* Top App Bar */}
             <header
-              className={`z-30 min-h-[56px] shrink-0 px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2 ${
+              className={`no-print print:hidden z-30 min-h-[56px] shrink-0 px-2.5 sm:px-4 py-1.5 flex items-center justify-between gap-2 ${
                 isPersonaTheme
                   ? 'bg-[#09090f] text-white border-b-[3px] border-[#e60012] persona-stripes'
                   : isMlbbTheme
@@ -646,25 +648,25 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 />
                 <div className="min-w-0 flex-1">
                   <h1
-                    className={`font-pixel-display text-[13px] sm:text-[14.5px] truncate leading-snug ${
+                    className={`font-pixel-display text-[12.5px] sm:text-[14px] truncate leading-snug ${
                       isPersonaTheme
-                        ? 'text-white uppercase tracking-wide'
+                        ? 'text-white uppercase tracking-[0.02em]'
                         : isMlbbTheme
-                          ? 'text-[#fde68a] uppercase tracking-wide'
+                          ? 'text-[#fde68a] uppercase tracking-[0.02em]'
                           : 'text-[var(--text-primary)]'
                     }`}
                   >
                     {activeTitle}
                   </h1>
                   <div
-                    className={`text-[12px] leading-tight mt-0.5 flex items-center gap-1.5 flex-wrap ${
+                    className={`text-[11.5px] sm:text-[12px] leading-tight mt-0.5 flex items-center gap-1.5 flex-wrap ${
                       isPersonaTheme || isMlbbTheme ? 'text-zinc-200' : 'text-[var(--text-secondary)]'
                     }`}
                   >
                     <span className="inline-flex items-center gap-1 min-w-0">
                       {isGm ? (
                         <span
-                          className={`flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0 ${
+                          className={`flex items-center gap-1 font-pixel-ui text-[10.5px] sm:text-[11px] font-bold shrink-0 ${
                             isPersonaTheme
                               ? 'text-[#ffe600]'
                               : isMlbbTheme
@@ -676,7 +678,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         </span>
                       ) : (
                         <span
-                          className={`flex items-center gap-1 font-pixel-ui text-[11px] font-bold shrink-0 ${
+                          className={`flex items-center gap-1 font-pixel-ui text-[10.5px] sm:text-[11px] font-bold shrink-0 ${
                             isPersonaTheme
                               ? 'text-[#ffe600]'
                               : isMlbbTheme
@@ -688,7 +690,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         </span>
                       )}
                       <span aria-hidden="true">·</span>
-                      <span className="truncate font-semibold max-w-[150px] sm:max-w-[220px]">
+                      <span className="truncate font-semibold max-w-[140px] sm:max-w-[220px]">
                         {isGm ? gmName : activeHeroName}
                       </span>
                     </span>
@@ -710,7 +712,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                 <div className="sm:hidden">
                   <PWAInstallButton compact />
                 </div>
@@ -807,14 +809,14 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             </header>
 
             {/* Main Scrollable Content Area */}
-            <main className="flex-1 min-h-0 overflow-y-auto pixel-scroll p-3.5 sm:p-5 pb-8 space-y-4">
+            <main className="print-unclip flex-1 min-h-0 overflow-y-auto pixel-scroll p-3.5 sm:p-5 pb-8 space-y-4">
               {children}
             </main>
 
             {/* Mobile Bottom Tab Bar Navigation (hidden on md+ where Persistent Sidebar is active) */}
             <nav
               aria-label={isGm ? 'Game Master Navigation' : 'Hero Navigation'}
-              className={`md:hidden z-30 h-[62px] shrink-0 ${
+              className={`no-print print:hidden md:hidden z-30 h-[62px] shrink-0 ${
                 isPersonaTheme
                   ? 'bg-[#09090f] text-white border-t-[3px] border-[#e60012]'
                   : 'bg-[var(--bg-surface)] border-t-2 border-[var(--border-pixel)]'
@@ -849,7 +851,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             {badgeCount}
                           </span>
                         )}
-                        <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
+                        <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
                           {item.shortLabel}
                         </span>
                       </button>
@@ -872,7 +874,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         {unreadNoticeCount}
                       </span>
                     )}
-                    <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap">
+                    <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
                       Menu
                     </span>
                   </button>
@@ -906,7 +908,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             {badgeCount}
                           </span>
                         )}
-                        <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap truncate max-w-full">
+                        <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
                           {item.shortLabel}
                         </span>
                       </button>
@@ -927,7 +929,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                     }`}
                   >
                     <Grid size={19} />
-                    <span className="font-pixel-ui text-[10px] sm:text-[10.5px] tracking-tight leading-none whitespace-nowrap">
+                    <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
                       Menu
                     </span>
                   </button>
@@ -939,7 +941,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
         )}
 
         {/* Handheld Console Footer Trim */}
-        <div className="hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
+        <div className="no-print print:hidden hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
           <div className="flex items-center gap-1.5">
             <PixelStar size={12} />
             <span>PIXEL QUEST ACADEMY</span>

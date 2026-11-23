@@ -112,7 +112,7 @@ export const StickerAchievement: React.FC<{
     </span>
     <div className="min-w-0 flex-1">
       <div className="flex items-center justify-between gap-1.5">
-        <p className="font-pixel-ui text-[12.5px] font-bold text-[#3f2117] leading-tight truncate">
+        <p className="font-pixel-ui text-[12px] sm:text-[12.5px] font-bold text-[#3f2117] leading-snug truncate">
           {title}
         </p>
         <span className="text-[10.5px] font-bold text-[#c82a36] shrink-0">
@@ -189,7 +189,7 @@ export const RoyalMedallion: React.FC<{
     </span>
     <div className="min-w-0 flex-1">
       <div className="flex items-center justify-between gap-1.5">
-        <p className="font-pixel-ui text-[12px] font-bold text-[#3b2214] truncate">
+        <p className="font-pixel-ui text-[12px] sm:text-[12.5px] font-bold text-[#3b2214] leading-snug truncate">
           {title}
         </p>
         <span className="text-[10.5px] font-bold text-[#3f7d28] shrink-0">
@@ -210,7 +210,7 @@ export const KingdomQuestBoard: React.FC<{
   <RoyalFrameCard className="space-y-2.5">
     <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[#b87c4b] border-2 border-[#5c3822] rounded-[3px] shadow-[inset_0_2px_0_rgba(255,248,223,0.3)]">
       <Sprout size={14} className="text-[#d9f99d] shrink-0" />
-      <span className="font-pixel-ui text-[11px] font-bold uppercase tracking-wider text-[#fff8df] truncate">
+      <span className="font-pixel-ui text-[10.5px] sm:text-[11px] font-bold uppercase tracking-[0.02em] text-[#fff8df] truncate">
         {headerTitle}
       </span>
     </div>
@@ -313,7 +313,7 @@ export const MinimalReadingCanvas: React.FC<{
   className?: string;
 }> = ({ children, className = '' }) => (
   <div
-    className={`relative bg-white border-[2.5px] border-[#09090f] rounded-[2px] p-5 sm:p-6 shadow-[4px_4px_0_0_#e60012] text-[15px] sm:text-[16px] leading-[1.8] text-[#09090f] whitespace-pre-line break-words [overflow-wrap:anywhere] ${className}`}
+    className={`relative bg-white border-[2.5px] border-[#09090f] rounded-[2px] p-5 sm:p-6 shadow-[4px_4px_0_0_#e60012] text-[14.5px] sm:text-[15px] leading-[1.75] text-[#09090f] whitespace-pre-line break-words [overflow-wrap:anywhere] ${className}`}
   >
     <span
       aria-hidden="true"
@@ -332,8 +332,8 @@ export const CleanProgressIndicator: React.FC<{
   return (
     <div className="space-y-1.5">
       {(labelLeft || labelRight) && (
-        <div className="flex items-center justify-between text-[12.5px] font-bold text-[#09090f] tabular-nums">
-          <span className="uppercase tracking-wide">{labelLeft}</span>
+        <div className="flex items-center justify-between text-[12px] font-bold text-[#09090f] tabular-nums">
+          <span className="uppercase tracking-[0.02em]">{labelLeft}</span>
           <span className="text-[#e60012]">{labelRight}</span>
         </div>
       )}
@@ -425,11 +425,9 @@ export const ThemedNoticeCard: React.FC<{
         {(speaker || metaRight) && (
           <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
             {speaker && (
-              <span className="persona-slant inline-flex items-center gap-1.5 bg-[#09090f] text-white border-2 border-[#09090f] shadow-[3px_3px_0_0_#e60012] px-2.5 py-1 font-pixel-ui text-[11px] font-bold uppercase tracking-wider">
-                <span className="persona-unslant inline-flex items-center gap-1">
-                  <Star size={11} className="text-[#ffe600]" fill="currentColor" />
-                  {speaker}
-                </span>
+              <span className="inline-flex items-center gap-1.5 bg-[#09090f] text-white border-2 border-[#09090f] shadow-[3px_3px_0_0_#e60012] px-2.5 py-1 font-pixel-ui text-[10.5px] sm:text-[11px] font-bold uppercase tracking-[0.02em] max-w-full break-words">
+                <Star size={11} className="text-[#ffe600] shrink-0" fill="currentColor" />
+                <span>{speaker}</span>
               </span>
             )}
             {metaRight && (
@@ -549,7 +547,7 @@ export const ThemedAchievementCard: React.FC<{
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1.5">
-            <p className="font-pixel-ui text-[12.5px] font-bold text-[#09090f] truncate">
+            <p className="font-pixel-ui text-[12px] sm:text-[12.5px] font-bold text-[#09090f] leading-snug truncate">
               {title}
             </p>
             <span
@@ -588,7 +586,7 @@ export const ThemedAchievementCard: React.FC<{
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1.5">
-            <p className="font-pixel-ui text-[12.5px] font-bold text-[#1e140e] leading-tight truncate">
+            <p className="font-pixel-ui text-[12px] sm:text-[12.5px] font-bold text-[#1e140e] leading-snug truncate">
               {title}
             </p>
             <span
@@ -627,7 +625,7 @@ export const ThemedAchievementCard: React.FC<{
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-1.5">
-          <p className="font-pixel-ui text-[12.5px] font-bold text-[#0b1730] leading-tight truncate">
+          <p className="font-pixel-ui text-[12px] sm:text-[12.5px] font-bold text-[#0b1730] leading-snug truncate">
             {title}
           </p>
           <span

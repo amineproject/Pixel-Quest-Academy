@@ -456,7 +456,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <Flame size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <h3 className="font-pixel-ui text-[11.5px] text-[var(--text-primary)] uppercase">
+              <h3 className="font-pixel-ui text-[11.5px] sm:text-[12px] tracking-[0.02em] text-[var(--text-primary)] uppercase">
                 Streak &amp; Lencana Prestasi
               </h3>
               <p className="text-[11.5px] text-[var(--text-secondary)]">
@@ -496,7 +496,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <Palette size={17} />
             </span>
             <div className="min-w-0">
-              <h3 className="font-pixel-ui text-[12px] text-[var(--text-primary)] uppercase">
+              <h3 className="font-pixel-ui text-[11.5px] sm:text-[12px] tracking-[0.02em] text-[var(--text-primary)] uppercase">
                 Gaya Tampilan &amp; Font Belajar
               </h3>
               <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
@@ -665,7 +665,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     <button
                       type="button"
                       onClick={() => setDetailQuest(quest)}
-                      className="text-left text-[13.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer"
+                      className="text-left text-[13.5px] font-bold text-[var(--text-primary)] hover:text-[var(--accent-primary)] leading-snug break-words cursor-pointer"
                     >
                       {quest.title}
                     </button>
@@ -694,7 +694,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     </span>
                   </div>
                   {grade?.feedback && (
-                    <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed pt-0.5 break-words [overflow-wrap:anywhere]">
+                    <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed pt-0.5 break-words">
                       Catatan Guru: {grade.feedback}
                     </p>
                   )}
@@ -963,7 +963,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     }`}
                   >
                     <PixelAvatar avatar={item.value} size={42} />
-                    <span className="font-pixel-ui text-[9px] text-[var(--text-primary)]">
+                    <span className="font-pixel-ui text-[10px] text-[var(--text-primary)] leading-tight text-center">
                       {item.label}
                     </span>
                   </button>

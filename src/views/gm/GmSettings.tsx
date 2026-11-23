@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { RotateCcw, ShieldAlert } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Archive, FileDown, RotateCcw, ShieldAlert, Trash2, Upload } from 'lucide-react';
 import {
   AcademyState,
   GameMasterProfile,
@@ -11,8 +11,17 @@ import {
   PixelConfirmDialog,
   PixelFieldLabel,
   PixelInput,
+  PixelModal,
   PixelSectionTitle,
+  PixelSelect,
 } from '../../components/PixelUI';
+import {
+  EraArchiveBundleV1,
+  MergeArchiveSummary,
+  generateEraArchiveBundle,
+  parseAndValidateEraArchive,
+  triggerEraArchiveDownload,
+} from '../../utils/archiveAndReport';
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import { PWAInstallButton } from '../../components/PWAInstallBanner';
 import { THEME_STYLES } from '../../utils/themes';
@@ -44,6 +53,11 @@ interface GmSettingsProps {
   onPullCloudData: () => Promise<AcademyState | null>;
   onTestAccessDenied: () => void;
   onRequestGmReauth?: () => void;
+  onImportEraArchive?: (bundle: EraArchiveBundleV1) => Promise<MergeArchiveSummary>;
+  onPruneEraArchive?: (
+    academicYearId: string,
+    pruneHeroesInEra: boolean
+  ) => Promise<{ ok: boolean; error?: string; summaryText?: string }>;
 }
 
 export const GmSettings: React.FC<GmSettingsProps> = ({
@@ -55,6 +69,8 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   onPullCloudData,
   onTestAccessDenied,
   onRequestGmReauth,
+  onImportEraArchive,
+  onPruneEraArchive,
 }) => {
   const isProtectedPass =
     isSupabaseConfigured() &&
@@ -81,6 +97,42 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+
+  // Academic Year Archive Management State
+  const academicYears = useMemo(() => state.academicYears || [], [state.academicYears]);
+  const defaultArchiveEraId =
+    academicYears.find((y) => !y.isActive)?.id || academicYears[0]?.id || '';
+  const [selectedArchiveEraId, setSelectedArchiveEraId] =
+    useState<string>(defaultArchiveEraId);
+  const [downloadedEraIds, setDownloadedEraIds] = useState<string[]>([]);
+  const [archiveStatusMsg, setArchiveStatusMsg] = useState<{
+    tone: 'success' | 'warning' | 'danger';
+    text: string;
+  } | null>(null);
+  const [pruneModalOpen, setPruneModalOpen] = useState(false);
+  const [pruneHeroesInEra, setPruneHeroesInEra] = useState(false);
+  const [isArchiveBusy, setIsArchiveBusy] = useState(false);
+  const [pendingImportBundle, setPendingImportBundle] =
+    useState<EraArchiveBundleV1 | null>(null);
+  const archiveFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const effectiveArchiveEraId = academicYears.some(
+    (y) => y.id === selectedArchiveEraId
+  )
+    ? selectedArchiveEraId
+    : defaultArchiveEraId;
+
+  const selectedArchiveEra = academicYears.find(
+    (y) => y.id === effectiveArchiveEraId
+  );
+
+  const selectedArchiveBundle = useMemo(
+    () =>
+      effectiveArchiveEraId
+        ? generateEraArchiveBundle(state, effectiveArchiveEraId)
+        : null,
+    [state, effectiveArchiveEraId]
+  );
 
   // Sync local form fields if remote Cloud data updates from another device (HP <-> Laptop)
   useEffect(() => {
@@ -231,6 +283,99 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
     }
   };
 
+  const handleGenerateArchiveDownload = () => {
+    if (!selectedArchiveBundle) {
+      setArchiveStatusMsg({
+        tone: 'danger',
+        text: 'Pilih Tahun Pelajaran terlebih dahulu sebelum mengunduh arsip.',
+      });
+      return;
+    }
+    const filename = triggerEraArchiveDownload(selectedArchiveBundle);
+    setDownloadedEraIds((prev) =>
+      prev.includes(selectedArchiveBundle.academicYear.id)
+        ? prev
+        : [...prev, selectedArchiveBundle.academicYear.id]
+    );
+    setArchiveStatusMsg({
+      tone: 'success',
+      text: `Arsip Tahun Pelajaran ${selectedArchiveBundle.academicYear.name} berhasil dibuat dan diunduh (${filename}). Simpan file .json ini sebagai cadangan.`,
+    });
+  };
+
+  const handleArchiveFilePicked = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = parseAndValidateEraArchive(text);
+      if (parsed.ok === false) {
+        setArchiveStatusMsg({ tone: 'danger', text: parsed.error });
+        return;
+      }
+      setPendingImportBundle(parsed.bundle);
+    } catch {
+      setArchiveStatusMsg({
+        tone: 'danger',
+        text: 'Gagal membaca isi file arsip .json yang dipilih.',
+      });
+    }
+  };
+
+  const handleConfirmImportArchive = async () => {
+    if (!pendingImportBundle || !onImportEraArchive) {
+      setPendingImportBundle(null);
+      return;
+    }
+    const bundle = pendingImportBundle;
+    setPendingImportBundle(null);
+    setIsArchiveBusy(true);
+    try {
+      const summary = await onImportEraArchive(bundle);
+      setSelectedArchiveEraId(bundle.academicYear.id);
+      setArchiveStatusMsg({
+        tone: 'success',
+        text: `Arsip Tahun Pelajaran ${summary.eraName} berhasil dipulihkan (+${summary.addedDungeons} kelas, +${summary.addedHeroes} siswa, +${summary.addedTomes} materi, +${summary.addedQuests} tugas, +${summary.addedGrades} nilai). Anda sekarang dapat mencetak laporannya di menu Guild Chronicles.`,
+      });
+    } finally {
+      setIsArchiveBusy(false);
+    }
+  };
+
+  const handleConfirmPruneEra = async () => {
+    if (!selectedArchiveEra || !onPruneEraArchive) {
+      setPruneModalOpen(false);
+      return;
+    }
+    setPruneModalOpen(false);
+    setIsArchiveBusy(true);
+    try {
+      const res = await onPruneEraArchive(
+        selectedArchiveEra.id,
+        pruneHeroesInEra
+      );
+      if (res.ok) {
+        setArchiveStatusMsg({
+          tone: 'warning',
+          text:
+            res.summaryText ||
+            `Data Tahun Pelajaran ${selectedArchiveEra.name} telah dibersihkan dari memori aktif agar aplikasi tetap ringan.`,
+        });
+      } else {
+        setArchiveStatusMsg({
+          tone: 'danger',
+          text: res.error || 'Gagal membersihkan Tahun Pelajaran lama.',
+        });
+      }
+    } finally {
+      setIsArchiveBusy(false);
+      setPruneHeroesInEra(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <PixelSectionTitle
@@ -241,7 +386,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
       {/* Full Style & Typography Theme Selector */}
       <ThemedPanelCard className="space-y-3">
         <div>
-          <h3 className="font-pixel-ui text-[12px] text-[var(--accent-warning)]">
+          <h3 className="font-pixel-ui text-[11px] sm:text-[12px] tracking-[0.02em] leading-snug text-[var(--accent-warning)]">
             GAYA VISUAL &amp; KOMBINASI FONT APLIKASI
           </h3>
           <p className="text-[12px] text-[var(--text-secondary)] mt-0.5">
@@ -325,7 +470,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
 
       {/* PWA Mobile Installation Card */}
       <ThemedPanelCard className="space-y-2.5">
-        <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
+        <h3 className="font-pixel-ui text-[11px] sm:text-[12px] tracking-[0.02em] leading-snug text-[var(--accent-warning)]">
           INSTALASI APLIKASI HP (PWA)
         </h3>
         <p className="text-[12.5px] text-[var(--text-secondary)] leading-relaxed">
@@ -340,8 +485,8 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         <div className="flex items-center gap-3">
           <PixelAvatar avatar={avatar} size={46} className="shrink-0" />
           <div className="min-w-0 flex-1">
-            <h3 className="font-pixel-ui text-[11px] sm:text-[12px] text-[var(--accent-warning)] leading-snug">
-              GAME MASTER PROFILE & SECURITY
+            <h3 className="font-pixel-ui text-[11px] sm:text-[12px] tracking-[0.02em] text-[var(--accent-warning)] leading-snug">
+              GAME MASTER PROFILE &amp; SECURITY
             </h3>
             <p className="text-[12.5px] text-[var(--text-secondary)] leading-snug mt-0.5">
               Kustomisasi identitas guru dan keamanan akun admin
@@ -372,7 +517,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                 }`}
               >
                 <PixelAvatar avatar={av.id} size={36} />
-                <span className="font-pixel-ui text-[9px] text-[var(--text-primary)]">
+                <span className="font-pixel-ui text-[10px] text-[var(--text-primary)] leading-tight">
                   {av.label}
                 </span>
               </button>
@@ -428,8 +573,9 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         {/* Security & Credentials */}
         <div className="pt-2 border-t border-[var(--border-pixel)]/40 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-1.5">
-            <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase">
-              🔐 Akun & Password Guru
+            <span className="font-pixel-ui text-[10.5px] text-[var(--accent-warning)] uppercase inline-flex items-center gap-1.5">
+              <Lock size={12} className="shrink-0" />
+              Akun &amp; Password Guru
             </span>
             <span className="text-[11.5px] font-medium text-[var(--text-muted)]">
               Proteksi Akses Siswa
@@ -494,18 +640,19 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Cloud size={17} className="text-[var(--accent-warning)] shrink-0" />
-            <h3 className="font-pixel-ui text-[10.5px] sm:text-[11px] text-[var(--accent-warning)] leading-snug">
+            <h3 className="font-pixel-ui text-[11px] sm:text-[12px] tracking-[0.02em] text-[var(--accent-warning)] leading-snug">
               SUPABASE CLOUD SYNC
             </h3>
           </div>
           <span
-            className={`font-pixel-ui text-[9px] px-2 py-0.5 rounded border-2 font-bold shrink-0 ${
+            className={`font-pixel-ui text-[10px] px-2 py-0.5 rounded border-2 font-bold shrink-0 inline-flex items-center gap-1 ${
               isCloudConfigured
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-700'
                 : 'bg-amber-100 text-amber-800 border-amber-700'
             }`}
           >
-            {isCloudConfigured ? '☁️ CLOUD AKTIF' : '⚠️ MODE LOKAL'}
+            <Cloud size={11} className="shrink-0" />
+            {isCloudConfigured ? 'CLOUD AKTIF' : 'MODE LOKAL'}
           </span>
         </div>
 
@@ -650,10 +797,171 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         </div>
       </ThemedPanelCard>
 
+      {/* Manajemen Arsip Tahun Pelajaran */}
+      <ThemedPanelCard className="space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Archive size={17} className="text-[var(--accent-warning)] shrink-0" />
+            <h3 className="font-pixel-ui text-[11px] sm:text-[12px] tracking-[0.02em] text-[var(--accent-warning)] leading-snug">
+              MANAJEMEN ARSIP TAHUN PELAJARAN
+            </h3>
+          </div>
+          <span className="font-pixel-ui text-[10px] px-2 py-0.5 border border-[var(--border-pixel)] bg-[var(--bg-inset)] text-[var(--text-primary)] shrink-0">
+            {academicYears.length} ERA TERSIMPAN
+          </span>
+        </div>
+
+        <div className="pixel-box-inset p-3 bg-[var(--bg-inset)] text-[12.5px] text-[var(--text-secondary)] leading-relaxed space-y-1">
+          <p className="font-bold text-[var(--text-primary)]">
+            Rekomendasi Pengelolaan Data Tahunan (Ringan &amp; Aman):
+          </p>
+          <p>
+            Agar aplikasi tetap ringan di HP maupun laptop tanpa kehilangan riwayat, terapkan alur{' '}
+            <strong>1. Generate &amp; Unduh Arsip (.json)</strong> terlebih dahulu, lalu{' '}
+            <strong>2. Bersihkan Tahun Lama</strong> yang sudah tidak aktif. Kapan saja laporan atau data tahun lama dibutuhkan lagi, cukup{' '}
+            <strong>3. Unggah &amp; Pulihkan File Arsip (.json)</strong> di sini.
+          </p>
+        </div>
+
+        {academicYears.length > 0 && (
+          <div className="space-y-2.5">
+            <div>
+              <PixelFieldLabel htmlFor="archive-era-select">
+                Pilih Tahun Pelajaran (Era)
+              </PixelFieldLabel>
+              <PixelSelect
+                id="archive-era-select"
+                value={effectiveArchiveEraId}
+                onChange={(e) => setSelectedArchiveEraId(e.target.value)}
+              >
+                {academicYears.map((era) => (
+                  <option key={era.id} value={era.id}>
+                    {era.name} {era.isActive ? '(Tahun Aktif Saat Ini)' : '(Non-Aktif / Siap Diarsipkan)'}
+                  </option>
+                ))}
+              </PixelSelect>
+            </div>
+
+            {selectedArchiveBundle && (
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-center text-[11.5px]">
+                <div className="pixel-box-inset p-2 bg-[var(--bg-surface)]">
+                  <p className="text-[var(--text-muted)]">Kelas</p>
+                  <p className="font-bold text-[var(--text-primary)] tabular-nums">
+                    {selectedArchiveBundle.counts.dungeons}
+                  </p>
+                </div>
+                <div className="pixel-box-inset p-2 bg-[var(--bg-surface)]">
+                  <p className="text-[var(--text-muted)]">Siswa</p>
+                  <p className="font-bold text-[var(--text-primary)] tabular-nums">
+                    {selectedArchiveBundle.counts.heroes}
+                  </p>
+                </div>
+                <div className="pixel-box-inset p-2 bg-[var(--bg-surface)]">
+                  <p className="text-[var(--text-muted)]">Materi</p>
+                  <p className="font-bold text-[var(--text-primary)] tabular-nums">
+                    {selectedArchiveBundle.counts.tomes}
+                  </p>
+                </div>
+                <div className="pixel-box-inset p-2 bg-[var(--bg-surface)]">
+                  <p className="text-[var(--text-muted)]">Tugas</p>
+                  <p className="font-bold text-[var(--text-primary)] tabular-nums">
+                    {selectedArchiveBundle.counts.quests}
+                  </p>
+                </div>
+                <div className="pixel-box-inset p-2 bg-[var(--bg-surface)]">
+                  <p className="text-[var(--text-muted)]">Notice</p>
+                  <p className="font-bold text-[var(--text-primary)] tabular-nums">
+                    {selectedArchiveBundle.counts.notices}
+                  </p>
+                </div>
+                <div className="pixel-box-inset p-2 bg-[var(--bg-surface)]">
+                  <p className="text-[var(--text-muted)]">Nilai</p>
+                  <p className="font-bold text-[var(--text-primary)] tabular-nums">
+                    {selectedArchiveBundle.counts.grades}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1">
+              <PixelButton
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={!selectedArchiveBundle || isArchiveBusy}
+                onClick={handleGenerateArchiveDownload}
+              >
+                <FileDown size={14} />
+                <span>Generate &amp; Unduh (.json)</span>
+              </PixelButton>
+
+              <PixelButton
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={
+                  !selectedArchiveEra ||
+                  selectedArchiveEra.isActive ||
+                  isArchiveBusy ||
+                  !onPruneEraArchive
+                }
+                onClick={() => {
+                  setPruneHeroesInEra(false);
+                  setPruneModalOpen(true);
+                }}
+              >
+                <Trash2 size={14} />
+                <span>Bersihkan Tahun Ini</span>
+              </PixelButton>
+
+              <PixelButton
+                type="button"
+                variant="success"
+                size="sm"
+                disabled={isArchiveBusy || !onImportEraArchive}
+                onClick={() => archiveFileInputRef.current?.click()}
+              >
+                <Upload size={14} />
+                <span>Unggah Arsip (.json)</span>
+              </PixelButton>
+            </div>
+
+            <input
+              ref={archiveFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleArchiveFilePicked}
+              className="hidden"
+              aria-label="Pilih file arsip tahun pelajaran JSON"
+            />
+
+            {selectedArchiveEra?.isActive && (
+              <p className="text-[12px] text-[var(--text-muted)] leading-snug">
+                Catatan: Tahun Pelajaran <strong>{selectedArchiveEra.name}</strong> sedang aktif sehingga tidak dapat dibersihkan. Buat atau alihkan ke Tahun Pelajaran baru pada pemilih Era di bagian atas layar terlebih dahulu jika ingin membersihkan tahun lama.
+              </p>
+            )}
+          </div>
+        )}
+
+        {archiveStatusMsg && (
+          <div
+            className={`pixel-box-inset p-2.5 text-[12.5px] font-semibold border-2 ${
+              archiveStatusMsg.tone === 'success'
+                ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
+                : archiveStatusMsg.tone === 'warning'
+                  ? 'border-amber-700 bg-amber-50 text-amber-900'
+                  : 'border-rose-700 bg-rose-50 text-rose-900'
+            }`}
+          >
+            {archiveStatusMsg.text}
+          </div>
+        )}
+      </ThemedPanelCard>
+
       {/* Security & RBAC Guard Testing */}
       <ThemedPanelCard className="space-y-2.5">
-        <h3 className="font-pixel-ui text-[11px] text-[var(--accent-warning)]">
-          PENGUJIAN KEAMANAN & RESET
+        <h3 className="font-pixel-ui text-[11px] sm:text-[12px] tracking-[0.02em] leading-snug text-[var(--accent-warning)]">
+          PENGUJIAN KEAMANAN &amp; RESET
         </h3>
         <PixelButton
           type="button"
@@ -674,6 +982,71 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
           Reset Demo Data
         </PixelButton>
       </ThemedPanelCard>
+
+      {/* Confirm Prune Archived Era Modal */}
+      <PixelModal
+        open={pruneModalOpen && Boolean(selectedArchiveEra)}
+        title={`Bersihkan Tahun Pelajaran ${selectedArchiveEra?.name || ''}`}
+        onClose={() => setPruneModalOpen(false)}
+      >
+        <div className="space-y-3 text-[13px] text-[var(--text-secondary)]">
+          <p className="leading-relaxed text-[var(--text-primary)]">
+            Tindakan ini akan menghapus seluruh Kelas, Tugas, Pengumuman, Nilai, dan Materi khusus Tahun Pelajaran{' '}
+            <strong>{selectedArchiveEra?.name}</strong> dari aplikasi aktif (lokal maupun Cloud) agar aplikasi tetap ringan.
+          </p>
+
+          {selectedArchiveEra && !downloadedEraIds.includes(selectedArchiveEra.id) && (
+            <div className="pixel-box-inset p-2.5 border-2 border-amber-700 bg-amber-50 text-amber-900 font-semibold">
+              Anda belum menekan &ldquo;Generate &amp; Unduh (.json)&rdquo; pada sesi ini untuk Tahun Pelajaran {selectedArchiveEra.name}. Disarankan unduh file arsip terlebih dahulu sebelum membersihkan.
+            </div>
+          )}
+
+          <label className="pixel-box-inset p-2.5 bg-[var(--bg-inset)] flex items-start gap-2.5 cursor-pointer text-[var(--text-primary)]">
+            <input
+              type="checkbox"
+              checked={pruneHeroesInEra}
+              onChange={(e) => setPruneHeroesInEra(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-[var(--accent-danger)] shrink-0"
+            />
+            <span>
+              <strong>Ikut hapus data akun siswa pada tahun ini</strong> (centang jika siswa sudah lulus; biarkan tidak dicentang jika siswa masih naik ke kelas tahun berikutnya).
+            </span>
+          </label>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <PixelButton
+              type="button"
+              variant="neutral"
+              onClick={() => setPruneModalOpen(false)}
+              className="flex-1"
+            >
+              Batal
+            </PixelButton>
+            <PixelButton
+              type="button"
+              variant="danger"
+              onClick={handleConfirmPruneEra}
+              className="flex-1"
+            >
+              Ya, Bersihkan Tahun Ini
+            </PixelButton>
+          </div>
+        </div>
+      </PixelModal>
+
+      {/* Confirm Import Archive Modal */}
+      <PixelConfirmDialog
+        open={Boolean(pendingImportBundle)}
+        title={`Pulihkan Arsip TP ${pendingImportBundle?.academicYear.name || ''}`}
+        message={
+          pendingImportBundle
+            ? `File arsip valid berisi ${pendingImportBundle.counts.dungeons} Kelas, ${pendingImportBundle.counts.heroes} Siswa, ${pendingImportBundle.counts.tomes} Materi, ${pendingImportBundle.counts.quests} Tugas, ${pendingImportBundle.counts.notices} Pengumuman, dan ${pendingImportBundle.counts.grades} Nilai. Pulihkan data ini ke aplikasi tanpa mengganggu Tahun Pelajaran aktif saat ini?`
+            : ''
+        }
+        confirmLabel="Ya, Pulihkan Arsip"
+        onCancel={() => setPendingImportBundle(null)}
+        onConfirm={handleConfirmImportArchive}
+      />
 
       <PixelConfirmDialog
         open={confirmReset}

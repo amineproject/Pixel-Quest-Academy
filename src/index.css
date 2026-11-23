@@ -277,21 +277,24 @@
     line-height: 1.25;
     letter-spacing: 0.01em;
     text-wrap: balance;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .font-pixel-ui {
     font-family: var(--font-ui);
     font-weight: 700;
     line-height: 1.25;
-    letter-spacing: 0.02em;
-    overflow-wrap: anywhere;
+    letter-spacing: 0.015em;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .font-pixel-body {
     font-family: var(--font-body);
     line-height: 1.5;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
 
   .pixel-box {
@@ -300,7 +303,8 @@
     border-radius: var(--card-radius);
     max-width: 100%;
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
     box-shadow: var(--box-shadow-style);
     transition: border-radius 150ms ease, box-shadow 150ms ease;
   }
@@ -327,7 +331,8 @@
     border-radius: var(--inset-radius);
     max-width: 100%;
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
     box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.08);
   }
 
@@ -503,20 +508,20 @@
 
   /* Subtle beveled emblem slant for MLBB Rank buttons */
   [data-theme="cyber_retro"] .comic-slant {
-    transform: skewX(-6deg);
+    transform: skewX(-4deg);
   }
 
   [data-theme="cyber_retro"] .comic-unslant {
-    transform: skewX(6deg);
+    transform: skewX(4deg);
   }
 
   /* Persona slanted ribbon & striped accent utilities */
   [data-theme="gameboy_green"] .persona-slant {
-    transform: skewX(-8deg);
+    transform: skewX(-4deg);
   }
 
   [data-theme="gameboy_green"] .persona-unslant {
-    transform: skewX(8deg);
+    transform: skewX(4deg);
   }
 
   [data-theme="gameboy_green"] .persona-stripes {
@@ -743,3 +748,84 @@
     animation: none;
   }
 }
+
+/* Formal Print / PDF Layout for Semester Reports */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #111827 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    cursor: auto !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .crt-scanlines::after {
+    display: none !important;
+  }
+
+  .print-unclip,
+  .console-bezel {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-report-sheet {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    font-family: "Plus Jakarta Sans", "Nunito", system-ui, sans-serif !important;
+  }
+
+  .print-report-sheet table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5px;
+  }
+
+  .print-report-sheet thead {
+    display: table-header-group;
+  }
+
+  .print-report-sheet tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+

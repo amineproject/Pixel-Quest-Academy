@@ -331,14 +331,14 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                 role="tab"
                 aria-selected={active}
                 onClick={() => setFilter(opt.id)}
-                className={`pixel-btn min-h-[44px] px-4 py-2 text-[14px] font-semibold inline-flex items-center gap-2 cursor-pointer ${
+                className={`pixel-btn font-pixel-ui min-h-[38px] px-3 py-1.5 text-[10.5px] sm:text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer ${
                   active
                     ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                 }`}
               >
                 <span>{opt.label}</span>
-                <span className="px-1.5 py-0.5 rounded bg-black/15 text-[12px] tabular-nums">
+                <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10.5px] tabular-nums">
                   {opt.count}
                 </span>
               </button>
@@ -561,26 +561,26 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setDetailQuest(quest)}
-                      className="text-left text-[16px] sm:text-[17px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words cursor-pointer block w-full"
+                      className="text-left text-[15px] sm:text-[16px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words cursor-pointer block w-full"
                     >
                       {quest.title}
                     </button>
 
                     {quest.description?.trim() && (
-                      <p className="text-[13.5px] text-[var(--board-muted)] leading-snug line-clamp-2 break-words">
+                      <p className="text-[13px] sm:text-[13.5px] text-[var(--board-muted)] leading-snug line-clamp-2 break-words">
                         {quest.description}
                       </p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-2 text-[14px] text-[var(--board-ink)]">
+                    <div className="flex flex-wrap items-center gap-2 text-[13px] text-[var(--board-ink)]">
                       <span className="inline-flex items-center gap-1.5 font-medium">
-                        <Clock size={15} className="shrink-0 text-[var(--board-accent)]" />
+                        <Clock size={14} className="shrink-0 text-[var(--board-accent)]" />
                         <span>Batas: {formatRetroDate(quest.deadline)}</span>
                       </span>
                       {targetIds.length > 0 && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="text-[13.5px] font-semibold">
+                          <span className="text-[13px] font-semibold">
                             {singleDungeon ? singleDungeon.name : targetSummary}
                           </span>
                         </>
@@ -603,7 +603,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
 
                 {/* Admin submission breakdown strip */}
                 {isGm && counts && (
-                  <div className="pt-2.5 border-t border-[var(--board-divider)] flex flex-wrap items-center gap-2 text-[13.5px]">
+                  <div className="pt-2.5 border-t border-[var(--board-divider)] flex flex-wrap items-center gap-2 text-[12px]">
                     <span className="px-2.5 py-1 rounded border border-[#78350f] bg-[#fef3c7] text-[#451a03] font-bold tabular-nums">
                       Belum: {counts.belum}
                     </span>
@@ -613,7 +613,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                     <span className="px-2.5 py-1 rounded border border-[#9f1239] bg-[#ffe4e6] text-[#881337] font-bold tabular-nums">
                       Terlambat: {counts.terlambat}
                     </span>
-                    <span className="text-[13px] font-semibold text-[var(--board-muted)] ml-auto tabular-nums">
+                    <span className="text-[12px] font-semibold text-[var(--board-muted)] ml-auto tabular-nums">
                       Total Hero Target: {counts.total}
                     </span>
                   </div>
@@ -631,7 +631,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         onClose={() => setDetailQuest(null)}
       >
         {detailQuest && (
-          <div className="space-y-4 text-[16px]">
+          <div className="space-y-4 text-[13.5px] sm:text-[14px]">
             <div className="pixel-box-inset p-3.5 space-y-2">
               <div className="flex flex-wrap items-center gap-1.5">
                 <QuestCategoryBadge category={detailQuest.category} showDescription />
@@ -644,7 +644,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                   Kelas: {formatTargetDungeonsSummary(detailQuest.dungeonId, state.dungeons, 'Semua Kelas')}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[14px]">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[13px]">
                 <span className="font-semibold text-[var(--accent-warning)]">
                   Tenggat: {formatRetroDate(detailQuest.deadline)} (
                   {getDeadlineUrgency(detailQuest.deadline).label})
@@ -655,19 +655,19 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
               </div>
               {detailQuest.description?.trim() && (
                 <div className="pt-1 border-t border-[var(--border-pixel)]/30 space-y-0.5">
-                  <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-primary)]">
+                  <p className="font-pixel-ui text-[10px] uppercase text-[var(--accent-primary)]">
                     Deskripsi Misi
                   </p>
-                  <p className="text-[14.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words">
+                  <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words">
                     {detailQuest.description}
                   </p>
                 </div>
               )}
               <div className="pt-1 border-t border-[var(--border-pixel)]/30 space-y-1">
-                <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-warning)]">
+                <p className="font-pixel-ui text-[10px] uppercase text-[var(--accent-warning)]">
                   Objek Misi / Instruksi Tugas
                 </p>
-                <p className="text-[15.5px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
+                <p className="text-[13.5px] sm:text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
                   {detailDetailText(detailQuest)}
                 </p>
               </div>
@@ -703,7 +703,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                 </div>
 
                 {detailRow.targetHeroes.length === 0 ? (
-                  <p className="text-[15px] text-[var(--text-secondary)]">
+                  <p className="text-[13px] text-[var(--text-secondary)]">
                     Tidak ada Hero aktif pada kelas target.
                   </p>
                 ) : (
@@ -718,18 +718,18 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                       return (
                         <div
                           key={h.id}
-                          className="pixel-box-inset p-2.5 flex items-center justify-between gap-2 text-[15px]"
+                          className="pixel-box-inset p-2.5 flex items-center justify-between gap-2 text-[13.5px]"
                         >
                           <div className="min-w-0">
                             <p className="font-bold text-[var(--text-primary)] truncate">
                               {h.name}
                             </p>
-                            <p className="text-[13px] text-[var(--text-secondary)] truncate">
+                            <p className="text-[12px] text-[var(--text-secondary)] truncate">
                               {dng ? dng.name : 'Tanpa Kelas'}
                             </p>
                           </div>
                           <span
-                            className={`px-2.5 py-1 border font-pixel-ui text-[10.5px] font-bold shrink-0 ${STATUS_BADGE_MAP[st].className}`}
+                            className={`px-2 py-0.5 border font-pixel-ui text-[10px] font-bold shrink-0 ${STATUS_BADGE_MAP[st].className}`}
                           >
                             {STATUS_BADGE_MAP[st].label}
                           </span>

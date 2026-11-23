@@ -170,10 +170,10 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11.5px] font-semibold text-[var(--text-muted)] break-words [overflow-wrap:anywhere]">
+                      <p className="text-[11.5px] font-semibold text-[var(--text-muted)] break-words">
                         {realm.code} · {tomeCount} Tomes · {questCount} Quests
                       </p>
-                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words [overflow-wrap:anywhere]">
+                      <h3 className="text-[14.5px] font-bold text-[var(--text-primary)] mt-0.5 leading-snug break-words">
                         {realm.name}
                       </h3>
                     </div>
@@ -200,7 +200,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                 </div>
 
                 {realm.description && (
-                  <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                  <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words">
                     {realm.description}
                   </p>
                 )}
@@ -255,7 +255,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                     color={accentColor}
                     size={24}
                   />
-                  <span className="font-pixel-ui text-[9px] text-[var(--text-secondary)] truncate max-w-full">
+                  <span className="font-pixel-ui text-[10px] text-[var(--text-secondary)] truncate max-w-full">
                     {item.label}
                   </span>
                 </button>

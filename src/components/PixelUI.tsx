@@ -40,9 +40,9 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASSES = {
-  sm: 'min-h-[40px] px-3 py-1.5 text-[12px] sm:text-[12.5px]',
-  md: 'min-h-[44px] px-4 py-2 text-[13px] sm:text-[13.5px]',
-  lg: 'min-h-[48px] px-5 py-2.5 text-[14px]',
+  sm: 'min-h-[38px] px-2.5 sm:px-3 py-1.5 text-[11.5px] sm:text-[12px]',
+  md: 'min-h-[42px] px-3.5 sm:px-4 py-2 text-[12.5px] sm:text-[13px]',
+  lg: 'min-h-[46px] px-4 sm:px-5 py-2.5 text-[13px] sm:text-[13.5px]',
 };
 
 export const PixelButton: React.FC<PixelButtonProps> = ({
@@ -56,16 +56,16 @@ export const PixelButton: React.FC<PixelButtonProps> = ({
   const { theme } = useActiveTheme();
   const extraThemeBtn =
     theme === 'nes_classic'
-      ? 'uppercase tracking-wider'
+      ? 'uppercase tracking-[0.02em]'
       : theme === 'daylight_rpg'
         ? 'font-semibold'
         : theme === 'gameboy_green'
-          ? 'uppercase tracking-wider font-bold'
+          ? 'uppercase tracking-[0.02em] font-bold'
           : '';
 
   return (
     <button
-      className={`pixel-btn font-pixel-ui inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${fullWidth ? 'w-full' : ''} ${extraThemeBtn} ${className}`}
+      className={`pixel-btn font-pixel-ui inline-flex items-center justify-center gap-1.5 sm:gap-2 whitespace-normal text-center leading-tight cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${fullWidth ? 'w-full' : ''} ${extraThemeBtn} ${className}`}
       {...rest}
     >
       {children}
@@ -94,7 +94,7 @@ export const PixelSectionTitle: React.FC<{
     >
       <div className="min-w-0 flex-1">
         <h2
-          className={`font-pixel-display text-[15px] sm:text-[16px] leading-snug tracking-wide text-[var(--text-primary)] break-words [overflow-wrap:anywhere] ${
+          className={`font-pixel-display text-[14.5px] sm:text-[15.5px] leading-snug tracking-[0.015em] text-[var(--text-primary)] break-words ${
             theme === 'cyber_retro' ? 'uppercase' : ''
           }`}
         >
@@ -151,7 +151,7 @@ export const PixelFieldLabel: React.FC<{
 }> = ({ htmlFor, children }) => (
   <label
     htmlFor={htmlFor}
-    className="block font-pixel-ui text-[11.5px] sm:text-[12px] uppercase tracking-wide text-[var(--text-secondary)] mb-1.5 leading-snug"
+    className="block font-pixel-ui text-[11px] sm:text-[11.5px] uppercase tracking-[0.02em] text-[var(--text-secondary)] mb-1.5 leading-snug"
   >
     {children}
   </label>
@@ -289,10 +289,10 @@ export const PixelEmptyState: React.FC<{
       }`}
     >
       {illustration}
-      <h3 className="font-pixel-display text-[13.5px] text-[var(--accent-warning)] leading-relaxed">
+      <h3 className="font-pixel-display text-[13px] sm:text-[14px] text-[var(--accent-warning)] leading-snug break-words">
         {title}
       </h3>
-      <p className="font-pixel-body text-[14.5px] text-[var(--text-secondary)] max-w-[34ch]">
+      <p className="font-pixel-body text-[13.5px] text-[var(--text-secondary)] max-w-[34ch] leading-relaxed">
         {description}
       </p>
       {action && <div className="mt-1">{action}</div>}
@@ -339,11 +339,11 @@ export const PixelModal: React.FC<{
           }`}
         >
           <h3
-            className={`font-pixel-display text-[13px] sm:text-[14px] truncate min-w-0 ${
+            className={`font-pixel-display text-[13px] sm:text-[14px] leading-snug line-clamp-2 break-words min-w-0 ${
               theme === 'gameboy_green'
-                ? 'text-white uppercase tracking-wide'
+                ? 'text-white uppercase tracking-[0.02em]'
                 : theme === 'cyber_retro'
-                  ? 'text-[#f5d782] uppercase tracking-wide'
+                  ? 'text-[#f5d782] uppercase tracking-[0.02em]'
                   : 'text-[var(--text-primary)]'
             }`}
           >
@@ -390,7 +390,7 @@ export const PixelConfirmDialog: React.FC<{
   onCancel,
 }) => (
   <PixelModal open={open} title={title} onClose={onCancel}>
-    <p className="font-pixel-body text-[16px] text-[var(--text-primary)]">
+    <p className="font-pixel-body text-[13.5px] sm:text-[14px] leading-relaxed text-[var(--text-primary)]">
       {message}
     </p>
     <div className="grid grid-cols-2 gap-3 pt-2">
@@ -424,7 +424,7 @@ export const AccessDeniedModal: React.FC<{
         <h2 className="font-pixel-display text-[14px] text-[var(--accent-danger)] leading-relaxed">
           ACCESS DENIED! YOUR LEVEL IS TOO LOW!
         </h2>
-        <p className="font-pixel-body text-[15px] text-[var(--text-secondary)]">
+        <p className="font-pixel-body text-[13.5px] sm:text-[14px] leading-relaxed text-[var(--text-secondary)]">
           Akun Hero beroperasi dalam mode Read-Only. Area{' '}
           <span className="text-[var(--accent-warning)] font-semibold">
             {attemptedRoute || 'Game Master'}

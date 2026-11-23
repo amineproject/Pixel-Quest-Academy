@@ -55,16 +55,16 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
           <p className="font-pixel-ui text-[10px] text-[var(--accent-warning)] break-words">
             {dungeon.guildCode} · {dungeon.tier}
           </p>
-          <h3 className="text-[15px] font-bold text-[var(--text-primary)] leading-snug break-words [overflow-wrap:anywhere]">
+          <h3 className="text-[15px] font-bold text-[var(--text-primary)] leading-snug break-words">
             {dungeon.name}
           </h3>
           {dungeon.description && (
-            <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+            <p className="text-[13.5px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-line break-words">
               {dungeon.description}
             </p>
           )}
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="font-pixel-ui text-[9px] text-[var(--accent-warning)] uppercase">
+            <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase">
               Mapel Diikuti ({enrolledRealms.length}):
             </span>
             {enrolledRealms.length > 0 ? (
@@ -158,7 +158,7 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
                         <p className="text-[13.5px] font-bold text-[var(--text-primary)] truncate">
                           {entry.hero.name} {isMe ? '(Kamu)' : ''}
                         </p>
-                        <span className="px-1.5 py-0.5 rounded bg-[var(--surface-tint)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[9px] font-bold text-[var(--text-primary)] shrink-0 tabular-nums">
+                        <span className="px-1.5 py-0.5 rounded bg-[var(--surface-tint)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[10px] font-bold text-[var(--text-primary)] shrink-0 tabular-nums">
                           Lv.{entry.level}
                         </span>
                       </div>
@@ -210,7 +210,7 @@ export const HeroMyGuild: React.FC<HeroMyGuildProps> = ({ state, hero }) => {
                     </p>
                   </div>
                 </div>
-                <span className="font-pixel-ui text-[9px] text-[var(--accent-success)] px-2 py-0.5 border border-[var(--accent-success)]/50 shrink-0 flex items-center gap-1">
+                <span className="font-pixel-ui text-[10px] text-[var(--accent-success)] px-2 py-0.5 border border-[var(--accent-success)]/50 shrink-0 flex items-center gap-1">
                   <Trophy size={10} />
                   AKTIF
                 </span>

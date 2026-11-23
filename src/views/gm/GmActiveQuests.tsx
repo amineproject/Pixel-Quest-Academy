@@ -583,18 +583,18 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
         <button
           type="button"
           onClick={() => setPreviewQuest(quest)}
-          className="text-left text-[16px] sm:text-[17px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words [overflow-wrap:anywhere] cursor-pointer block w-full"
+          className="text-left text-[15px] sm:text-[16px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words cursor-pointer block w-full"
         >
           {quest.title}
         </button>
 
         {quest.description?.trim() && (
-          <p className="text-[13.5px] font-semibold text-[var(--board-muted)] leading-snug line-clamp-2 break-words [overflow-wrap:anywhere]">
+          <p className="text-[13px] sm:text-[13.5px] font-semibold text-[var(--board-muted)] leading-snug line-clamp-2 break-words">
             {quest.description}
           </p>
         )}
 
-        <p className="text-[14px] sm:text-[14.5px] text-[var(--board-muted)] leading-relaxed line-clamp-2 break-words [overflow-wrap:anywhere]">
+        <p className="text-[13.5px] text-[var(--board-muted)] leading-relaxed line-clamp-2 break-words">
           <strong className="text-[var(--board-ink)]">Objek Misi / Instruksi:</strong>{' '}
           {quest.instructions}
         </p>
@@ -800,14 +800,14 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                     role="tab"
                     aria-selected={active}
                     onClick={() => setStatusFilter(opt.id)}
-                    className={`pixel-btn min-h-[38px] px-3.5 text-[13px] font-semibold inline-flex items-center gap-2 cursor-pointer ${
+                    className={`pixel-btn font-pixel-ui min-h-[38px] px-3 py-1.5 text-[10.5px] sm:text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer ${
                       active
                         ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                         : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
                     }`}
                   >
                     <span>{opt.label}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-black/15 text-[11.5px] tabular-nums">
+                    <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10.5px] tabular-nums">
                       {opt.count}
                     </span>
                   </button>
@@ -822,7 +822,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               <button
                 type="button"
                 onClick={() => setCategoryFilter('all')}
-                className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
                   categoryFilter === 'all'
                     ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -838,7 +838,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                     type="button"
                     onClick={() => setCategoryFilter(cat.id)}
                     title={cat.description}
-                    className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[10px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
                       active
                         ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
                         : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -927,17 +927,17 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
 
               {previewQuest.description?.trim() && (
                 <div className="pixel-box-inset p-3 space-y-1 bg-[var(--bg-inset)]">
-                  <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-primary)]">
+                  <p className="font-pixel-ui text-[10px] uppercase text-[var(--accent-primary)]">
                     Deskripsi Misi
                   </p>
-                  <p className="text-[14px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
+                  <p className="text-[13.5px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
                     {previewQuest.description}
                   </p>
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-warning)]">
+                <p className="font-pixel-ui text-[10px] uppercase text-[var(--accent-warning)]">
                   Objek Misi / Instruksi Tugas
                 </p>
                 <ThemedReadingSurface>
@@ -991,7 +991,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                       return (
                         <div
                           key={h.id}
-                          className="pixel-box-inset p-2 flex items-center justify-between gap-2 text-[14px]"
+                          className="pixel-box-inset p-2 flex items-center justify-between gap-2 text-[13.5px]"
                         >
                           <div className="min-w-0">
                             <p className="font-bold text-[var(--text-primary)] truncate">
