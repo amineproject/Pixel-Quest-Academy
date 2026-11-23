@@ -84,6 +84,8 @@ CREATE TABLE IF NOT EXISTS public.tomes (
     scheduled_at TEXT NOT NULL DEFAULT '',
     class_schedules TEXT NOT NULL DEFAULT '{}',
     published_date TEXT NOT NULL,
+    academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL,
+    season TEXT DEFAULT 'ganjil',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 DO $$ BEGIN
@@ -99,6 +101,8 @@ ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS target_dungeon_id TEXT NOT NULL DEFAULT 'all';
 ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS scheduled_at TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS class_schedules TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS academic_year_id TEXT REFERENCES public.academic_years(id) ON DELETE SET NULL;
+ALTER TABLE public.tomes ADD COLUMN IF NOT EXISTS season TEXT DEFAULT 'ganjil';
 
 -- ----------------------------------------------------------------------------
 -- 5. Active Quests table (Tugas & Misi Petualangan)
@@ -685,6 +689,20 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.gm_delete_academic_year(p_gm_user TEXT, p_gm_pass TEXT, p_id TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
+BEGIN
+  IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.academic_years WHERE id = p_id AND is_active = true) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'Era yang sedang aktif tidak dapat dihapus.');
+  END IF;
+  DELETE FROM public.academic_years WHERE id = p_id;
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.gm_upsert_dungeon(p_gm_user TEXT, p_gm_pass TEXT, p_data JSONB)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$
 BEGIN
@@ -856,7 +874,7 @@ BEGIN
   IF NOT public._pqa_is_gm(p_gm_user, p_gm_pass) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'Akses ditolak: Kredensial GM tidak valid.');
   END IF;
-  INSERT INTO public.tomes (id, realm_id, title, chapter, read_minutes, summary, content, link_url, target_dungeon_id, scheduled_at, class_schedules, published_date)
+  INSERT INTO public.tomes (id, realm_id, title, chapter, read_minutes, summary, content, link_url, target_dungeon_id, scheduled_at, class_schedules, published_date, academic_year_id, season)
   VALUES (
     p_data->>'id', NULLIF(TRIM(COALESCE(p_data->>'realm_id', '')), ''),
     p_data->>'title', COALESCE(NULLIF(TRIM(p_data->>'chapter'), ''), 'Bab 1'),
@@ -865,14 +883,18 @@ BEGIN
     COALESCE(NULLIF(TRIM(p_data->>'target_dungeon_id'), ''), 'all'),
     COALESCE(p_data->>'scheduled_at', ''),
     COALESCE(p_data->>'class_schedules', '{}'),
-    COALESCE(p_data->>'published_date', to_char(now(), 'YYYY-MM-DD'))
+    COALESCE(p_data->>'published_date', to_char(now(), 'YYYY-MM-DD')),
+    NULLIF(TRIM(COALESCE(p_data->>'academic_year_id', '')), ''),
+    NULLIF(TRIM(COALESCE(p_data->>'season', '')), '')
   )
   ON CONFLICT (id) DO UPDATE SET
     realm_id = EXCLUDED.realm_id, title = EXCLUDED.title, chapter = EXCLUDED.chapter,
     read_minutes = EXCLUDED.read_minutes, summary = EXCLUDED.summary, content = EXCLUDED.content,
     link_url = EXCLUDED.link_url, target_dungeon_id = EXCLUDED.target_dungeon_id,
     scheduled_at = EXCLUDED.scheduled_at, class_schedules = EXCLUDED.class_schedules,
-    published_date = EXCLUDED.published_date;
+    published_date = EXCLUDED.published_date,
+    academic_year_id = COALESCE(EXCLUDED.academic_year_id, public.tomes.academic_year_id),
+    season = COALESCE(EXCLUDED.season, public.tomes.season);
   RETURN jsonb_build_object('ok', true);
 END;
 $$;
@@ -1074,6 +1096,7 @@ GRANT EXECUTE ON FUNCTION public.get_hero_grade_statuses(TEXT, TEXT) TO anon, au
 GRANT EXECUTE ON FUNCTION public.get_gm_grades(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_upsert_academic_year(TEXT, TEXT, JSONB) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_set_active_era(TEXT, TEXT, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.gm_delete_academic_year(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_upsert_dungeon(TEXT, TEXT, JSONB) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_delete_dungeon(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.gm_upsert_hero(TEXT, TEXT, JSONB) TO anon, authenticated;

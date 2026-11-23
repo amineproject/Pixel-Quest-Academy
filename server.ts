@@ -6,6 +6,7 @@ import * as dotenv from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
   changeOwnHeroPinSql,
+  deleteAcademicYear,
   deleteDungeon,
   deleteHero,
   deleteNotice,
@@ -225,6 +226,10 @@ app.get('/api/academy', async (req, res) => {
               scheduledAt: t.scheduled_at || t.scheduledAt || '',
               classSchedules: cs,
               publishedDate: t.published_date || t.publishedDate,
+              academicYearId: t.academic_year_id || t.academicYearId || undefined,
+              ...(t.season === 'genap' || t.season === 'ganjil'
+                ? { season: t.season as 'ganjil' | 'genap' }
+                : {}),
             };
           }),
           quests: (qData || []).map((q: any) => {
@@ -342,6 +347,21 @@ app.post('/api/eras/:id/activate', async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to activate Era' });
+  }
+});
+
+app.delete('/api/eras/:id', async (req, res) => {
+  try {
+    if (req.headers['x-pqa-role'] !== 'admin') {
+      return res.status(403).json({ error: 'Hanya Super Admin / Game Master yang dapat menghapus Era arsip.' });
+    }
+    await deleteAcademicYear(req.params.id);
+    if (supabaseAdmin) {
+      await supabaseAdmin.from('academic_years').delete().eq('id', req.params.id);
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to delete Era' });
   }
 });
 
@@ -552,6 +572,8 @@ app.post('/api/tomes', async (req, res) => {
         scheduled_at: req.body.scheduledAt || '',
         class_schedules: JSON.stringify(req.body.classSchedules || {}),
         published_date: req.body.publishedDate,
+        academic_year_id: req.body.academicYearId || null,
+        season: req.body.season || null,
       });
     }
     res.json({ success: true });
