@@ -21,7 +21,7 @@ interface AboutViewProps {
   currentTheme: PixelTheme;
 }
 
-const APP_VERSION = '3.11';
+const APP_VERSION = '3.13';
 const APP_DEVELOPER = 'Amin Wayudi, S.Pd.';
 
 interface VersionLog {
@@ -34,10 +34,28 @@ interface VersionLog {
 
 const CHANGELOG: VersionLog[] = [
   {
-    version: '3.11',
-    title: 'Cek Progres & Tugas Selesai / Belum Siswa di Menu Penilaian',
+    version: '3.13',
+    title: 'Penyederhanaan Kategori & Isolasi Quest Selesai di Papan Tugas Siswa',
     badge: 'TERBARU · SAAT INI',
     isCurrent: true,
+    changes: [
+      'Kategori Quest Lebih Ringkas (Akun Siswa): menghilangkan kategori/tab Rekap Seluruh Quest dan Quest Baru / Belum di Papan Tugas Siswa, serta memindahkan opsi "Quest Selesai" langsung ke dalam bar Filter Kategori Quest.',
+      'Isolasi Otomatis Tugas Tuntas: quest yang sudah berstatus Selesai otomatis berpindah ke kategori Quest Selesai dan tidak lagi ditampilkan di Semua Kategori maupun kategori tugas aktif lainnya (Main, Party, Special, Knowledge Quest).',
+    ],
+  },
+  {
+    version: '3.12',
+    title: 'Rekap Seluruh Quest, Quest Baru & Selesai di Papan Tugas Siswa',
+    badge: 'PEMBARUAN BESAR',
+    changes: [
+      'Kartu Ringkasan "Rekap Seluruh Quest Kamu" (Akun Siswa): di bagian atas Papan Tugas, siswa langsung melihat total keseluruhan quest yang harus diselesaikan, jumlah Quest Baru / Belum, jumlah Quest Selesai, serta bar persentase progres keseluruhan.',
+      'Tab Filter Lengkap (Semua Quest, Quest Baru / Belum, Selesai, & Rekap Seluruh Quest): dilengkapi lencana BARU untuk quest yang belum dibuka, serta halaman Rekap Seluruh Quest yang merinci jumlah total, selesai, baru/belum, proses, dan terlambat per mata pelajaran, kategori quest, hingga daftar lengkap seluruh quest.',
+    ],
+  },
+  {
+    version: '3.11',
+    title: 'Cek Progres & Tugas Selesai / Belum Siswa di Menu Penilaian',
+    badge: 'PEMBARUAN BESAR',
     changes: [
       'Tab Baru "Cek Progres Siswa" di Menu Penilaian (Akun Guru): guru kini dapat memantau progres pengerjaan tiap siswa per kelas dan mata pelajaran secara langsung—lengkap dengan bar persentase ketuntasan, jumlah tugas Tuntas, Belum Dikerjakan, Remidial, dan Proses Dinilai.',
       'Rincian Checklist Tugas & Lompat Cepat ke Penilaian: setiap kartu siswa dapat dibuka untuk mengecek daftar tugas yang sudah diselesaikan maupun yang belum/terlewat tenggat, memfilter siswa yang masih punya tanggungan, serta tombol langsung "Nilai / Edit" menuju pengisian nilai tugas tersebut.',

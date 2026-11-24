@@ -1723,5 +1723,195 @@ export function computeHeroesQuestProgress(params: {
   });
 }
 
+export interface StudentQuestBoardRealmRecap {
+  realm: Realm;
+  total: number;
+  selesai: number;
+  questBaru: number;
+  proses: number;
+  remidial: number;
+  terlambat: number;
+  percent: number;
+}
+
+export interface StudentQuestBoardCategoryRecap {
+  meta: QuestCategoryMeta;
+  total: number;
+  selesai: number;
+  questBaru: number;
+}
+
+export interface StudentQuestBoardSummary {
+  totalQuests: number;
+  selesaiCount: number;
+  prosesCount: number;
+  remidialCount: number;
+  belumActiveCount: number;
+  terlambatCount: number;
+  /** All quests that still require student work/completion (belum active + terlambat + remidial). */
+  questBaruCount: number;
+  /** Everything not yet tuntas (questBaruCount + prosesCount). */
+  remainingToCompleteCount: number;
+  completionPercent: number;
+  byRealm: StudentQuestBoardRealmRecap[];
+  byCategory: StudentQuestBoardCategoryRecap[];
+}
+
+function isDeadlineBeforeDay(deadlineIso: string, now: Date): boolean {
+  if (!deadlineIso || !/^\d{4}-\d{2}-\d{2}$/.test(deadlineIso)) return false;
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const [y, m, d] = deadlineIso.split('-').map((n) => parseInt(n, 10));
+  const targetUtc = Date.UTC(y, m - 1, d);
+  return targetUtc < todayUtc;
+}
+
+/**
+ * Computes a Student's full Quest Board summary across all assigned quests
+ * so the student knows the total number of quests they must complete, how many are finished,
+ * and how many are still new/pending per subject and category.
+ */
+export function computeStudentQuestBoardSummary(params: {
+  hero: HeroStudent;
+  quests: ActiveQuest[];
+  grades: ExpGrade[];
+  dungeons: Dungeon[];
+  realms: Realm[];
+  now?: Date;
+}): StudentQuestBoardSummary {
+  const { hero, quests, grades, dungeons, realms, now = new Date() } = params;
+
+  const gradeByQuestId = new Map<string, ExpGrade>();
+  grades.forEach((g) => {
+    if (g.heroId === hero.id) {
+      gradeByQuestId.set(g.questId, g);
+    }
+  });
+
+  const assignedQuests = quests.filter((q) =>
+    isQuestAssignedToHero(q, hero, dungeons, {
+      now,
+      hasGrade: gradeByQuestId.has(q.id),
+    })
+  );
+
+  const allowedRealmIds = getHeroEffectiveRealmIds(hero, dungeons);
+  const enrolledRealms =
+    allowedRealmIds && allowedRealmIds.length > 0
+      ? realms.filter((r) => allowedRealmIds.includes(r.id))
+      : realms;
+
+  const realmStats = new Map<
+    string,
+    {
+      realm: Realm;
+      total: number;
+      selesai: number;
+      questBaru: number;
+      proses: number;
+      remidial: number;
+      terlambat: number;
+    }
+  >();
+
+  enrolledRealms.forEach((r) => {
+    realmStats.set(r.id, {
+      realm: r,
+      total: 0,
+      selesai: 0,
+      questBaru: 0,
+      proses: 0,
+      remidial: 0,
+      terlambat: 0,
+    });
+  });
+
+  const categoryStats = new Map<
+    QuestCategory,
+    { meta: QuestCategoryMeta; total: number; selesai: number; questBaru: number }
+  >();
+  QUEST_CATEGORIES.forEach((meta) => {
+    categoryStats.set(meta.id, { meta, total: 0, selesai: 0, questBaru: 0 });
+  });
+
+  let selesaiCount = 0;
+  let prosesCount = 0;
+  let remidialCount = 0;
+  let belumActiveCount = 0;
+  let terlambatCount = 0;
+
+  assignedQuests.forEach((quest) => {
+    const grade = gradeByQuestId.get(quest.id);
+    const eff: GradeStatus = grade ? getEffectiveGradeStatus(grade) : 'belum';
+    const overdue = isDeadlineBeforeDay(quest.deadline, now);
+
+    const isSelesai = eff === 'tuntas';
+    const isProses = eff === 'proses';
+    const isRemidial = eff === 'remidial';
+    const isTerlambat = eff === 'belum' && overdue;
+    const isBelumActive = eff === 'belum' && !overdue;
+    const isQuestBaruOrPending = isBelumActive || isTerlambat || isRemidial;
+
+    if (isSelesai) selesaiCount++;
+    else if (isProses) prosesCount++;
+    else if (isRemidial) remidialCount++;
+    else if (isTerlambat) terlambatCount++;
+    else belumActiveCount++;
+
+    const rBucket = realmStats.get(quest.realmId);
+    if (rBucket) {
+      rBucket.total++;
+      if (isSelesai) rBucket.selesai++;
+      if (isProses) rBucket.proses++;
+      if (isRemidial) rBucket.remidial++;
+      if (isTerlambat) rBucket.terlambat++;
+      if (isQuestBaruOrPending) rBucket.questBaru++;
+    }
+
+    const catId = normalizeQuestCategory(quest.category);
+    const cBucket = categoryStats.get(catId);
+    if (cBucket) {
+      cBucket.total++;
+      if (isSelesai) cBucket.selesai++;
+      if (isQuestBaruOrPending) cBucket.questBaru++;
+    }
+  });
+
+  const totalQuests = assignedQuests.length;
+  const questBaruCount = belumActiveCount + terlambatCount + remidialCount;
+  const remainingToCompleteCount = totalQuests - selesaiCount;
+  const completionPercent =
+    totalQuests > 0
+      ? Math.min(100, Math.round((selesaiCount / totalQuests) * 100))
+      : 0;
+
+  const byRealm: StudentQuestBoardRealmRecap[] = Array.from(realmStats.values())
+    .filter((item) => item.total > 0)
+    .map((item) => ({
+      ...item,
+      percent:
+        item.total > 0
+          ? Math.min(100, Math.round((item.selesai / item.total) * 100))
+          : 0,
+    }));
+
+  const byCategory: StudentQuestBoardCategoryRecap[] = Array.from(
+    categoryStats.values()
+  ).filter((item) => item.total > 0);
+
+  return {
+    totalQuests,
+    selesaiCount,
+    prosesCount,
+    remidialCount,
+    belumActiveCount,
+    terlambatCount,
+    questBaruCount,
+    remainingToCompleteCount,
+    completionPercent,
+    byRealm,
+    byCategory,
+  };
+}
+
 
 

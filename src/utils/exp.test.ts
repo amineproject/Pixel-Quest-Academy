@@ -7,6 +7,7 @@ import {
   calculateExpEarned,
   computeDashboardAnalytics,
   computeHeroesQuestProgress,
+  computeStudentQuestBoardSummary,
   doesTargetMatchDungeon,
   escapeCsvCell,
   formatChapterLabel,
@@ -1426,6 +1427,151 @@ describe('Per-Student Quest Completion Progress (Menu Penilaian)', () => {
     assert.equal(rafiInf.totalQuests, 2);
     assert.equal(rafiInf.belumCount, 0);
     assert.equal(rafiInf.remidialCount, 1);
+  });
+});
+
+describe('Student Quest Board Summary Recap', () => {
+  it('computes total quests, selesai, quest baru/pending, per-subject and per-category breakdown', () => {
+    const dungeons: Dungeon[] = [
+      {
+        id: 'd-9a',
+        name: 'Kelas IX-A',
+        tier: 'Kelas IX',
+        guildCode: '9A',
+        capacity: 30,
+        description: '',
+        realmIds: ['r-inf', 'r-bin'],
+      },
+    ];
+    const realms: Realm[] = [
+      { id: 'r-inf', name: 'Informatika', code: 'INF', icon: 'bolt', accentColor: '#2563eb', description: '' },
+      { id: 'r-bin', name: 'Bahasa Indonesia', code: 'BIN', icon: 'book', accentColor: '#d97706', description: '' },
+    ];
+    const hero: HeroStudent = {
+      id: 'hero-9a-1',
+      name: 'Nadia Putri',
+      username: 'nadia',
+      studentCode: '3001',
+      dungeonId: 'd-9a',
+      avatar: 'scholar',
+      heroClass: 'Scholar',
+      active: true,
+      joinedDate: '2026-07-01',
+    };
+    const quests: ActiveQuest[] = [
+      {
+        id: 'qb-1',
+        realmId: 'r-inf',
+        dungeonId: 'all',
+        title: 'Quest Tuntas',
+        instructions: 'Kerjakan',
+        deadline: '2026-08-05',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Main',
+      },
+      {
+        id: 'qb-2',
+        realmId: 'r-inf',
+        dungeonId: 'd-9a',
+        title: 'Quest Baru Aktif',
+        instructions: 'Kerjakan',
+        deadline: '2026-08-15',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Party',
+      },
+      {
+        id: 'qb-3',
+        realmId: 'r-bin',
+        dungeonId: 'all',
+        title: 'Quest Terlambat',
+        instructions: 'Kerjakan',
+        deadline: '2026-08-02',
+        maxExp: 100,
+        difficulty: 'Elite',
+        category: 'Main',
+      },
+      {
+        id: 'qb-4',
+        realmId: 'r-bin',
+        dungeonId: 'all',
+        title: 'Quest Proses',
+        instructions: 'Kerjakan',
+        deadline: '2026-08-12',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Knowledge',
+      },
+      {
+        id: 'qb-5',
+        realmId: 'r-inf',
+        dungeonId: 'all',
+        title: 'Quest Masa Depan Terjadwal',
+        instructions: 'Belum tayang',
+        deadline: '2026-09-01',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Special',
+        scheduledAt: '2026-08-20T08:00',
+      },
+    ];
+    const grades: ExpGrade[] = [
+      {
+        id: 'g-1',
+        heroId: 'hero-9a-1',
+        questId: 'qb-1',
+        realmId: 'r-inf',
+        score: 95,
+        expEarned: 95,
+        status: 'tuntas',
+        feedback: 'Mantap',
+        gradedDate: '2026-08-04',
+      },
+      {
+        id: 'g-4',
+        heroId: 'hero-9a-1',
+        questId: 'qb-4',
+        realmId: 'r-bin',
+        score: 0,
+        expEarned: 0,
+        status: 'proses',
+        feedback: 'Sedang diperiksa',
+        gradedDate: '2026-08-07',
+      },
+    ];
+
+    const summary = computeStudentQuestBoardSummary({
+      hero,
+      quests,
+      grades,
+      dungeons,
+      realms,
+      now: new Date('2026-08-08T10:00:00'),
+    });
+
+    // qb-5 future scheduled is excluded -> 4 visible quests
+    assert.equal(summary.totalQuests, 4);
+    assert.equal(summary.selesaiCount, 1);
+    assert.equal(summary.prosesCount, 1);
+    assert.equal(summary.belumActiveCount, 1);
+    assert.equal(summary.terlambatCount, 1);
+    assert.equal(summary.questBaruCount, 2); // qb-2 (belum active) + qb-3 (terlambat)
+    assert.equal(summary.remainingToCompleteCount, 3); // total 4 - 1 selesai
+    assert.equal(summary.completionPercent, 25);
+
+    const inf = summary.byRealm.find((r) => r.realm.id === 'r-inf')!;
+    assert.equal(inf.total, 2);
+    assert.equal(inf.selesai, 1);
+    assert.equal(inf.questBaru, 1);
+    assert.equal(inf.percent, 50);
+
+    const bin = summary.byRealm.find((r) => r.realm.id === 'r-bin')!;
+    assert.equal(bin.total, 2);
+    assert.equal(bin.selesai, 0);
+    assert.equal(bin.terlambat, 1);
+    assert.equal(bin.proses, 1);
+    assert.equal(bin.questBaru, 1);
   });
 });
 

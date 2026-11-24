@@ -545,6 +545,26 @@ export default function App() {
     }
   }, [seenStorageKey]);
 
+  const markSingleQuestSeen = useCallback(
+    (questId: string) => {
+      if (!questId) return;
+      setSeenQuestIds((prev) => {
+        if (prev.includes(questId)) return prev;
+        const nextQuests = [...prev, questId];
+        try {
+          localStorage.setItem(
+            seenStorageKey,
+            JSON.stringify({ notices: seenNoticeIds, quests: nextQuests })
+          );
+        } catch {
+          // Ignore storage error
+        }
+        return nextQuests;
+      });
+    },
+    [seenStorageKey, seenNoticeIds]
+  );
+
   // Hash-based route & EC-01 RBAC Guard listener
   useEffect(() => {
     const syncFromHash = () => {
@@ -2244,6 +2264,8 @@ export default function App() {
                     state={eraFilteredState}
                     role={UserRole.HERO}
                     hero={activeHero}
+                    seenQuestIds={seenQuestIds}
+                    onMarkQuestSeen={markSingleQuestSeen}
                   />
                 )}
                 {heroMenu === 'my_guild' && (

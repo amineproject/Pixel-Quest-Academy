@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Eye,
-  AlertTriangle,
-  Sword,
   Send,
+  Sparkles,
+  Sword,
 } from 'lucide-react';
 import {
   AcademyState,
@@ -27,6 +28,7 @@ import { PixelRealmGlyph } from '../../components/PixelArt';
 import {
   PixelButton,
   PixelEmptyState,
+  PixelExpBar,
   PixelFieldLabel,
   PixelLinkButton,
   PixelModal,
@@ -50,12 +52,20 @@ import {
 } from '../../utils/exp';
 
 export type QuestBoardFilter = 'all' | 'pending' | 'done';
-export type SubmissionBadgeStatus = 'belum' | 'dikumpulkan' | 'terlambat' | 'selesai';
+export type StudentCategoryFilter = 'all' | QuestCategory | 'done';
+export type SubmissionBadgeStatus =
+  | 'belum'
+  | 'dikumpulkan'
+  | 'remidial'
+  | 'terlambat'
+  | 'selesai';
 
 interface QuestBoardViewProps {
   state: AcademyState;
   role: UserRole;
   hero?: HeroStudent;
+  seenQuestIds?: string[];
+  onMarkQuestSeen?: (questId: string) => void;
   onNavigateGm?: (menu: GmMenuId) => void;
 }
 
@@ -68,8 +78,12 @@ const STATUS_BADGE_MAP: Record<
     className: 'bg-emerald-100 text-emerald-900 border-emerald-800',
   },
   dikumpulkan: {
-    label: 'Dikumpulkan',
+    label: 'Proses Dinilai',
     className: 'bg-sky-100 text-sky-900 border-sky-800',
+  },
+  remidial: {
+    label: 'Remidial',
+    className: 'bg-amber-100 text-amber-950 border-amber-800',
   },
   terlambat: {
     label: 'Terlambat',
@@ -96,24 +110,26 @@ function resolveHeroQuestSubmissionStatus(
   const eff = getEffectiveGradeStatus(grade);
   if (eff === 'tuntas') return 'selesai';
   if (eff === 'proses') return 'dikumpulkan';
-  if (eff === 'remidial') return 'dikumpulkan';
+  if (eff === 'remidial') return 'remidial';
   return urgency.isOverdue ? 'terlambat' : 'belum';
 }
 
 /**
  * Lightweight Quest Board list view shared between Game Master (Admin) and Hero (Student).
- * Provides simple status filters (Semua / Belum / Selesai) and deadline countdowns.
+ * For students, completed quests move exclusively into the "Quest Selesai" category filter.
  */
 export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
   state,
   role,
   hero,
+  seenQuestIds = [],
+  onMarkQuestSeen,
   onNavigateGm,
 }) => {
   const isGm = role === UserRole.GAME_MASTER;
   const [filter, setFilter] = useState<QuestBoardFilter>('all');
   const [selectedRealmId, setSelectedRealmId] = useState<string>('all');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | QuestCategory>('all');
+  const [selectedCategory, setSelectedCategory] = useState<StudentCategoryFilter>('all');
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [detailQuest, setDetailQuest] = useState<ActiveQuest | null>(null);
@@ -154,7 +170,14 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
       : 'all';
   }, [isGm, selectedRealmId, enrolledRealms]);
 
+  const seenQuestSet = useMemo(() => new Set(seenQuestIds), [seenQuestIds]);
+
   const rows = useMemo(() => {
+    const heroGradeQuestIds =
+      !isGm && hero
+        ? new Set(state.grades.filter((g) => g.heroId === hero.id).map((g) => g.questId))
+        : null;
+
     const baseQuests = isGm
       ? state.quests.filter((q) => {
           if (!gmScope.isFiltered) return true;
@@ -175,7 +198,9 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         })
       : hero
         ? state.quests.filter((q) =>
-            isQuestAssignedToHero(q, hero, state.dungeons)
+            isQuestAssignedToHero(q, hero, state.dungeons, {
+              hasGrade: heroGradeQuestIds?.has(q.id),
+            })
           )
         : [];
 
@@ -192,12 +217,14 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
           quest,
           state.grades
         );
-        const isDone = personalStatus === 'selesai' || personalStatus === 'dikumpulkan';
+        const isCompleted = personalStatus === 'selesai';
+        const isUnreadNew = !seenQuestSet.has(quest.id) && !isCompleted;
         return {
           quest,
           urgency,
           personalStatus,
-          isDone,
+          isDone: isCompleted,
+          isUnreadNew,
           counts: null as null | {
             total: number;
             belum: number;
@@ -224,7 +251,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
       targetHeroes.forEach((h) => {
         const st = resolveHeroQuestSubmissionStatus(h.id, quest, state.grades);
         if (st === 'belum') belum++;
-        else if (st === 'dikumpulkan') dikumpulkan++;
+        else if (st === 'dikumpulkan' || st === 'remidial') dikumpulkan++;
         else if (st === 'terlambat') terlambat++;
         else if (st === 'selesai') selesai++;
       });
@@ -237,6 +264,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         urgency,
         personalStatus: null as SubmissionBadgeStatus | null,
         isDone,
+        isUnreadNew: false,
         counts: {
           total: targetHeroes.length,
           belum,
@@ -252,57 +280,111 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
     state.quests,
     state.heroes,
     state.grades,
+    state.dungeons,
     gmScope,
     hero,
-    heroRealmIds,
+    seenQuestSet,
   ]);
+
+  const studentTotalDone = useMemo(
+    () => rows.filter((r) => r.isDone).length,
+    [rows]
+  );
+
+  const studentCompletionPercent = useMemo(() => {
+    if (rows.length === 0) return 0;
+    return Math.round((studentTotalDone / rows.length) * 100);
+  }, [rows.length, studentTotalDone]);
 
   const questCountByRealm = useMemo(() => {
     const map = new Map<string, number>();
     rows.forEach((r) => {
+      if (!isGm) {
+        const matchesMode = selectedCategory === 'done' ? r.isDone : !r.isDone;
+        if (!matchesMode) return;
+      }
       map.set(r.quest.realmId, (map.get(r.quest.realmId) || 0) + 1);
     });
     return map;
-  }, [rows]);
+  }, [rows, isGm, selectedCategory]);
 
-  const realmScopedRows = useMemo(() => {
+  const studentRealmModeTotal = useMemo(() => {
+    if (isGm) return rows.length;
+    return rows.filter((r) => (selectedCategory === 'done' ? r.isDone : !r.isDone))
+      .length;
+  }, [rows, isGm, selectedCategory]);
+
+  const realmOnlyRows = useMemo(() => {
     return rows.filter((r) => {
       if (!isGm && activeRealmFilter !== 'all' && r.quest.realmId !== activeRealmFilter) {
         return false;
       }
+      return true;
+    });
+  }, [rows, isGm, activeRealmFilter]);
+
+  const studentActiveCount = useMemo(
+    () => realmOnlyRows.filter((r) => !r.isDone).length,
+    [realmOnlyRows]
+  );
+
+  const studentDoneCount = useMemo(
+    () => realmOnlyRows.filter((r) => r.isDone).length,
+    [realmOnlyRows]
+  );
+
+  const realmScopedRows = useMemo(() => {
+    return realmOnlyRows.filter((r) => {
+      if (!isGm) {
+        // Completed quests move exclusively to 'done' (Quest Selesai) and do not appear elsewhere
+        if (selectedCategory === 'done') {
+          return r.isDone;
+        }
+        if (r.isDone) return false;
+      }
       if (
         selectedCategory !== 'all' &&
+        selectedCategory !== 'done' &&
         normalizeQuestCategory(r.quest.category) !== selectedCategory
       ) {
         return false;
       }
       return true;
     });
-  }, [rows, isGm, activeRealmFilter, selectedCategory]);
+  }, [realmOnlyRows, isGm, selectedCategory]);
 
   const categoryCountMap = useMemo(() => {
     const map = new Map<QuestCategory, number>();
-    rows.forEach((r) => {
-      if (!isGm && activeRealmFilter !== 'all' && r.quest.realmId !== activeRealmFilter) {
-        return;
-      }
+    realmOnlyRows.forEach((r) => {
+      // For students, exclude finished quests from active quest categories
+      if (!isGm && r.isDone) return;
       const cat = normalizeQuestCategory(r.quest.category);
       map.set(cat, (map.get(cat) || 0) + 1);
     });
     return map;
-  }, [rows, isGm, activeRealmFilter]);
+  }, [realmOnlyRows, isGm]);
 
   const filteredRows = useMemo(() => {
+    if (!isGm) {
+      return realmScopedRows;
+    }
     if (filter === 'pending') return realmScopedRows.filter((r) => !r.isDone);
     if (filter === 'done') return realmScopedRows.filter((r) => r.isDone);
     return realmScopedRows;
-  }, [realmScopedRows, filter]);
+  }, [realmScopedRows, filter, isGm]);
 
-  const filterOptions: { id: QuestBoardFilter; label: string; count: number }[] = [
+  const gmFilterOptions: { id: QuestBoardFilter; label: string; count: number }[] = [
     { id: 'all', label: 'Semua', count: realmScopedRows.length },
     { id: 'pending', label: 'Belum', count: realmScopedRows.filter((r) => !r.isDone).length },
     { id: 'done', label: 'Selesai', count: realmScopedRows.filter((r) => r.isDone).length },
   ];
+
+  const handleOpenQuestDetail = (quest: ActiveQuest) => {
+    setDetailQuest(quest);
+    if (!isGm && onMarkQuestSeen) {
+      onMarkQuestSeen(quest.id);
+    }
+  };
 
   const detailRow = detailQuest
     ? rows.find((r) => r.quest.id === detailQuest.id) || null
@@ -315,36 +397,53 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
         subtitle={
           isGm
             ? 'Pantau status pengumpulan tugas seluruh Quest secara ringkas'
-            : 'Daftar tugas aktif kelas beserta hitung mundur tenggat dan status pribadimu'
+            : 'Daftar tugas aktif berdasarkan kategori dan tugas tuntas di Quest Selesai'
         }
       />
 
       {/* Filter Bar */}
       <ThemedPanelCard className="p-3.5 space-y-3">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter status quest">
-          {filterOptions.map((opt) => {
-            const active = filter === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setFilter(opt.id)}
-                className={`pixel-btn font-pixel-ui min-h-[38px] px-3 py-1.5 text-[10.5px] sm:text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer ${
-                  active
-                    ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
-                    : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
-                }`}
-              >
-                <span>{opt.label}</span>
-                <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10.5px] tabular-nums">
-                  {opt.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {isGm ? (
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter status quest">
+            {gmFilterOptions.map((opt) => {
+              const active = filter === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setFilter(opt.id)}
+                  className={`pixel-btn font-pixel-ui min-h-[38px] px-3 py-1.5 text-[10.5px] sm:text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer ${
+                    active
+                      ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]'
+                  }`}
+                >
+                  <span>{opt.label}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10.5px] tabular-nums">
+                    {opt.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <PixelExpBar
+            percent={studentCompletionPercent}
+            labelLeft={`Progres Tugas: ${studentTotalDone} dari ${rows.length} Quest Selesai`}
+            labelRight={
+              rows.length > 0 && rows.length - studentTotalDone === 0
+                ? 'Semua Tuntas!'
+                : `Tersisa ${rows.length - studentTotalDone} Quest Aktif`
+            }
+            color={
+              rows.length > 0 && rows.length - studentTotalDone === 0
+                ? 'var(--accent-success)'
+                : 'var(--accent-warning)'
+            }
+          />
+        )}
 
         {!isGm && enrolledRealms.length > 0 && (
           <div className="pt-2 border-t border-[var(--border-pixel)]/30 space-y-1.5">
@@ -367,7 +466,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
               >
                 <span>Semua Mapel</span>
                 <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10px] tabular-nums">
-                  {rows.length}
+                  {studentRealmModeTotal}
                 </span>
               </button>
               {enrolledRealms.map((realm) => {
@@ -413,7 +512,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
           />
         )}
 
-        {/* RPG Quest Category Filter */}
+        {/* RPG Quest Category Filter (+ Quest Selesai for Student) */}
         <div className="pt-2 border-t border-[var(--border-pixel)]/30 space-y-1.5">
           <PixelFieldLabel>Filter Kategori Quest</PixelFieldLabel>
           <div
@@ -426,13 +525,18 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
               role="tab"
               aria-selected={selectedCategory === 'all'}
               onClick={() => setSelectedCategory('all')}
-              className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
                 selectedCategory === 'all'
                   ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                   : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-alt)]'
               }`}
             >
-              Semua Kategori
+              <span>Semua Kategori</span>
+              {!isGm && (
+                <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10px] tabular-nums">
+                  {studentActiveCount}
+                </span>
+              )}
             </button>
             {QUEST_CATEGORIES.map((cat) => {
               const active = selectedCategory === cat.id;
@@ -459,25 +563,68 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                 </button>
               );
             })}
+            {!isGm && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedCategory === 'done'}
+                title="Tugas yang sudah selesai / tuntas dinilai"
+                onClick={() => setSelectedCategory('done')}
+                className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                  selectedCategory === 'done'
+                    ? 'bg-[var(--accent-success)] text-[var(--text-on-success)] font-bold'
+                    : 'bg-[var(--bg-surface)] text-emerald-800 hover:bg-[var(--bg-surface-alt)]'
+                }`}
+              >
+                <CheckCircle2 size={13} />
+                <span>Quest Selesai</span>
+                <span className="px-1.5 py-0.5 rounded bg-black/15 text-[10px] tabular-nums">
+                  {studentDoneCount}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </ThemedPanelCard>
 
-      {/* Lightweight Quest List */}
+      {/* Quest Board Card List */}
       {filteredRows.length === 0 ? (
         <PixelEmptyState
-          title="Belum Ada Quest di Daftar Ini"
+          title={
+            !isGm && selectedCategory === 'done'
+              ? 'Belum Ada Quest Selesai'
+              : !isGm && studentActiveCount === 0 && studentDoneCount > 0
+                ? 'Semua Quest Sudah Selesai!'
+                : 'Belum Ada Quest di Daftar Ini'
+          }
           description={
-            activeRealmFilter !== 'all'
-              ? 'Belum ada tugas untuk mata pelajaran dan status yang dipilih.'
-              : filter === 'pending'
-                ? 'Semua tugas sudah dikumpulkan atau diselesaikan!'
-                : filter === 'done'
-                  ? 'Belum ada tugas yang berstatus selesai.'
-                  : 'Belum ada Quest yang ditugaskan saat ini.'
+            !isGm
+              ? selectedCategory === 'done'
+                ? activeRealmFilter !== 'all'
+                  ? 'Belum ada tugas yang berstatus selesai di mata pelajaran ini.'
+                  : 'Belum ada tugas yang berstatus selesai.'
+                : studentActiveCount === 0 && studentDoneCount > 0
+                  ? 'Semua tugasmu sudah tuntas dan dipindahkan ke kategori Quest Selesai.'
+                  : 'Belum ada tugas aktif pada mata pelajaran atau kategori yang dipilih.'
+              : activeRealmFilter !== 'all'
+                ? 'Belum ada tugas untuk mata pelajaran dan status yang dipilih.'
+                : filter === 'pending'
+                  ? 'Semua tugas sudah dikumpulkan atau diselesaikan!'
+                  : filter === 'done'
+                    ? 'Belum ada tugas yang berstatus selesai.'
+                    : 'Belum ada Quest yang ditugaskan saat ini.'
           }
           action={
-            activeRealmFilter !== 'all' ? (
+            !isGm && selectedCategory !== 'done' && studentActiveCount === 0 && studentDoneCount > 0 ? (
+              <PixelButton
+                type="button"
+                size="sm"
+                variant="primary"
+                onClick={() => setSelectedCategory('done')}
+              >
+                Lihat Quest Selesai ({studentDoneCount})
+              </PixelButton>
+            ) : activeRealmFilter !== 'all' ? (
               <PixelButton
                 type="button"
                 size="sm"
@@ -486,13 +633,22 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
               >
                 Tampilkan Semua Mapel
               </PixelButton>
+            ) : !isGm && selectedCategory !== 'all' ? (
+              <PixelButton
+                type="button"
+                size="sm"
+                variant="neutral"
+                onClick={() => setSelectedCategory('all')}
+              >
+                Lihat Semua Kategori Aktif
+              </PixelButton>
             ) : undefined
           }
           compact
         />
       ) : (
         <div className="space-y-3">
-          {filteredRows.map(({ quest, urgency, personalStatus, counts }) => {
+          {filteredRows.map(({ quest, urgency, personalStatus, isUnreadNew, counts }) => {
             const realm = realmMap.get(quest.realmId);
             const targetIds = parseTargetDungeonIds(quest.dungeonId);
             const targetSummary = formatTargetDungeonsSummary(
@@ -517,15 +673,25 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                 }
                 bannerRight={
                   !isGm && personalStatus ? (
-                    <span
-                      className={`px-2.5 py-0.5 rounded border font-pixel-ui text-[11px] font-bold inline-flex items-center gap-1 ${STATUS_BADGE_MAP[personalStatus].className}`}
-                    >
-                      {personalStatus === 'selesai' && <CheckCircle2 size={13} />}
-                      {personalStatus === 'dikumpulkan' && <Send size={13} />}
-                      {personalStatus === 'terlambat' && <AlertTriangle size={13} />}
-                      {personalStatus === 'belum' && <Sword size={13} />}
-                      {STATUS_BADGE_MAP[personalStatus].label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {isUnreadNew && (
+                        <span className="px-2 py-0.5 rounded border border-[#09090f] bg-[var(--comic-gold)] text-[#09090f] font-pixel-ui text-[10px] font-bold inline-flex items-center gap-1">
+                          <Sparkles size={11} />
+                          BARU
+                        </span>
+                      )}
+                      <span
+                        className={`px-2.5 py-0.5 rounded border font-pixel-ui text-[11px] font-bold inline-flex items-center gap-1 ${STATUS_BADGE_MAP[personalStatus].className}`}
+                      >
+                        {personalStatus === 'selesai' && <CheckCircle2 size={13} />}
+                        {personalStatus === 'dikumpulkan' && <Send size={13} />}
+                        {(personalStatus === 'terlambat' || personalStatus === 'remidial') && (
+                          <AlertTriangle size={13} />
+                        )}
+                        {personalStatus === 'belum' && <Sword size={13} />}
+                        {STATUS_BADGE_MAP[personalStatus].label}
+                      </span>
+                    </div>
                   ) : undefined
                 }
                 stats={[
@@ -560,7 +726,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                     </div>
                     <button
                       type="button"
-                      onClick={() => setDetailQuest(quest)}
+                      onClick={() => handleOpenQuestDetail(quest)}
                       className="text-left text-[15px] sm:text-[16px] font-bold text-[var(--board-ink)] hover:text-[var(--board-accent)] leading-snug break-words cursor-pointer block w-full"
                     >
                       {quest.title}
@@ -593,7 +759,7 @@ export const QuestBoardView: React.FC<QuestBoardViewProps> = ({
                       type="button"
                       size="sm"
                       variant="primary"
-                      onClick={() => setDetailQuest(quest)}
+                      onClick={() => handleOpenQuestDetail(quest)}
                     >
                       <Eye size={15} />
                       <span>{isGm ? 'Cek Status' : 'Detail'}</span>
