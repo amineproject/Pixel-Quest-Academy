@@ -6,6 +6,7 @@ import {
   buildAcademicPeriodLabel,
   calculateExpEarned,
   computeDashboardAnalytics,
+  computeHeroesQuestProgress,
   doesTargetMatchDungeon,
   escapeCsvCell,
   formatChapterLabel,
@@ -1221,6 +1222,210 @@ describe('Semester Report & Academic Year Archive Lifecycle', () => {
     assert.equal(secondImport.summary.addedDungeons, 0);
     assert.equal(secondImport.summary.addedQuests, 0);
     assert.equal(secondImport.summary.addedGrades, 0);
+  });
+});
+
+describe('Per-Student Quest Completion Progress (Menu Penilaian)', () => {
+  const progDungeons: Dungeon[] = [
+    {
+      id: 'd-8a',
+      name: 'Kelas VIII-A',
+      tier: 'Kelas VIII',
+      guildCode: '8A',
+      capacity: 30,
+      description: '',
+      realmIds: ['r-inf', 'r-bin'],
+    },
+    {
+      id: 'd-8b',
+      name: 'Kelas VIII-B',
+      tier: 'Kelas VIII',
+      guildCode: '8B',
+      capacity: 30,
+      description: '',
+      realmIds: ['r-inf'],
+    },
+  ];
+  const progRealms: Realm[] = [
+    { id: 'r-inf', name: 'Informatika', code: 'INF', icon: 'bolt', accentColor: '#2563eb', description: '' },
+    { id: 'r-bin', name: 'Bahasa Indonesia', code: 'BIN', icon: 'book', accentColor: '#d97706', description: '' },
+  ];
+  const progHeroes: HeroStudent[] = [
+    {
+      id: 'st-1',
+      name: 'Rafi Akbar',
+      username: 'rafi',
+      studentCode: '2001',
+      dungeonId: 'd-8a',
+      avatar: 'knight',
+      heroClass: 'Knight',
+      active: true,
+      joinedDate: '2026-07-01',
+    },
+    {
+      id: 'st-2',
+      name: 'Sinta Kirana',
+      username: 'sinta',
+      studentCode: '2002',
+      dungeonId: 'd-8a',
+      avatar: 'mage',
+      heroClass: 'Mage',
+      active: true,
+      joinedDate: '2026-07-01',
+      enrolledRealmIds: ['r-inf'],
+    },
+    {
+      id: 'st-3',
+      name: 'Budi Nonaktif',
+      username: 'budi',
+      studentCode: '2003',
+      dungeonId: 'd-8a',
+      avatar: 'ranger',
+      heroClass: 'Ranger',
+      active: false,
+      joinedDate: '2026-07-01',
+    },
+  ];
+  const progQuests: ActiveQuest[] = [
+    {
+      id: 'pq-1',
+      realmId: 'r-inf',
+      dungeonId: 'all',
+      title: 'Tugas Algoritma',
+      instructions: 'Kerjakan',
+      deadline: '2026-08-10',
+      maxExp: 100,
+      difficulty: 'Normal',
+      category: 'Main',
+    },
+    {
+      id: 'pq-2',
+      realmId: 'r-inf',
+      dungeonId: 'd-8a',
+      title: 'Praktik Flowchart',
+      instructions: 'Buat bagan',
+      deadline: '2026-08-15',
+      maxExp: 100,
+      difficulty: 'Elite',
+      category: 'Party',
+    },
+    {
+      id: 'pq-3',
+      realmId: 'r-bin',
+      dungeonId: 'all',
+      title: 'Teks LHO',
+      instructions: 'Tulis laporan',
+      deadline: '2026-08-20',
+      maxExp: 100,
+      difficulty: 'Normal',
+      category: 'Main',
+    },
+    {
+      id: 'pq-4-perclass-other',
+      realmId: 'r-inf',
+      dungeonId: 'all',
+      title: 'Khusus 8B Per-Kelas',
+      instructions: 'Hanya 8B',
+      deadline: '2026-08-25',
+      maxExp: 100,
+      difficulty: 'Normal',
+      category: 'Special',
+      scheduledAt: '__per_class__',
+      classSchedules: { 'd-8b': '2026-08-01T08:00' },
+    },
+  ];
+  const progGrades: ExpGrade[] = [
+    {
+      id: 'gr-1',
+      heroId: 'st-1',
+      questId: 'pq-1',
+      realmId: 'r-inf',
+      score: 90,
+      expEarned: 90,
+      status: 'tuntas',
+      feedback: 'Bagus',
+      gradedDate: '2026-08-05',
+    },
+    {
+      id: 'gr-2',
+      heroId: 'st-1',
+      questId: 'pq-2',
+      realmId: 'r-inf',
+      score: 55,
+      expEarned: 55,
+      status: 'remidial',
+      feedback: 'Perbaiki cabang',
+      gradedDate: '2026-08-06',
+    },
+    {
+      id: 'gr-3',
+      heroId: 'st-2',
+      questId: 'pq-1',
+      realmId: 'r-inf',
+      score: 85,
+      expEarned: 85,
+      status: 'tuntas',
+      feedback: '',
+      gradedDate: '2026-08-05',
+    },
+    {
+      id: 'gr-4',
+      heroId: 'st-2',
+      questId: 'pq-2',
+      realmId: 'r-inf',
+      score: 95,
+      expEarned: 95,
+      status: 'tuntas',
+      feedback: '',
+      gradedDate: '2026-08-06',
+    },
+  ];
+
+  it('computes completed vs unfinished tasks per student accurately across subjects and classes', () => {
+    const allSummary = computeHeroesQuestProgress({
+      heroes: progHeroes,
+      quests: progQuests,
+      grades: progGrades,
+      dungeons: progDungeons,
+      realms: progRealms,
+      now: new Date('2026-08-08T10:00:00'),
+    });
+
+    // Inactive student Budi excluded
+    assert.equal(allSummary.length, 2);
+
+    const rafi = allSummary.find((s) => s.hero.id === 'st-1')!;
+    // Rafi gets pq-1 (tuntas), pq-2 (remidial), pq-3 (ungraded -> belum); excludes pq-4 (per-class 8B only)
+    assert.equal(rafi.totalQuests, 3);
+    assert.equal(rafi.tuntasCount, 1);
+    assert.equal(rafi.remidialCount, 1);
+    assert.equal(rafi.belumCount, 1);
+    assert.equal(rafi.unfinishedCount, 2);
+    assert.equal(rafi.completionPercent, 33);
+    assert.equal(rafi.isAllDone, false);
+
+    const sinta = allSummary.find((s) => s.hero.id === 'st-2')!;
+    // Sinta only enrolled in r-inf, so pq-3 (r-bin) is excluded -> 2/2 tuntas (100%)
+    assert.equal(sinta.totalQuests, 2);
+    assert.equal(sinta.tuntasCount, 2);
+    assert.equal(sinta.unfinishedCount, 0);
+    assert.equal(sinta.completionPercent, 100);
+    assert.equal(sinta.isAllDone, true);
+
+    // Filter strictly to r-inf
+    const infOnly = computeHeroesQuestProgress({
+      heroes: progHeroes,
+      quests: progQuests,
+      grades: progGrades,
+      dungeons: progDungeons,
+      realms: progRealms,
+      realmId: 'r-inf',
+      now: new Date('2026-08-08T10:00:00'),
+    });
+    const rafiInf = infOnly.find((s) => s.hero.id === 'st-1')!;
+    assert.equal(rafiInf.totalQuests, 2);
+    assert.equal(rafiInf.belumCount, 0);
+    assert.equal(rafiInf.remidialCount, 1);
   });
 });
 

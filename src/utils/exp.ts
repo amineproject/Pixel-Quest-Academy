@@ -1547,5 +1547,181 @@ export function resolveScoreFromDraft(
   return parsed.numericScore;
 }
 
+export interface HeroQuestProgressItem {
+  quest: ActiveQuest;
+  realm?: Realm;
+  status: GradeStatus;
+  hasGradeRecord: boolean;
+  isCompleted: boolean;
+  isScheduledFuture: boolean;
+  score: number | null;
+  expEarned: number;
+  feedback: string;
+  gradedDate: string;
+}
+
+export interface HeroQuestProgressSummary {
+  hero: HeroStudent;
+  dungeon?: Dungeon;
+  items: HeroQuestProgressItem[];
+  totalQuests: number;
+  tuntasCount: number;
+  prosesCount: number;
+  remidialCount: number;
+  belumCount: number;
+  unfinishedCount: number;
+  completionPercent: number;
+  averageScore: number;
+  totalExp: number;
+  isAllDone: boolean;
+}
+
+/**
+ * Computes per-student quest completion progress across all assigned quests
+ * (strictly respecting class targeting, per-class schedules, and student enrolled subjects).
+ */
+export function computeHeroesQuestProgress(params: {
+  heroes: HeroStudent[];
+  quests: ActiveQuest[];
+  grades: ExpGrade[];
+  dungeons: Dungeon[];
+  realms: Realm[];
+  realmId?: string;
+  scopedDungeonIds?: Set<string> | null;
+  now?: Date;
+}): HeroQuestProgressSummary[] {
+  const {
+    heroes,
+    quests,
+    grades,
+    dungeons,
+    realms,
+    realmId = 'all',
+    scopedDungeonIds = null,
+    now = new Date(),
+  } = params;
+
+  const sortedDungeons = sortDungeonsAlphabetically(dungeons);
+  const dungeonOrder = new Map(sortedDungeons.map((d, idx) => [d.id, idx]));
+  const dungeonMap = new Map(dungeons.map((d) => [d.id, d]));
+  const realmMap = new Map(realms.map((r) => [r.id, r]));
+
+  const sortedQuests = sortQuestsByCategory(
+    quests.filter((q) => realmId === 'all' || q.realmId === realmId)
+  );
+
+  const gradeMap = new Map<string, ExpGrade>();
+  grades.forEach((g) => {
+    gradeMap.set(`${g.heroId}__${g.questId}`, g);
+  });
+
+  const activeHeroes = heroes
+    .filter(
+      (h) =>
+        h.active && (!scopedDungeonIds || scopedDungeonIds.has(h.dungeonId))
+    )
+    .sort((a, b) => {
+      const idxA = dungeonOrder.get(a.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      const idxB = dungeonOrder.get(b.dungeonId) ?? Number.MAX_SAFE_INTEGER;
+      if (idxA !== idxB) return idxA - idxB;
+      return a.name.localeCompare(b.name, 'id', { sensitivity: 'base' });
+    });
+
+  return activeHeroes.map((hero) => {
+    const allowedRealms = getHeroEffectiveRealmIds(hero, dungeons);
+    const items: HeroQuestProgressItem[] = [];
+
+    let tuntasCount = 0;
+    let prosesCount = 0;
+    let remidialCount = 0;
+    let belumCount = 0;
+    let scoredSum = 0;
+    let scoredCount = 0;
+    let totalExp = 0;
+
+    sortedQuests.forEach((quest) => {
+      const grade = gradeMap.get(`${hero.id}__${quest.id}`);
+      if (!doesTargetMatchDungeon(quest.dungeonId, hero.dungeonId)) {
+        return;
+      }
+      if (
+        quest.scheduledAt === '__per_class__' &&
+        !quest.classSchedules?.[hero.dungeonId] &&
+        !grade
+      ) {
+        return;
+      }
+      if (
+        quest.realmId &&
+        allowedRealms &&
+        !allowedRealms.includes(quest.realmId)
+      ) {
+        return;
+      }
+
+      const effSchedule = getEffectiveScheduleForClass(quest, hero.dungeonId);
+      const isScheduledFuture = Boolean(
+        effSchedule.releaseTime &&
+          effSchedule.releaseTime.getTime() > now.getTime()
+      );
+
+      const status: GradeStatus = grade ? getEffectiveGradeStatus(grade) : 'belum';
+      const hasScore = Boolean(grade && status !== 'belum');
+      const score = hasScore
+        ? Math.max(0, Math.min(100, Number(grade?.score ?? 0)))
+        : null;
+      const expEarned = hasScore ? Number(grade?.expEarned ?? 0) : 0;
+
+      if (status === 'tuntas') tuntasCount++;
+      else if (status === 'proses') prosesCount++;
+      else if (status === 'remidial') remidialCount++;
+      else belumCount++;
+
+      if (score !== null) {
+        scoredCount++;
+        scoredSum += score;
+      }
+      totalExp += expEarned;
+
+      items.push({
+        quest,
+        realm: realmMap.get(quest.realmId),
+        status,
+        hasGradeRecord: Boolean(grade),
+        isCompleted: status === 'tuntas',
+        isScheduledFuture,
+        score,
+        expEarned,
+        feedback: grade?.feedback || '',
+        gradedDate: grade?.gradedDate || '',
+      });
+    });
+
+    const totalQuests = items.length;
+    const unfinishedCount = belumCount + remidialCount + prosesCount;
+    const completionPercent =
+      totalQuests > 0
+        ? Math.min(100, Math.round((tuntasCount / totalQuests) * 100))
+        : 0;
+    const averageScore = scoredCount > 0 ? Math.round(scoredSum / scoredCount) : 0;
+
+    return {
+      hero,
+      dungeon: dungeonMap.get(hero.dungeonId),
+      items,
+      totalQuests,
+      tuntasCount,
+      prosesCount,
+      remidialCount,
+      belumCount,
+      unfinishedCount,
+      completionPercent,
+      averageScore,
+      totalExp,
+      isAllDone: totalQuests > 0 && unfinishedCount === 0,
+    };
+  });
+}
+
 
 

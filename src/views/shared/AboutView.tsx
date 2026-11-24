@@ -21,7 +21,7 @@ interface AboutViewProps {
   currentTheme: PixelTheme;
 }
 
-const APP_VERSION = '3.10';
+const APP_VERSION = '3.11';
 const APP_DEVELOPER = 'Amin Wayudi, S.Pd.';
 
 interface VersionLog {
@@ -34,10 +34,20 @@ interface VersionLog {
 
 const CHANGELOG: VersionLog[] = [
   {
-    version: '3.10',
-    title: 'Perapihan Tipografi, Ukuran Font & Tata Letak Lintas 5 Tema',
+    version: '3.11',
+    title: 'Cek Progres & Tugas Selesai / Belum Siswa di Menu Penilaian',
     badge: 'TERBARU · SAAT INI',
     isCurrent: true,
+    changes: [
+      'Tab Baru "Cek Progres Siswa" di Menu Penilaian (Akun Guru): guru kini dapat memantau progres pengerjaan tiap siswa per kelas dan mata pelajaran secara langsung—lengkap dengan bar persentase ketuntasan, jumlah tugas Tuntas, Belum Dikerjakan, Remidial, dan Proses Dinilai.',
+      'Rincian Checklist Tugas & Lompat Cepat ke Penilaian: setiap kartu siswa dapat dibuka untuk mengecek daftar tugas yang sudah diselesaikan maupun yang belum/terlewat tenggat, memfilter siswa yang masih punya tanggungan, serta tombol langsung "Nilai / Edit" menuju pengisian nilai tugas tersebut.',
+      'Filter Status & Pencarian Siswa di Tab Input Nilai: memudahkan guru menyaring siswa berdasarkan status pengerjaan (Belum, Remidial, Proses, Tuntas) atau nama/NIS langsung saat mengisi nilai tugas.',
+    ],
+  },
+  {
+    version: '3.10',
+    title: 'Perapihan Tipografi, Ukuran Font & Tata Letak Lintas 5 Tema',
+    badge: 'PEMBARUAN BESAR',
     changes: [
       'Standarisasi Skala Font & Pembungkus Teks Lintas Tema: perbaikan menyeluruh pada 5 tema (Super Paper Stage, Pokémon Café ReMix, Sprout Pixel Village, Mobile Legends, dan Phantom Persona Pop) agar kata normal tidak terpotong di tengah huruf, tombol dan judul kartu tidak meluber di layar sempit, serta sudut miring tema Persona lebih proporsional.',
       'Konsistensi Menu Akun Guru & Siswa: menyeragamkan ukuran teks sidebar, drawer menu mobile, bilah navigasi bawah, kartu KPI Dashboard, tab filter, label pengumuman, serta tampilan modal dan tombol aksi di semua halaman Guru maupun Siswa.',
