@@ -572,7 +572,7 @@ BEGIN
 END;
 $$;
 
--- F. Ambil Status Nilai Siswa (Hanya Milik Siswa Tersebut & TANPA Skor Angka)
+-- F. Ambil Status Nilai Siswa (Hanya Milik Siswa Tersebut & TANPA Skor Angka, namun tetap menyertakan EXP)
 CREATE OR REPLACE FUNCTION public.get_hero_grade_statuses(
   p_hero_id TEXT,
   p_pin TEXT DEFAULT ''
@@ -595,13 +595,19 @@ BEGIN
     'quest_id', g.quest_id,
     'realm_id', g.realm_id,
     'score', 0,
-    'exp_earned', 0,
+    'exp_earned', CASE
+      WHEN COALESCE(g.status, CASE WHEN g.score >= 70 THEN 'tuntas' ELSE 'remidial' END) = 'belum' THEN 0
+      WHEN COALESCE(g.exp_earned, 0) > 0 THEN g.exp_earned
+      WHEN COALESCE(g.score, 0) > 0 THEN ROUND((LEAST(100, GREATEST(0, g.score))::numeric / 100.0) * GREATEST(0, COALESCE(q.max_exp, 200)))::int
+      ELSE 0
+    END,
     'status', COALESCE(g.status, CASE WHEN g.score >= 70 THEN 'tuntas' ELSE 'remidial' END),
     'feedback', COALESCE(g.feedback, ''),
     'graded_date', g.graded_date
   )), '[]'::jsonb)
   INTO v_rows
   FROM public.grades g
+  LEFT JOIN public.quests q ON q.id = g.quest_id
   WHERE g.hero_id = p_hero_id;
 
   RETURN jsonb_build_object('ok', true, 'grades', v_rows);
