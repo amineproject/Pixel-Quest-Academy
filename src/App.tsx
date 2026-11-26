@@ -304,6 +304,7 @@ export default function App() {
   const [isInitialBooting, setIsInitialBooting] = useState(true);
   const [seenNoticeIds, setSeenNoticeIds] = useState<string[]>([]);
   const [seenQuestIds, setSeenQuestIds] = useState<string[]>([]);
+  const lastSyncedHeroIdRef = useRef<string | null>(null);
 
   // EC-01 Access Denied Guard State
   const [deniedRoute, setDeniedRoute] = useState<string | null>(null);
@@ -647,9 +648,11 @@ export default function App() {
         // Detect Hero auto-EXP & Level-Up upon sync (Item 4.1)
         const ses = overrideAuth || authSessionRef.current;
         if (ses.isLoggedIn && ses.role === UserRole.HERO && ses.heroId) {
+          const isInitialSessionSync = lastSyncedHeroIdRef.current !== ses.heroId;
+          lastSyncedHeroIdRef.current = ses.heroId;
           const prevExp = getHeroTotalExp(ses.heroId, prev.grades);
           const nextExp = getHeroTotalExp(ses.heroId, next.grades);
-          if (nextExp > prevExp && prev.grades.length > 0) {
+          if (!isInitialSessionSync && nextExp > prevExp) {
             const prevLvl = getHeroLevelProgress(prevExp).level;
             const nextLvl = getHeroLevelProgress(nextExp).level;
             if (nextLvl > prevLvl) {
@@ -773,6 +776,7 @@ export default function App() {
     } catch {
       // Ignore storage error
     }
+    lastSyncedHeroIdRef.current = null;
     setAuthSession(emptyAuth);
     setRole(UserRole.HERO);
     setActiveHeroId('');

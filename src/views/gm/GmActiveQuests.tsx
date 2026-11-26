@@ -822,7 +822,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               <button
                 type="button"
                 onClick={() => setCategoryFilter('all')}
-                className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
                   categoryFilter === 'all'
                     ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -838,7 +838,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                     type="button"
                     onClick={() => setCategoryFilter(cat.id)}
                     title={cat.description}
-                    className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[10px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
                       active
                         ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)] font-bold'
                         : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -927,7 +927,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
 
               {previewQuest.description?.trim() && (
                 <div className="pixel-box-inset p-3 space-y-1 bg-[var(--bg-inset)]">
-                  <p className="font-pixel-ui text-[10px] uppercase text-[var(--accent-primary)]">
+                  <p className="font-pixel-ui text-[11px] uppercase text-[var(--accent-primary)]">
                     Deskripsi Misi
                   </p>
                   <p className="text-[13.5px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
@@ -937,7 +937,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
               )}
 
               <div className="space-y-1.5">
-                <p className="font-pixel-ui text-[10px] uppercase text-[var(--accent-warning)]">
+                <p className="font-pixel-ui text-[11px] uppercase text-[var(--accent-warning)]">
                   Objek Misi / Instruksi Tugas
                 </p>
                 <ThemedReadingSurface>
@@ -1002,7 +1002,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                             </p>
                           </div>
                           <span
-                            className={`px-2 py-0.5 border font-pixel-ui text-[10px] font-bold shrink-0 ${STATUS_BADGE_MAP[st].className}`}
+                            className={`px-2 py-0.5 border font-pixel-ui text-[10.5px] font-bold shrink-0 ${STATUS_BADGE_MAP[st].className}`}
                           >
                             {STATUS_BADGE_MAP[st].label}
                           </span>
@@ -1048,7 +1048,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* Grouped Class & Taught Subject Selection */}
           <div className="pixel-box-inset p-3 space-y-3 border border-[var(--border-pixel)] bg-[var(--bg-inset)]">
-            <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-primary)]">
+            <div className="flex items-center gap-1.5 font-pixel-ui text-[11px] text-[var(--accent-primary)]">
               <Layers size={13} />
               <span>KELOMPOK KELAS &amp; MAPEL YANG DIAJARKAN</span>
             </div>
@@ -1216,7 +1216,7 @@ export const GmActiveQuests: React.FC<GmActiveQuestsProps> = ({
                       {getQuestCategoryIcon(cat.id, 13)}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block font-pixel-ui text-[10px] font-bold text-[var(--text-primary)]">
+                      <span className="block font-pixel-ui text-[11px] font-bold text-[var(--text-primary)]">
                         {selected ? '▶ ' : ''}
                         {cat.label}
                       </span>

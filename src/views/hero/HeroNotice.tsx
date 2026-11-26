@@ -83,7 +83,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
             <button
               type="button"
               onClick={onMarkGuildNotificationsRead}
-              className="pixel-btn min-h-[32px] px-2.5 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[10px] font-bold cursor-pointer shrink-0"
+              className="pixel-btn min-h-[34px] px-2.5 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[11px] font-bold cursor-pointer shrink-0"
             >
               Tandai Dibaca
             </button>
@@ -96,14 +96,14 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
         <div className="flex items-center gap-3 min-w-0">
           <PixelAvatar avatar={hero.avatar} size={48} className="animate-pixel-bounce shrink-0" />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-success)] truncate">
+            <div className="flex items-center gap-1.5 font-pixel-ui text-[10.5px] text-[var(--accent-success)] truncate">
               <PixelStar size={12} className="shrink-0" />
               <span className="truncate">{hero.heroClass.toUpperCase()}</span>
               <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] text-[#09090f] font-bold shrink-0">
                 Lv.{heroLevel.level}
               </span>
             </div>
-            <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] truncate mt-0.5">
+            <h2 className="font-pixel-display text-[13.5px] sm:text-[14.5px] text-[var(--text-primary)] truncate mt-0.5">
               {hero.name}
             </h2>
             <p className="text-[12.5px] text-[var(--text-secondary)] truncate">
@@ -134,7 +134,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
               key={item}
               type="button"
               onClick={() => setFilter(item)}
-              className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
                 filter === item
                   ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                   : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -210,7 +210,7 @@ export const HeroNotice: React.FC<HeroNoticeProps> = ({
       {/* Demo RBAC Verification Trigger */}
       <section className="pixel-box-inset p-3.5 flex flex-wrap items-center justify-between gap-3 overflow-hidden">
         <div className="min-w-0 flex-1">
-          <p className="font-pixel-ui text-[10px] text-[var(--text-muted)]">
+          <p className="font-pixel-ui text-[11px] text-[var(--text-muted)]">
             RBAC READ-ONLY GUARD
           </p>
           <p className="text-[12.5px] text-[var(--text-secondary)] leading-snug break-words">

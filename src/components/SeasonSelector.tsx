@@ -78,7 +78,7 @@ export const SeasonSelector: React.FC<SeasonSelectorProps> = ({
         aria-haspopup="listbox"
         aria-expanded={open}
         title="Pilih Season Aktif (Ganjil / Genap)"
-        className="inline-flex items-center gap-1 px-2 py-0.5 min-h-[26px] rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[10px] tracking-normal font-bold shadow-[2px_2px_0_var(--shadow-ink)] hover:brightness-95 active:translate-y-[1px] cursor-pointer transition-all"
+        className="inline-flex items-center gap-1 px-2 py-0.5 min-h-[28px] rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[11px] tracking-normal font-bold shadow-[2px_2px_0_var(--shadow-ink)] hover:brightness-95 active:translate-y-[1px] cursor-pointer transition-all"
       >
         <Sparkles size={11} className="text-[var(--accent-primary)] shrink-0" />
         <span className="truncate max-w-[115px] sm:max-w-[140px]">
@@ -97,7 +97,7 @@ export const SeasonSelector: React.FC<SeasonSelectorProps> = ({
           className="absolute left-0 mt-1.5 z-50 w-[236px] sm:w-[258px] rounded-[var(--card-radius)] border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-[4px_4px_0_var(--shadow-ink)] p-2 space-y-1.5"
         >
           <div className="px-1.5 py-0.5 flex items-center justify-between border-b border-[var(--border-pixel)]/20">
-            <span className="font-pixel-ui text-[9.5px] uppercase tracking-wide text-[var(--text-muted)]">
+            <span className="font-pixel-ui text-[10.5px] uppercase tracking-wide text-[var(--text-muted)]">
               Season Aktif
             </span>
             <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
@@ -144,7 +144,7 @@ export const SeasonSelector: React.FC<SeasonSelectorProps> = ({
             })}
           </div>
 
-          <p className="px-1.5 pt-1 border-t border-[var(--border-pixel)]/20 text-[10.5px] text-[var(--text-muted)] leading-snug">
+          <p className="px-1.5 pt-1 border-t border-[var(--border-pixel)]/20 text-[11px] text-[var(--text-muted)] leading-snug">
             Tugas, pengumuman &amp; nilai Season lain tetap tersimpan sebagai arsip.
           </p>
         </div>

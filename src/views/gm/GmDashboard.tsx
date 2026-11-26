@@ -174,15 +174,15 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
           />
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center justify-between gap-1.5 min-w-0">
-              <div className="flex items-center gap-1.5 font-pixel-ui text-[10px] text-[var(--accent-warning)] min-w-0">
+              <div className="flex items-center gap-1.5 font-pixel-ui text-[10.5px] text-[var(--accent-warning)] min-w-0">
                 <PixelStar size={12} className="shrink-0" />
                 <span className="truncate">GUILD MASTER ONLINE</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10px] font-bold text-[#09090f] shrink-0 tabular-nums">
+              <span className="px-2 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10.5px] font-bold text-[#09090f] shrink-0 tabular-nums">
                 GM Lv.{gmLevel.level}
               </span>
             </div>
-            <h2 className="font-pixel-display text-[12px] sm:text-[13px] text-[var(--text-primary)] break-words">
+            <h2 className="font-pixel-display text-[13.5px] sm:text-[14.5px] text-[var(--text-primary)] break-words">
               {gmName}
             </h2>
             <p className="text-[12.5px] text-[var(--text-secondary)] break-words">
@@ -202,29 +202,29 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
         {/* 4 Live KPI Counters (No Notice / Pengumuman clutter) */}
         <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 min-w-0">
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[11px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">HEROES AKTIF</span>
               <PixelStar size={14} className="shrink-0 text-[var(--accent-success)]" />
             </p>
-            <p className="font-pixel-display text-[14.5px] sm:text-[16px] text-[var(--accent-success)] tabular-nums truncate mt-1.5">
+            <p className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--accent-success)] tabular-nums truncate mt-1.5">
               {activeHeroes}/{heroes.length}
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[11px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">QUESTS MENUNGGU</span>
               <Sword size={14} className="shrink-0 text-[var(--accent-warning)]" />
             </p>
-            <p className="font-pixel-display text-[14.5px] sm:text-[16px] text-[var(--accent-warning)] tabular-nums truncate mt-1.5">
+            <p className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--accent-warning)] tabular-nums truncate mt-1.5">
               {pendingQuestsCount}/{quests.length}
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[11px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">KETUNTASAN</span>
               <BarChart3 size={14} className="shrink-0 text-[var(--accent-primary)]" />
             </p>
-            <p className="font-pixel-display text-[15px] sm:text-[16px] text-[var(--accent-primary)] tabular-nums truncate mt-1.5">
+            <p className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--accent-primary)] tabular-nums truncate mt-1.5">
               {overallCompletion.completionPercent}%
             </p>
             <p className="text-[11px] font-semibold text-[var(--text-secondary)] tabular-nums truncate mt-0.5">
@@ -232,11 +232,11 @@ export const GmDashboard: React.FC<GmDashboardProps> = React.memo(({
             </p>
           </div>
           <div className="pixel-box-inset p-3 min-w-0 overflow-hidden">
-            <p className="font-pixel-ui text-[10px] sm:text-[10.5px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
+            <p className="font-pixel-ui text-[11px] text-[var(--text-muted)] flex items-center justify-between gap-1 min-w-0">
               <span className="truncate">LAST SYNC</span>
               <PixelCoin size={14} className="shrink-0 animate-coin-shine" />
             </p>
-            <p className="font-pixel-display text-[13.5px] sm:text-[14.5px] text-[#0369a1] tabular-nums truncate mt-1.5">
+            <p className="font-pixel-display text-[14.5px] sm:text-[15.5px] text-[#0369a1] tabular-nums truncate mt-1.5">
               {syncLabel}
             </p>
           </div>

@@ -60,7 +60,7 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'guild_chronicles', label: 'Guild Chronicles', shortLabel: 'Chronicles', standardName: 'Statistik' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'settings', label: 'System Settings', shortLabel: 'Config', standardName: 'Pengaturan' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.13' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.15' },
 ];
 
 export const HERO_NAV_ITEMS: {
@@ -75,7 +75,7 @@ export const HERO_NAV_ITEMS: {
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.13' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.15' },
 ];
 
 export function getGmMenuIcon(id: GmMenuId, size = 18) {
@@ -290,7 +290,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
       >
         {/* Console Hardware Top Trim */}
         <div className="no-print print:hidden hidden sm:flex items-center justify-between px-2 pb-2 text-[var(--text-on-bezel)] font-bold">
-          <div className="flex items-center gap-2 font-pixel-ui text-[10.5px] tracking-wide uppercase min-w-0 flex-1">
+          <div className="flex items-center gap-2 font-pixel-ui text-[11px] tracking-wide uppercase min-w-0 flex-1">
             <PixelCoin size={15} className="animate-coin-shine shrink-0" />
             <span className="truncate">
               {theme === 'sunny_quest'
@@ -308,7 +308,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               <button
                 type="button"
                 onClick={() => setIsWindowMinimized((prev) => !prev)}
-                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[10px] flex items-center justify-center leading-none font-bold hover:bg-[var(--comic-gold)] cursor-pointer"
+                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[11px] flex items-center justify-center leading-none font-bold hover:bg-[var(--comic-gold)] cursor-pointer"
                 title={isWindowMinimized ? 'Pulihkan Jendela' : 'Minimize Jendela'}
                 aria-label={isWindowMinimized ? 'Pulihkan Jendela' : 'Minimize Jendela'}
               >
@@ -320,7 +320,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   setIsWindowMinimized(false);
                   setIsWindowMaximized((prev) => !prev);
                 }}
-                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[9px] flex items-center justify-center leading-none font-bold hover:bg-[var(--comic-gold)] cursor-pointer"
+                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[#18181b] text-[10px] flex items-center justify-center leading-none font-bold hover:bg-[var(--comic-gold)] cursor-pointer"
                 title={isWindowMaximized ? 'Ukuran Normal' : 'Perbesar Jendela'}
                 aria-label={isWindowMaximized ? 'Ukuran Normal' : 'Perbesar Jendela'}
               >
@@ -329,7 +329,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               <button
                 type="button"
                 onClick={() => setLogoutConfirmOpen(true)}
-                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[10px] flex items-center justify-center leading-none font-bold hover:bg-[#f43f5e] hover:text-white cursor-pointer"
+                className="w-5 h-5 rounded-sm border-2 border-[var(--border-pixel)] bg-[#fb7185] text-[#18181b] text-[11px] flex items-center justify-center leading-none font-bold hover:bg-[#f43f5e] hover:text-white cursor-pointer"
                 title="Keluar / Logout"
                 aria-label="Keluar / Logout"
               >
@@ -406,7 +406,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 />
                 <div className="min-w-0 flex-1">
                   <p
-                    className={`font-pixel-ui text-[10px] uppercase tracking-wide flex items-center gap-1 ${
+                    className={`font-pixel-ui text-[10.5px] uppercase tracking-wide flex items-center gap-1 ${
                       isPersonaTheme
                         ? 'text-[#ffe600]'
                         : isMlbbTheme
@@ -431,7 +431,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
             {/* Sidebar Menu Links */}
             <nav className="flex-1 overflow-y-auto pixel-scroll p-2.5 space-y-1">
               <p
-                className={`px-2 pb-1 font-pixel-ui text-[9.5px] uppercase tracking-wide ${
+                className={`px-2 pb-1 font-pixel-ui text-[10.5px] uppercase tracking-wide ${
                   isPersonaTheme
                     ? 'text-[#ffe600]'
                     : isMlbbTheme
@@ -499,7 +499,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             {item.shortLabel}
                           </span>
                           <span
-                            className={`block text-[10.5px] font-medium leading-tight truncate ${
+                            className={`block text-[11px] font-medium leading-tight truncate ${
                               active
                                 ? 'opacity-90'
                                 : isPersonaTheme
@@ -514,7 +514,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         </span>
                         {badgeCount > 0 && (
                           <span
-                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9.5px] font-bold shrink-0 tabular-nums ${
+                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[10.5px] font-bold shrink-0 tabular-nums ${
                               isPersonaTheme && active ? 'persona-unslant ' : ''
                             }${isPersonaTheme ? 'border border-white' : ''}`}
                           >
@@ -580,7 +580,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                             {item.shortLabel}
                           </span>
                           <span
-                            className={`block text-[10.5px] font-medium leading-tight truncate ${
+                            className={`block text-[11px] font-medium leading-tight truncate ${
                               active
                                 ? 'opacity-90'
                                 : isPersonaTheme
@@ -595,7 +595,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                         </span>
                         {badgeCount > 0 && (
                           <span
-                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[9.5px] font-bold shrink-0 tabular-nums ${
+                            className={`px-1.5 py-0.5 rounded bg-[var(--accent-danger)] text-white font-pixel-ui text-[10.5px] font-bold shrink-0 tabular-nums ${
                               isPersonaTheme && active ? 'persona-unslant ' : ''
                             }${isPersonaTheme ? 'border border-white' : ''}`}
                           >
@@ -620,7 +620,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
               <button
                 type="button"
                 onClick={() => setLogoutConfirmOpen(true)}
-                className="w-full pixel-btn min-h-[38px] px-3 py-1.5 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10.5px] flex items-center justify-center gap-2 cursor-pointer font-bold"
+                className="w-full pixel-btn min-h-[38px] px-3 py-1.5 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[11px] flex items-center justify-center gap-2 cursor-pointer font-bold"
               >
                 <LogOut size={14} />
                 <span>Keluar (Logout)</span>
@@ -723,7 +723,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       type="button"
                       onClick={onManualSync}
                       disabled={isSyncing}
-                      className={`pixel-btn min-w-[36px] min-h-[36px] px-2.5 flex items-center justify-center gap-1 cursor-pointer font-pixel-ui text-[9.5px] font-bold ${
+                      className={`pixel-btn min-w-[36px] min-h-[36px] px-2.5 flex items-center justify-center gap-1 cursor-pointer font-pixel-ui text-[11px] font-bold ${
                         syncStatus === 'error'
                           ? 'bg-[#fef2f2] text-[var(--accent-danger)]'
                           : syncStatus === 'synced'
@@ -798,7 +798,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                 <button
                   type="button"
                   onClick={() => setLogoutConfirmOpen(true)}
-                  className="sm:hidden pixel-btn min-w-[36px] min-h-[36px] px-2 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[10px] flex items-center justify-center gap-1 cursor-pointer font-bold"
+                  className="sm:hidden pixel-btn min-w-[36px] min-h-[36px] px-2 py-1 bg-[var(--accent-danger)] text-[var(--text-on-danger)] font-pixel-ui text-[11px] flex items-center justify-center gap-1 cursor-pointer font-bold"
                   title="Keluar / Logout"
                   aria-label="Keluar / Logout"
                 >
@@ -847,11 +847,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       >
                         {getGmMenuIcon(tabId, 19)}
                         {badgeCount > 0 && (
-                          <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                          <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
                             {badgeCount}
                           </span>
                         )}
-                        <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
+                        <span className="font-pixel-ui text-[10.5px] sm:text-[11px] tracking-normal leading-tight truncate max-w-full px-0.5">
                           {item.shortLabel}
                         </span>
                       </button>
@@ -870,11 +870,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   >
                     <Grid size={19} />
                     {unreadNoticeCount > 0 && (
-                      <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                      <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
                         {unreadNoticeCount}
                       </span>
                     )}
-                    <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
+                    <span className="font-pixel-ui text-[10.5px] sm:text-[11px] tracking-normal leading-tight truncate max-w-full px-0.5">
                       Menu
                     </span>
                   </button>
@@ -904,11 +904,11 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       >
                         {getHeroMenuIcon(tabId, 19)}
                         {badgeCount > 0 && (
-                          <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                          <span className="absolute top-1 right-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[var(--accent-danger)] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
                             {badgeCount}
                           </span>
                         )}
-                        <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
+                        <span className="font-pixel-ui text-[10.5px] sm:text-[11px] tracking-normal leading-tight truncate max-w-full px-0.5">
                           {item.shortLabel}
                         </span>
                       </button>
@@ -929,7 +929,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                     }`}
                   >
                     <Grid size={19} />
-                    <span className="font-pixel-ui text-[9px] min-[370px]:text-[9.5px] sm:text-[10px] tracking-normal leading-tight truncate max-w-full px-0.5">
+                    <span className="font-pixel-ui text-[10.5px] sm:text-[11px] tracking-normal leading-tight truncate max-w-full px-0.5">
                       Menu
                     </span>
                   </button>
@@ -941,7 +941,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
         )}
 
         {/* Handheld Console Footer Trim */}
-        <div className="no-print print:hidden hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-bezel)] font-pixel-ui text-[9px] font-bold">
+        <div className="no-print print:hidden hidden sm:flex items-center justify-between px-2 pt-2.5 text-[var(--text-on-bezel)] font-pixel-ui text-[10.5px] font-bold">
           <div className="flex items-center gap-1.5">
             <PixelStar size={12} />
             <span>PIXEL QUEST ACADEMY</span>
@@ -1014,7 +1014,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span
-                        className={`px-1.5 py-0.5 rounded font-pixel-ui text-[9px] font-bold uppercase ${
+                        className={`px-1.5 py-0.5 rounded font-pixel-ui text-[10.5px] font-bold uppercase ${
                           log.status === 'error'
                             ? 'bg-rose-100 text-rose-800 border border-rose-700'
                             : log.status === 'success'
@@ -1036,7 +1036,7 @@ export const ArcadeShell: React.FC<ArcadeShellProps> = ({
                       {log.detail}
                     </p>
                   </div>
-                  <span className="font-pixel-ui text-[10px] text-[var(--text-muted)] shrink-0 tabular-nums">
+                  <span className="font-pixel-ui text-[11px] text-[var(--text-muted)] shrink-0 tabular-nums">
                     {log.timeLabel}
                   </span>
                 </div>

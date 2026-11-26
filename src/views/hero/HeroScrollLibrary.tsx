@@ -73,7 +73,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
         <button
           type="button"
           onClick={() => setSelectedRealmId('all')}
-          className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+          className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
             selectedRealmId === 'all'
               ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
               : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -86,7 +86,7 @@ export const HeroScrollLibrary: React.FC<HeroScrollLibraryProps> = ({
             key={realm.id}
             type="button"
             onClick={() => setSelectedRealmId(realm.id)}
-            className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               selectedRealmId === realm.id
                 ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
                 : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'

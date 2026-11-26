@@ -21,7 +21,7 @@ interface AboutViewProps {
   currentTheme: PixelTheme;
 }
 
-const APP_VERSION = '3.13';
+const APP_VERSION = '3.15';
 const APP_DEVELOPER = 'Amin Wayudi, S.Pd.';
 
 interface VersionLog {
@@ -34,10 +34,28 @@ interface VersionLog {
 
 const CHANGELOG: VersionLog[] = [
   {
-    version: '3.13',
-    title: 'Penyederhanaan Kategori & Isolasi Quest Selesai di Papan Tugas Siswa',
+    version: '3.15',
+    title: 'Perbaikan Perolehan EXP Siswa & Tombol Pencarian Nama di Penilaian dan Siswa',
     badge: 'TERBARU · SAAT INI',
     isCurrent: true,
+    changes: [
+      'Perbaikan Akumulasi EXP Akun Siswa: memperbaiki sinkronisasi dan pemetaan nilai pada akun siswa agar EXP dari tugas/quest yang sudah selesai (Tuntas) langsung masuk ke total EXP dan level siswa secara akurat, dengan tetap menjaga kerahasiaan skor angka ujian (0–100).',
+      'Tombol Pencarian Nama di Menu Penilaian & Siswa (Akun Guru): menambahkan tombol "Cari Nama", tombol hapus cepat, dan tombol Reset pada menu Siswa (Heroes) serta pada kedua tab menu Penilaian (Input Nilai per Tugas & Cek Progres Siswa) yang mendukung pencarian nama, username, maupun NIS.',
+    ],
+  },
+  {
+    version: '3.14',
+    title: 'Penyeragaman Skala Font & Kerapihan Tampilan Lintas Menu Guru dan Siswa',
+    badge: 'PEMBARUAN BESAR',
+    changes: [
+      'Skala Tipografi Seragam & Mudah Dibaca: menaikkan ukuran teks yang terlalu kecil (<10.5px) pada tab navigasi bawah HP, menu sidebar, tombol filter mapel/kategori quest, lencana status, trim konsol, serta label pengumuman agar nyaman dibaca di HP maupun komputer.',
+      'Keseimbangan Judul, Kartu KPI & Kolom Input: menyeragamkan ukuran angka statistik KPI di Dashboard, Penilaian, dan Chronicles (16px–18px), judul utama layar Login di 5 tema, serta ukuran huruf pada kolom input/pilihan di menu Penilaian agar proporsional dan tidak terlalu besar maupun kecil.',
+    ],
+  },
+  {
+    version: '3.13',
+    title: 'Penyederhanaan Kategori & Isolasi Quest Selesai di Papan Tugas Siswa',
+    badge: 'PEMBARUAN BESAR',
     changes: [
       'Kategori Quest Lebih Ringkas (Akun Siswa): menghilangkan kategori/tab Rekap Seluruh Quest dan Quest Baru / Belum di Papan Tugas Siswa, serta memindahkan opsi "Quest Selesai" langsung ke dalam bar Filter Kategori Quest.',
       'Isolasi Otomatis Tugas Tuntas: quest yang sudah berstatus Selesai otomatis berpindah ke kategori Quest Selesai dan tidak lagi ditampilkan di Semua Kategori maupun kategori tugas aktif lainnya (Main, Party, Special, Knowledge Quest).',
@@ -195,7 +213,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ role, currentTheme }) => {
               <UserCheck size={19} />
             </span>
             <div className="min-w-0">
-              <p className="font-pixel-ui text-[10px] text-[var(--text-muted)] uppercase">
+              <p className="font-pixel-ui text-[10.5px] text-[var(--text-muted)] uppercase">
                 Pengembang Aplikasi
               </p>
               <p className="text-[14px] font-bold text-[var(--text-primary)] break-words">
@@ -209,7 +227,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ role, currentTheme }) => {
               <Code2 size={19} />
             </span>
             <div className="min-w-0">
-              <p className="font-pixel-ui text-[10px] text-[var(--text-muted)] uppercase">
+              <p className="font-pixel-ui text-[10.5px] text-[var(--text-muted)] uppercase">
                 Versi Rilis Aktif
               </p>
               <p className="text-[14px] font-bold text-[var(--text-primary)]">
@@ -265,7 +283,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ role, currentTheme }) => {
                   {release.title}
                 </h4>
               </div>
-              <span className="font-pixel-ui text-[10px] px-2 py-0.5 bg-[var(--bg-surface-alt)] border border-[var(--border-pixel)]/50 text-[var(--accent-warning)] shrink-0">
+              <span className="font-pixel-ui text-[10.5px] px-2 py-0.5 bg-[var(--bg-surface-alt)] border border-[var(--border-pixel)]/50 text-[var(--accent-warning)] shrink-0">
                 {release.badge}
               </span>
             </div>

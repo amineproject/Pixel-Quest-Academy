@@ -176,7 +176,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
   const heroGrades = rawHeroGrades.filter(
     (g) =>
       relevantQuestIdSet.has(g.questId) &&
-      (!allowedRealmSet || allowedRealmSet.has(g.realmId))
+      (!allowedRealmSet || !g.realmId || allowedRealmSet.has(g.realmId))
   );
 
   // Compute summary counts by symbol status (NO numeric points/scores)
@@ -339,10 +339,10 @@ export const HeroLog: React.FC<HeroLogProps> = ({
           <PixelAvatar avatar={hero.avatar} size={42} className="shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <h3 className="font-pixel-display text-[12px] text-[var(--text-primary)] truncate">
+              <h3 className="font-pixel-display text-[13.5px] sm:text-[14.5px] text-[var(--text-primary)] truncate">
                 {hero.name}
               </h3>
-              <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10px] font-bold text-[#09090f] shrink-0">
+              <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10.5px] font-bold text-[#09090f] shrink-0">
                 Lv.{getHeroLevelProgress(getHeroTotalExp(hero.id, heroGrades)).level}
               </span>
               {hero.username ? (
@@ -395,10 +395,10 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <CheckCircle2 size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[11.5px] sm:text-[12px] font-bold text-emerald-800 leading-tight break-words">
+              <p className="text-[12px] font-bold text-emerald-800 leading-tight break-words">
                 Tuntas ({counts.tuntas})
               </p>
-              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
+              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
                 Centang Hijau
               </p>
             </div>
@@ -409,10 +409,10 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <XCircle size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[11.5px] sm:text-[12px] font-bold text-rose-800 leading-tight break-words">
+              <p className="text-[12px] font-bold text-rose-800 leading-tight break-words">
                 Belum ({counts.belum})
               </p>
-              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
+              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
                 Silang Merah
               </p>
             </div>
@@ -423,10 +423,10 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <AlertCircle size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[11.5px] sm:text-[12px] font-bold text-teal-800 leading-tight break-words">
+              <p className="text-[12px] font-bold text-teal-800 leading-tight break-words">
                 Proses ({counts.proses})
               </p>
-              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
+              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
                 Tanda Seru
               </p>
             </div>
@@ -437,10 +437,10 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <AlertTriangle size={17} strokeWidth={2.5} />
             </span>
             <div className="min-w-0">
-              <p className="text-[11.5px] sm:text-[12px] font-bold text-amber-800 leading-tight break-words">
+              <p className="text-[12px] font-bold text-amber-800 leading-tight break-words">
                 Remidial ({counts.remidial})
               </p>
-              <p className="text-[10.5px] text-[var(--text-muted)] leading-tight">
+              <p className="text-[11px] text-[var(--text-muted)] leading-tight">
                 Perlu Perbaikan
               </p>
             </div>
@@ -525,7 +525,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                         {style.label}
                       </span>
                       {active && (
-                        <span className="font-pixel-ui text-[9.5px] px-1.5 py-0.5 rounded bg-[var(--accent-primary)] text-[var(--text-on-accent)] shrink-0">
+                        <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 rounded bg-[var(--accent-primary)] text-[var(--text-on-accent)] shrink-0">
                           AKTIF
                         </span>
                       )}
@@ -565,7 +565,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               <button
                 type="button"
                 onClick={() => setStatusRealmFilter('all')}
-                className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
                   activeStatusRealmFilter === 'all'
                     ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -580,7 +580,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     key={r.id}
                     type="button"
                     onClick={() => setStatusRealmFilter(r.id)}
-                    className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
                       activeStatusRealmFilter === r.id
                         ? 'bg-[var(--accent-warning)] text-[var(--text-on-warning)]'
                         : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -770,7 +770,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-pixel-ui text-[10px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
+                        <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 bg-[var(--accent-primary)] text-[var(--text-on-accent)]">
                           {cls.code}
                         </span>
                         <h3 className="text-[14px] font-bold text-[var(--text-primary)] truncate">
@@ -897,7 +897,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
               </p>
               {detailQuest.description?.trim() && (
                 <div className="pixel-box-inset p-2.5 space-y-1 bg-[var(--bg-inset)]">
-                  <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-primary)]">
+                  <p className="font-pixel-ui text-[11px] uppercase text-[var(--accent-primary)]">
                     Deskripsi Misi
                   </p>
                   <p className="text-[13.5px] text-[var(--text-primary)] leading-relaxed whitespace-pre-line break-words">
@@ -906,7 +906,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                 </div>
               )}
               <div className="space-y-1">
-                <p className="font-pixel-ui text-[9.5px] uppercase text-[var(--accent-warning)]">
+                <p className="font-pixel-ui text-[11px] uppercase text-[var(--accent-warning)]">
                   Objek Misi / Instruksi Tugas
                 </p>
                 <ThemedReadingSurface>
@@ -963,7 +963,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                     }`}
                   >
                     <PixelAvatar avatar={item.value} size={42} />
-                    <span className="font-pixel-ui text-[10px] text-[var(--text-primary)] leading-tight text-center">
+                    <span className="font-pixel-ui text-[10.5px] text-[var(--text-primary)] leading-tight text-center">
                       {item.label}
                     </span>
                   </button>
@@ -1034,7 +1034,7 @@ export const HeroLog: React.FC<HeroLogProps> = ({
                   Username Baru (Maks. 5 Karakter)
                 </PixelFieldLabel>
                 <span
-                  className={`font-pixel-ui text-[10px] tabular-nums ${
+                  className={`font-pixel-ui text-[10.5px] tabular-nums ${
                     usernameInput.length >= 5
                       ? 'text-[var(--accent-warning)] font-bold'
                       : 'text-[var(--text-muted)]'

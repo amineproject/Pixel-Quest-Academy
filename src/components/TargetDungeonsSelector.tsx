@@ -256,7 +256,7 @@ export const TargetDungeonsSelector: React.FC<TargetDungeonsSelectorProps> = ({
                             {dng.guildCode} — {dng.name}
                           </span>
                           {highlightedRealmId && !teachesHighlighted && (
-                            <span className="text-[9.5px] px-1 py-0.5 border border-amber-700/60 bg-amber-100 text-amber-900 font-semibold shrink-0">
+                            <span className="text-[10.5px] px-1.5 py-0.5 border border-amber-700/60 bg-amber-100 text-amber-900 font-semibold shrink-0">
                               Luar Mapel
                             </span>
                           )}

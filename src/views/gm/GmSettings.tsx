@@ -517,7 +517,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
                 }`}
               >
                 <PixelAvatar avatar={av.id} size={36} />
-                <span className="font-pixel-ui text-[10px] text-[var(--text-primary)] leading-tight">
+                <span className="font-pixel-ui text-[10.5px] text-[var(--text-primary)] leading-tight">
                   {av.label}
                 </span>
               </button>
@@ -645,7 +645,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
             </h3>
           </div>
           <span
-            className={`font-pixel-ui text-[10px] px-2 py-0.5 rounded border-2 font-bold shrink-0 inline-flex items-center gap-1 ${
+            className={`font-pixel-ui text-[10.5px] px-2 py-0.5 rounded border-2 font-bold shrink-0 inline-flex items-center gap-1 ${
               isCloudConfigured
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-700'
                 : 'bg-amber-100 text-amber-800 border-amber-700'
@@ -743,7 +743,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
         {isCloudConfigured && shareLink && (
           <div className="pixel-box-inset p-3 space-y-2 border-2 border-[var(--accent-success)]/60 bg-[var(--bg-inset)]">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-pixel-ui text-[10px] text-[var(--accent-success)] flex items-center gap-1.5">
+              <span className="font-pixel-ui text-[11px] text-[var(--accent-success)] flex items-center gap-1.5">
                 <Link2 size={13} />
                 LINK AKSES LINTAS PERANGKAT (HP / LAPTOP LAIN)
               </span>
@@ -806,7 +806,7 @@ export const GmSettings: React.FC<GmSettingsProps> = ({
               MANAJEMEN ARSIP TAHUN PELAJARAN
             </h3>
           </div>
-          <span className="font-pixel-ui text-[10px] px-2 py-0.5 border border-[var(--border-pixel)] bg-[var(--bg-inset)] text-[var(--text-primary)] shrink-0">
+          <span className="font-pixel-ui text-[10.5px] px-2 py-0.5 border border-[var(--border-pixel)] bg-[var(--bg-inset)] text-[var(--text-primary)] shrink-0">
             {academicYears.length} ERA TERSIMPAN
           </span>
         </div>

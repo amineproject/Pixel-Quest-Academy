@@ -103,7 +103,7 @@ export const EraSelector: React.FC<EraSelectorProps> = ({
         aria-haspopup="listbox"
         aria-expanded={open}
         title="Pilih atau Tambah Era (Tahun Pelajaran)"
-        className="inline-flex items-center gap-1 px-2 py-0.5 min-h-[26px] rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)] bg-[var(--comic-gold)] text-[#18181b] font-pixel-ui text-[10px] tracking-normal font-bold shadow-[2px_2px_0_var(--shadow-ink)] hover:brightness-105 active:translate-y-[1px] cursor-pointer transition-all"
+        className="inline-flex items-center gap-1 px-2 py-0.5 min-h-[28px] rounded-[var(--btn-radius)] border-2 border-[var(--border-pixel)] bg-[var(--comic-gold)] text-[#18181b] font-pixel-ui text-[11px] tracking-normal font-bold shadow-[2px_2px_0_var(--shadow-ink)] hover:brightness-105 active:translate-y-[1px] cursor-pointer transition-all"
       >
         <CalendarRange size={11} className="shrink-0" />
         <span className="truncate max-w-[92px] sm:max-w-[130px]">
@@ -122,7 +122,7 @@ export const EraSelector: React.FC<EraSelectorProps> = ({
           className="absolute left-0 mt-1.5 z-50 w-[250px] sm:w-[272px] rounded-[var(--card-radius)] border-2 border-[var(--border-pixel)] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-[4px_4px_0_var(--shadow-ink)] p-2 space-y-1.5"
         >
           <div className="px-1.5 py-0.5 flex items-center justify-between border-b border-[var(--border-pixel)]/20">
-            <span className="font-pixel-ui text-[9.5px] uppercase tracking-wide text-[var(--text-muted)]">
+            <span className="font-pixel-ui text-[10.5px] uppercase tracking-wide text-[var(--text-muted)]">
               Arsip Era Aktif
             </span>
             <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
@@ -186,7 +186,7 @@ export const EraSelector: React.FC<EraSelectorProps> = ({
               onSubmit={handleSubmitCreate}
               className="pt-1.5 border-t border-[var(--border-pixel)]/20 space-y-2"
             >
-              <p className="font-pixel-ui text-[9.5px] uppercase tracking-wide text-[var(--accent-warning)]">
+              <p className="font-pixel-ui text-[10.5px] uppercase tracking-wide text-[var(--accent-warning)]">
                 Buat Era Baru
               </p>
               <input

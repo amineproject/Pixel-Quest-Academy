@@ -137,8 +137,8 @@ export const MascotEmptyState: React.FC<{
       <div className="w-24 h-24 rounded-[6px] bg-[#d6f5f3] border-2 border-[#4e2a1e] flex items-center justify-center shadow-[3px_3px_0_0_rgba(78,42,30,0.28)]">
         {illustration}
       </div>
-      <h3 className="font-pixel-display text-[15px] text-[#3f2117]">{title}</h3>
-      <p className="text-[14px] text-[#683c2b] max-w-[32ch]">{description}</p>
+      <h3 className="font-pixel-display text-[14px] sm:text-[15px] text-[#3f2117] leading-snug">{title}</h3>
+      <p className="text-[13px] sm:text-[13.5px] text-[#683c2b] max-w-[34ch] leading-relaxed">{description}</p>
       {action && <div className="mt-1">{action}</div>}
     </div>
   </div>
@@ -210,7 +210,7 @@ export const KingdomQuestBoard: React.FC<{
   <RoyalFrameCard className="space-y-2.5">
     <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[#b87c4b] border-2 border-[#5c3822] rounded-[3px] shadow-[inset_0_2px_0_rgba(255,248,223,0.3)]">
       <Sprout size={14} className="text-[#d9f99d] shrink-0" />
-      <span className="font-pixel-ui text-[10.5px] sm:text-[11px] font-bold uppercase tracking-[0.02em] text-[#fff8df] truncate">
+      <span className="font-pixel-ui text-[11px] sm:text-[11.5px] font-bold uppercase tracking-[0.02em] text-[#fff8df] truncate">
         {headerTitle}
       </span>
     </div>
@@ -425,7 +425,7 @@ export const ThemedNoticeCard: React.FC<{
         {(speaker || metaRight) && (
           <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
             {speaker && (
-              <span className="inline-flex items-center gap-1.5 bg-[#09090f] text-white border-2 border-[#09090f] shadow-[3px_3px_0_0_#e60012] px-2.5 py-1 font-pixel-ui text-[10.5px] sm:text-[11px] font-bold uppercase tracking-[0.02em] max-w-full break-words">
+              <span className="inline-flex items-center gap-1.5 bg-[#09090f] text-white border-2 border-[#09090f] shadow-[3px_3px_0_0_#e60012] px-2.5 py-1 font-pixel-ui text-[11px] font-bold uppercase tracking-[0.02em] max-w-full break-words">
                 <Star size={11} className="text-[#ffe600] shrink-0" fill="currentColor" />
                 <span>{speaker}</span>
               </span>
@@ -629,14 +629,14 @@ export const ThemedAchievementCard: React.FC<{
             {title}
           </p>
           <span
-            className={`text-[10.5px] font-bold shrink-0 ${
+            className={`text-[11px] font-bold shrink-0 ${
               unlocked ? 'text-[#1b4db3]' : 'text-[#4b628a]'
             }`}
           >
             {statusLabel}
           </span>
         </div>
-        <p className="text-[11.5px] text-[#243b61] leading-snug mt-0.5 break-words">
+        <p className="text-[12px] text-[#243b61] leading-snug mt-0.5 break-words">
           {description}
         </p>
       </div>

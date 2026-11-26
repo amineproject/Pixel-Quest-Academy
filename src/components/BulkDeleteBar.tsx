@@ -37,7 +37,7 @@ export const BulkDeleteBar: React.FC<BulkDeleteBarProps> = ({
           <button
             type="button"
             onClick={onToggleSelectAllVisible}
-            className="pixel-btn min-h-[34px] px-2.5 py-1 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[9.5px] flex items-center gap-1.5 cursor-pointer"
+            className="pixel-btn min-h-[36px] px-2.5 py-1 bg-[var(--bg-surface)] text-[var(--text-primary)] font-pixel-ui text-[11px] flex items-center gap-1.5 cursor-pointer"
           >
             {allVisibleSelected ? (
               <CheckSquare size={14} className="text-[var(--accent-primary)] shrink-0" />
@@ -54,14 +54,14 @@ export const BulkDeleteBar: React.FC<BulkDeleteBarProps> = ({
 
         {selectedIds.length > 0 && (
           <>
-            <span className="font-pixel-ui text-[9.5px] font-bold text-[var(--accent-danger)] px-1.5">
+            <span className="font-pixel-ui text-[11px] font-bold text-[var(--accent-danger)] px-1.5">
               {selectedIds.length} {itemLabel} dipilih
             </span>
             <button
               type="button"
               onClick={onClearSelection}
               aria-label="Bersihkan pilihan"
-              className="pixel-btn min-h-[30px] px-2 py-0.5 bg-[var(--bg-surface-alt)] text-[var(--text-secondary)] text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+              className="pixel-btn min-h-[34px] px-2.5 py-0.5 bg-[var(--bg-surface-alt)] text-[var(--text-secondary)] text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
             >
               <X size={12} />
               Reset

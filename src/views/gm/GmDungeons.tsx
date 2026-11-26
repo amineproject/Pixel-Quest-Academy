@@ -138,7 +138,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
             key={tier}
             type="button"
             onClick={() => setTierFilter(tier)}
-            className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+            className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
               tierFilter === tier
                 ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                 : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -238,7 +238,7 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
 
                 {/* Linked Realms / Subjects */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--border-pixel)]/30">
-                  <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase shrink-0">
+                  <span className="font-pixel-ui text-[11px] text-[var(--accent-warning)] uppercase shrink-0">
                     Mapel ({dungeon.realmIds?.length || 0}):
                   </span>
                   {dungeon.realmIds && dungeon.realmIds.length > 0 ? (
@@ -396,15 +396,15 @@ export const GmDungeons: React.FC<GmDungeonsProps> = ({
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, realmIds: state.realms.map((r) => r.id) })}
-                  className="text-[10px] text-[var(--accent-warning)] hover:underline font-pixel-ui cursor-pointer"
+                  className="text-[11px] text-[var(--accent-warning)] hover:underline font-pixel-ui cursor-pointer"
                 >
                   Pilih Semua
                 </button>
-                <span className="text-[var(--text-muted)] text-[10px]">·</span>
+                <span className="text-[var(--text-muted)] text-[11px]">·</span>
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, realmIds: [] })}
-                  className="text-[10px] text-[var(--text-muted)] hover:underline font-pixel-ui cursor-pointer"
+                  className="text-[11px] text-[var(--text-muted)] hover:underline font-pixel-ui cursor-pointer"
                 >
                   Kosongkan
                 </button>

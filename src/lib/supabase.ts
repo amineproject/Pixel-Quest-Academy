@@ -7,13 +7,14 @@ import {
   Dungeon,
   ExpGrade,
   GameMasterProfile,
+  GradeStatus,
   HeroStudent,
   PixelTheme,
   QuestNotice,
   Realm,
   SystemSettings,
 } from '../types/lms';
-import { normalizeQuestCategory } from '../utils/exp';
+import { normalizeQuestCategory, resolveStudentGradeExp } from '../utils/exp';
 
 export const SUPABASE_URL_KEY = 'pixel_quest_supabase_url';
 export const SUPABASE_KEY_KEY = 'pixel_quest_supabase_anon_key';
@@ -533,18 +534,43 @@ function parseClassSchedules(raw: any): Record<string, string> {
   return {};
 }
 
-function mapGradeRows(rows: any[], hideScores = false): ExpGrade[] {
-  return (rows || []).map((g: any) => ({
-    id: g.id,
-    heroId: g.hero_id || '',
-    questId: g.quest_id || '',
-    realmId: g.realm_id || '',
-    score: hideScores ? 0 : Number(g.score) || 0,
-    expEarned: hideScores ? 0 : Number(g.exp_earned) || 0,
-    status: g.status || ((Number(g.score) || 0) >= 70 ? 'tuntas' : 'remidial'),
-    feedback: g.feedback || '',
-    gradedDate: g.graded_date || '',
-  }));
+function mapGradeRows(
+  rows: any[],
+  hideScores = false,
+  questMaxExpById?: Map<string, number>
+): ExpGrade[] {
+  return (rows || []).map((g: any) => {
+    const rawScore = Number(g.score) || 0;
+    const rawExp = Number(g.exp_earned) || 0;
+    const status: GradeStatus =
+      g.status === 'tuntas' ||
+      g.status === 'belum' ||
+      g.status === 'proses' ||
+      g.status === 'remidial'
+        ? g.status
+        : rawScore >= 70
+          ? 'tuntas'
+          : 'remidial';
+    const questMaxExp = questMaxExpById?.get(g.quest_id || '') ?? 200;
+
+    return {
+      id: g.id,
+      heroId: g.hero_id || '',
+      questId: g.quest_id || '',
+      realmId: g.realm_id || '',
+      score: hideScores ? 0 : rawScore,
+      expEarned: resolveStudentGradeExp({
+        rawScore,
+        rawExpEarned: rawExp,
+        status,
+        questMaxExp,
+        hideScores,
+      }),
+      status,
+      feedback: g.feedback || '',
+      gradedDate: g.graded_date || '',
+    };
+  });
 }
 
 export async function fetchAcademyFromSupabase(
@@ -592,6 +618,13 @@ export async function fetchAcademyFromSupabase(
       return null;
     }
 
+    const questMaxExpById = new Map<string, number>();
+    qList.forEach((q: any) => {
+      if (q?.id) {
+        questMaxExpById.set(q.id, Number(q.max_exp) || 200);
+      }
+    });
+
     // Fetch grades strictly scoped to authenticated role
     let gradesList: ExpGrade[] = [];
     if (ctx.role === 'admin' && ctx.gmUsername && ctx.gmPassword) {
@@ -600,10 +633,10 @@ export async function fetchAcademyFromSupabase(
         p_gm_pass: ctx.gmPassword,
       });
       if (!gErr && (gRpc as any)?.ok) {
-        gradesList = mapGradeRows((gRpc as any).grades || [], false);
+        gradesList = mapGradeRows((gRpc as any).grades || [], false, questMaxExpById);
       } else if (gErr && isMissingRpcError(gErr)) {
         const { data: legacyGrades } = await client.from('grades').select('*');
-        gradesList = mapGradeRows(legacyGrades || [], false);
+        gradesList = mapGradeRows(legacyGrades || [], false, questMaxExpById);
       }
     } else if (ctx.role === 'student' && ctx.heroId) {
       const { data: sRpc, error: sErr } = await client.rpc('get_hero_grade_statuses', {
@@ -611,13 +644,13 @@ export async function fetchAcademyFromSupabase(
         p_pin: ctx.heroPin || '',
       });
       if (!sErr && (sRpc as any)?.ok) {
-        gradesList = mapGradeRows((sRpc as any).grades || [], true);
+        gradesList = mapGradeRows((sRpc as any).grades || [], true, questMaxExpById);
       } else if (sErr && isMissingRpcError(sErr)) {
         const { data: legacyGrades } = await client
           .from('grades')
           .select('*')
           .eq('hero_id', ctx.heroId);
-        gradesList = mapGradeRows(legacyGrades || [], true);
+        gradesList = mapGradeRows(legacyGrades || [], true, questMaxExpById);
       }
     }
 

@@ -940,7 +940,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <ThemedPanelCard className="p-4 space-y-1.5 bg-[var(--surface-tint)]">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-pixel-ui text-[10.5px] uppercase text-[var(--text-secondary)]">
+                <span className="font-pixel-ui text-[11px] uppercase text-[var(--text-secondary)]">
                   Quest Selesai
                 </span>
                 <CheckCircle2
@@ -948,7 +948,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
                   className="text-[var(--accent-success)] shrink-0"
                 />
               </div>
-              <p className="font-pixel-display text-[18px] sm:text-[21px] leading-tight text-[var(--accent-success)] tabular-nums">
+              <p className="font-pixel-display text-[16px] sm:text-[18px] leading-tight text-[var(--accent-success)] tabular-nums">
                 {questSelesaiCount}
               </p>
               <p className="text-[12.5px] sm:text-[13px] text-[var(--text-secondary)]">
@@ -961,7 +961,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
 
             <ThemedPanelCard className="p-4 space-y-1.5 bg-[var(--surface-tint)]">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-pixel-ui text-[10.5px] uppercase text-[var(--text-secondary)]">
+                <span className="font-pixel-ui text-[11px] uppercase text-[var(--text-secondary)]">
                   Rata-rata EXP
                 </span>
                 <Award
@@ -969,7 +969,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
                   className="text-[var(--accent-warning)] shrink-0"
                 />
               </div>
-              <p className="font-pixel-display text-[18px] sm:text-[21px] leading-tight text-[var(--accent-warning)] tabular-nums">
+              <p className="font-pixel-display text-[16px] sm:text-[18px] leading-tight text-[var(--accent-warning)] tabular-nums">
                 {averageExp}
               </p>
               <p className="text-[12.5px] sm:text-[13px] text-[var(--text-secondary)]">
@@ -979,7 +979,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
 
             <ThemedPanelCard className="p-4 space-y-1.5 bg-[var(--surface-tint)]">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-pixel-ui text-[10.5px] uppercase text-[var(--text-secondary)]">
+                <span className="font-pixel-ui text-[11px] uppercase text-[var(--text-secondary)]">
                   Heroes Aktif
                 </span>
                 <Users
@@ -987,7 +987,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
                   className="text-[var(--accent-primary)] shrink-0"
                 />
               </div>
-              <p className="font-pixel-display text-[18px] sm:text-[21px] leading-tight text-[var(--accent-primary)] tabular-nums">
+              <p className="font-pixel-display text-[16px] sm:text-[18px] leading-tight text-[var(--accent-primary)] tabular-nums">
                 {activeHeroes.length}
               </p>
               <p className="text-[12.5px] sm:text-[13px] text-[var(--text-secondary)]">

@@ -19,6 +19,7 @@ import {
   Save,
   Search,
   Upload,
+  X,
   XCircle,
 } from 'lucide-react';
 import {
@@ -127,10 +128,12 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
   const [isCollectiveOpen, setIsCollectiveOpen] = useState<boolean>(true);
   const [gradeSearch, setGradeSearch] = useState<string>('');
   const [gradeStatusFilter, setGradeStatusFilter] = useState<'all' | GradeStatus>('all');
+  const gradeSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   // Student Quest Progress Tracker state (Tab: Cek Progres Siswa)
   const [progressRealmId, setProgressRealmId] = useState<string>('all');
   const [progressSearch, setProgressSearch] = useState<string>('');
+  const progressSearchInputRef = useRef<HTMLInputElement | null>(null);
   const [progressStudentFilter, setProgressStudentFilter] = useState<
     'all' | 'has_unfinished' | 'all_done' | 'has_proses_remidial'
   >('all');
@@ -331,8 +334,9 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     return eligibleHeroes.filter((h) => {
       if (q) {
         const matchName = h.name.toLowerCase().includes(q);
+        const matchUsername = (h.username || '').toLowerCase().includes(q);
         const matchCode = (h.studentCode || '').toLowerCase().includes(q);
-        if (!matchName && !matchCode) return false;
+        if (!matchName && !matchUsername && !matchCode) return false;
       }
       if (gradeStatusFilter !== 'all') {
         const grade = activeQuestGradeMap.get(h.id);
@@ -363,8 +367,9 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
     return allProgressRows.filter((row) => {
       if (q) {
         const matchName = row.hero.name.toLowerCase().includes(q);
+        const matchUsername = (row.hero.username || '').toLowerCase().includes(q);
         const matchCode = (row.hero.studentCode || '').toLowerCase().includes(q);
-        if (!matchName && !matchCode) return false;
+        if (!matchName && !matchUsername && !matchCode) return false;
       }
       if (progressStudentFilter === 'has_unfinished' && row.unfinishedCount === 0) {
         return false;
@@ -844,7 +849,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               onChange={(e) => handleScoreChange(hero.id, e.target.value)}
               onBlur={() => handleScoreBlur(hero.id)}
               placeholder="0"
-              className="!w-[68px] sm:!w-[74px] !min-h-[44px] lg:!min-h-[40px] !px-2 !text-[16px] sm:!text-[14px] shrink-0 text-center font-bold tabular-nums"
+              className="!w-[68px] sm:!w-[74px] !min-h-[44px] lg:!min-h-[40px] !px-2 !text-[14px] shrink-0 text-center font-bold tabular-nums"
             />
 
             <PixelButton
@@ -880,7 +885,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                     [hero.id]: e.target.value,
                   }))
                 }
-                className="w-full !min-h-[44px] lg:!min-h-[40px] !text-[16px] sm:!text-[13px]"
+                className="w-full !min-h-[44px] lg:!min-h-[40px] !text-[14px]"
               />
             </div>
 
@@ -998,20 +1003,73 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
               }
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
               <div>
                 <PixelFieldLabel htmlFor="prg-search">
-                  3. Cari Siswa (Nama / NIS)
+                  3. Cari Siswa (Nama / Username / NIS)
                 </PixelFieldLabel>
-                <div className="relative">
-                  <PixelInput
-                    id="prg-search"
-                    placeholder="Ketik nama atau NIS siswa..."
-                    value={progressSearch}
-                    onChange={(e) => setProgressSearch(e.target.value)}
-                    className="!text-[16px] sm:!text-[14px]"
-                  />
-                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setProgressSearch((prev) => prev.trim());
+                    progressSearchInputRef.current?.focus();
+                  }}
+                  role="search"
+                  aria-label="Pencarian nama siswa pada progres"
+                  className="flex flex-wrap sm:flex-nowrap items-center gap-1.5"
+                >
+                  <div className="relative flex-1 min-w-[180px]">
+                    <Search
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
+                    />
+                    <PixelInput
+                      ref={progressSearchInputRef}
+                      id="prg-search"
+                      placeholder="Ketik nama, username, atau NIS..."
+                      value={progressSearch}
+                      onChange={(e) => setProgressSearch(e.target.value)}
+                      className="!pl-8 !pr-8 !min-h-[42px] !text-[14px]"
+                    />
+                    {progressSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProgressSearch('');
+                          progressSearchInputRef.current?.focus();
+                        }}
+                        aria-label="Hapus kata kunci pencarian siswa"
+                        title="Hapus kata kunci"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <PixelButton
+                    type="submit"
+                    size="sm"
+                    variant="primary"
+                    className="shrink-0 !min-h-[42px] !px-3.5"
+                  >
+                    <Search size={14} />
+                    <span>Cari Nama</span>
+                  </PixelButton>
+                  {progressSearch && (
+                    <PixelButton
+                      type="button"
+                      size="sm"
+                      variant="neutral"
+                      onClick={() => {
+                        setProgressSearch('');
+                        progressSearchInputRef.current?.focus();
+                      }}
+                      className="shrink-0 !min-h-[42px] !px-2.5"
+                    >
+                      Reset
+                    </PixelButton>
+                  )}
+                </form>
               </div>
 
               <div>
@@ -1030,7 +1088,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                         | 'has_proses_remidial'
                     )
                   }
-                  className="!text-[16px] sm:!text-[14px]"
+                  className="!text-[14px]"
                 >
                   <option value="all">Semua Siswa ({allProgressRows.length})</option>
                   <option value="has_unfinished">
@@ -1056,7 +1114,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-[var(--border-pixel)]/30">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="font-pixel-ui text-[10px] uppercase text-[var(--text-secondary)] mr-1">
+                <span className="font-pixel-ui text-[11px] uppercase text-[var(--text-secondary)] mr-1">
                   Tampilkan Tugas:
                 </span>
                 {(
@@ -1070,7 +1128,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setProgressTaskFilter(tab.id)}
-                    className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[10.5px] cursor-pointer ${
+                    className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] cursor-pointer ${
                       progressTaskFilter === tab.id
                         ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                         : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -1115,10 +1173,10 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
           {/* Summary KPI Strip */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             <ThemedPanelCard className="p-3 space-y-1">
-              <p className="font-pixel-ui text-[10px] uppercase text-[var(--text-secondary)]">
+              <p className="font-pixel-ui text-[11px] uppercase text-[var(--text-secondary)]">
                 Siswa Ditampilkan
               </p>
-              <p className="font-pixel-display text-[19px] sm:text-[21px] text-[var(--text-primary)] tabular-nums">
+              <p className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--text-primary)] tabular-nums">
                 {progressKpi.totalStudents}
               </p>
               <p className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
@@ -1127,10 +1185,10 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             </ThemedPanelCard>
 
             <ThemedPanelCard className="p-3 space-y-1">
-              <p className="font-pixel-ui text-[10px] uppercase text-emerald-700">
+              <p className="font-pixel-ui text-[11px] uppercase text-emerald-700">
                 Tuntas 100%
               </p>
-              <p className="font-pixel-display text-[19px] sm:text-[21px] text-emerald-700 tabular-nums">
+              <p className="font-pixel-display text-[16px] sm:text-[18px] text-emerald-700 tabular-nums">
                 {progressKpi.allDoneStudents}
               </p>
               <p className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
@@ -1139,10 +1197,10 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             </ThemedPanelCard>
 
             <ThemedPanelCard className="p-3 space-y-1">
-              <p className="font-pixel-ui text-[10px] uppercase text-rose-700">
+              <p className="font-pixel-ui text-[11px] uppercase text-rose-700">
                 Masih Ada Tanggungan
               </p>
-              <p className="font-pixel-display text-[19px] sm:text-[21px] text-rose-700 tabular-nums">
+              <p className="font-pixel-display text-[16px] sm:text-[18px] text-rose-700 tabular-nums">
                 {progressKpi.pendingStudents}
               </p>
               <p className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
@@ -1151,10 +1209,10 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             </ThemedPanelCard>
 
             <ThemedPanelCard className="p-3 space-y-1">
-              <p className="font-pixel-ui text-[10px] uppercase text-[var(--accent-warning)]">
+              <p className="font-pixel-ui text-[11px] uppercase text-[var(--accent-warning)]">
                 Ketuntasan Tugas
               </p>
-              <p className="font-pixel-display text-[19px] sm:text-[21px] text-[var(--accent-warning)] tabular-nums">
+              <p className="font-pixel-display text-[16px] sm:text-[18px] text-[var(--accent-warning)] tabular-nums">
                 {progressKpi.overallPercent}%
               </p>
               <p className="text-[11.5px] text-[var(--text-muted)] tabular-nums">
@@ -1264,7 +1322,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                                       </div>
 
                                       <span
-                                        className={`font-pixel-ui text-[10px] px-2 py-0.5 border shrink-0 tabular-nums ${
+                                        className={`font-pixel-ui text-[10.5px] px-2 py-0.5 border shrink-0 tabular-nums ${
                                           row.totalQuests === 0
                                             ? 'bg-zinc-200 text-zinc-700 border-zinc-400'
                                             : row.isAllDone
@@ -1413,7 +1471,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                                                   {statusUi.label}
                                                 </span>
                                                 {item.realm && (
-                                                  <span className="font-pixel-ui text-[10px] px-1.5 py-0.5 border border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)]">
+                                                  <span className="font-pixel-ui text-[10.5px] px-1.5 py-0.5 border border-[var(--border-pixel)] bg-[var(--surface-tint)] text-[var(--text-primary)]">
                                                     {item.realm.code}
                                                   </span>
                                                 )}
@@ -1634,7 +1692,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                     key={item.id}
                     type="button"
                     onClick={() => setGradeStatusFilter(item.id)}
-                    className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[10.5px] cursor-pointer tabular-nums ${
+                    className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] cursor-pointer tabular-nums ${
                       gradeStatusFilter === item.id
                         ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                         : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -1645,20 +1703,74 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                 ))}
               </div>
 
-              <div className="relative w-full lg:w-[240px]">
-                <Search
-                  size={14}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
-                />
-                <PixelInput
-                  aria-label="Cari siswa pada tugas ini"
-                  placeholder="Cari nama / NIS siswa..."
-                  value={gradeSearch}
-                  onChange={(e) => setGradeSearch(e.target.value)}
-                  className="!pl-8 !min-h-[38px] !text-[16px] sm:!text-[13px]"
-                />
-              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setGradeSearch((prev) => prev.trim());
+                  gradeSearchInputRef.current?.focus();
+                }}
+                role="search"
+                aria-label="Pencarian nama siswa pada tugas ini"
+                className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 w-full lg:w-auto lg:min-w-[320px]"
+              >
+                <div className="relative flex-1 min-w-[170px]">
+                  <Search
+                    size={14}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
+                  />
+                  <PixelInput
+                    ref={gradeSearchInputRef}
+                    aria-label="Cari nama siswa pada tugas ini"
+                    placeholder="Cari nama, username, atau NIS..."
+                    value={gradeSearch}
+                    onChange={(e) => setGradeSearch(e.target.value)}
+                    className="!pl-8 !pr-8 !min-h-[40px] !text-[14px]"
+                  />
+                  {gradeSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGradeSearch('');
+                        gradeSearchInputRef.current?.focus();
+                      }}
+                      aria-label="Hapus pencarian nama siswa"
+                      title="Hapus kata kunci"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <PixelButton
+                  type="submit"
+                  size="sm"
+                  variant="primary"
+                  className="shrink-0 !min-h-[40px] !px-3.5"
+                >
+                  <Search size={14} />
+                  <span>Cari Nama</span>
+                </PixelButton>
+                {gradeSearch && (
+                  <PixelButton
+                    type="button"
+                    size="sm"
+                    variant="neutral"
+                    onClick={() => {
+                      setGradeSearch('');
+                      gradeSearchInputRef.current?.focus();
+                    }}
+                    className="shrink-0 !min-h-[40px] !px-2.5"
+                  >
+                    Reset
+                  </PixelButton>
+                )}
+              </form>
             </div>
+            {gradeSearch.trim() && (
+              <p className="text-[12px] text-[var(--text-secondary)] tabular-nums">
+                Ditemukan <strong>{displayedGradeHeroes.length}</strong> siswa untuk kata kunci &ldquo;{gradeSearch.trim()}&rdquo;
+              </p>
+            )}
           </ThemedPanelCard>
 
           {/* Collective / Bulk Grading Panel (Nilai, Status & Catatan secara kolektif) */}
@@ -1730,7 +1842,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                           e.target.value as 'all' | 'selected' | 'ungraded'
                         )
                       }
-                      className="!text-[16px] sm:!text-[14px]"
+                      className="!text-[14px]"
                     >
                       <option value="all">
                         Semua Siswa Tampil ({eligibleHeroes.length})
@@ -1752,7 +1864,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                       onChange={(e) =>
                         setBulkStatusInput(e.target.value as GradeStatus | 'keep')
                       }
-                      className="!text-[16px] sm:!text-[14px]"
+                      className="!text-[14px]"
                     >
                       <option value="keep">-- Tidak diubah (tetap) --</option>
                       <option value="tuntas">Tuntas</option>
@@ -1778,7 +1890,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                         setBulkScoreInput(sanitizeScoreDraftInput(e.target.value).inputValue)
                       }
                       disabled={bulkStatusInput === 'belum'}
-                      className="!text-[16px] sm:!text-[14px] tabular-nums"
+                      className="!text-[14px] tabular-nums"
                     />
                   </div>
 
@@ -1795,7 +1907,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
                         if (e.target.value.trim() !== '') setBulkClearNote(false);
                       }}
                       disabled={bulkClearNote}
-                      className="!text-[16px] sm:!text-[14px]"
+                      className="!text-[14px]"
                     />
                   </div>
                 </div>
@@ -2232,7 +2344,7 @@ export const GmExpLoot: React.FC<GmExpLootProps> = ({
             <div className="space-y-2.5">
               {parsedExcel.matchedQuestColumns.length > 0 && (
                 <div className="pixel-box-inset p-2.5 space-y-1">
-                  <span className="font-pixel-ui text-[10px] text-[var(--accent-success)] block">
+                  <span className="font-pixel-ui text-[11px] text-[var(--accent-success)] block">
                     KOLOM TUGAS TERDETEKSI ({parsedExcel.matchedQuestColumns.length}):
                   </span>
                   <div className="flex flex-wrap gap-1.5">

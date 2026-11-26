@@ -42,6 +42,38 @@ export function calculateExpEarned(score: number, maxExp: number): number {
   return Math.round((clamped / 100) * Math.max(0, maxExp));
 }
 
+/**
+ * Resolves earned EXP from a stored or RPC-masked grade row.
+ * Preserves numeric EXP for students even when raw 0-100 exam scores are hidden,
+ * and provides a safe quest maxExp fallback if a legacy student RPC returns 0 EXP for a completed ('tuntas') quest.
+ */
+export function resolveStudentGradeExp(params: {
+  rawScore: number;
+  rawExpEarned: number;
+  status: GradeStatus;
+  questMaxExp?: number;
+  hideScores?: boolean;
+}): number {
+  const {
+    rawScore,
+    rawExpEarned,
+    status,
+    questMaxExp = 200,
+    hideScores = false,
+  } = params;
+  if (status === 'belum') return 0;
+  const safeExp = Math.max(0, Number(rawExpEarned) || 0);
+  if (safeExp > 0) return safeExp;
+  const safeScore = Math.max(0, Number(rawScore) || 0);
+  if (safeScore > 0) {
+    return calculateExpEarned(safeScore, questMaxExp);
+  }
+  if (hideScores && status === 'tuntas') {
+    return Math.max(0, Number(questMaxExp) || 0);
+  }
+  return 0;
+}
+
 export interface LevelProgress {
   level: number;
   totalExp: number;

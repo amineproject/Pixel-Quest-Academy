@@ -192,7 +192,7 @@ export const MultiDungeonFilter: React.FC<MultiDungeonFilterProps> = ({
             {/* Quick Select Bar: Semua Kelas + Tingkat Kelas (Tier) */}
             <div className="space-y-1.5 pb-2 border-b border-[var(--border-pixel)]/30 shrink-0">
               <div className="flex flex-wrap items-center justify-between gap-1.5">
-                <span className="font-pixel-ui text-[10px] uppercase text-[var(--text-muted)]">
+                <span className="font-pixel-ui text-[11px] uppercase text-[var(--text-muted)]">
                   {groups.length > 1
                     ? 'Pilih Cepat (Tingkat Kelas)'
                     : 'Pilih Kelas'}
@@ -313,7 +313,7 @@ export const MultiDungeonFilter: React.FC<MultiDungeonFilterProps> = ({
                                 {d.guildCode} — {d.name}
                               </span>
                               {teachesRealm && (
-                                <span className="text-[10px] px-1 py-0.5 bg-[var(--bg-surface)] border border-[var(--border-pixel)]/40 text-[var(--accent-success)] font-bold shrink-0">
+                                <span className="text-[10.5px] px-1.5 py-0.5 bg-[var(--bg-surface)] border border-[var(--border-pixel)]/40 text-[var(--accent-success)] font-bold shrink-0">
                                   Mapel
                                 </span>
                               )}

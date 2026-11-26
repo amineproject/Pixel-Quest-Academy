@@ -255,7 +255,7 @@ export const GmRealms: React.FC<GmRealmsProps> = ({
                     color={accentColor}
                     size={24}
                   />
-                  <span className="font-pixel-ui text-[10px] text-[var(--text-secondary)] truncate max-w-full">
+                  <span className="font-pixel-ui text-[10.5px] text-[var(--text-secondary)] truncate max-w-full">
                     {item.label}
                   </span>
                 </button>

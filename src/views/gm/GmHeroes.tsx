@@ -8,8 +8,10 @@ import {
   Lock,
   Pencil,
   Plus,
+  Search,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import { AcademyState, AvatarClass, HeroStudent } from '../../types/lms';
 import { PixelAvatar } from '../../components/PixelArt';
@@ -69,6 +71,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
   onDeleteHeroesBatch,
 }) => {
   const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [selectedDungeonIds, setSelectedDungeonIds] = useState<string[]>([]);
   const [realmFilter, setRealmFilter] = useState('all');
@@ -401,12 +404,77 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
       />
 
       <div className="space-y-2.5">
-        <PixelInput
-          placeholder="Cari nama, username, atau NIS..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Cari siswa"
-        />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSearch((prev) => prev.trim());
+            searchInputRef.current?.focus();
+          }}
+          role="search"
+          aria-label="Pencarian nama siswa"
+          className="space-y-1.5"
+        >
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none"
+              />
+              <PixelInput
+                ref={searchInputRef}
+                placeholder="Cari nama, username, atau NIS siswa..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Cari nama, username, atau NIS siswa"
+                className="!pl-9 !pr-9 !min-h-[42px] !text-[14px]"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    searchInputRef.current?.focus();
+                  }}
+                  aria-label="Hapus kata kunci pencarian"
+                  title="Hapus kata kunci"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <PixelButton
+                type="submit"
+                size="sm"
+                variant="primary"
+                className="flex-1 sm:flex-initial !min-h-[42px] !px-4"
+              >
+                <Search size={15} />
+                <span>Cari Nama</span>
+              </PixelButton>
+              {search && (
+                <PixelButton
+                  type="button"
+                  size="sm"
+                  variant="neutral"
+                  onClick={() => {
+                    setSearch('');
+                    searchInputRef.current?.focus();
+                  }}
+                  className="!min-h-[42px] !px-3"
+                >
+                  Reset
+                </PixelButton>
+              )}
+            </div>
+          </div>
+          {search.trim() && (
+            <p className="text-[12px] text-[var(--text-secondary)] tabular-nums">
+              Menampilkan <strong>{filtered.length}</strong> siswa untuk kata kunci &ldquo;{search.trim()}&rdquo;
+            </p>
+          )}
+        </form>
 
         {tierGroups.length > 0 && (
           <div className="space-y-1.5">
@@ -509,7 +577,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
             <button
               type="button"
               onClick={() => setRealmFilter('all')}
-              className={`pixel-btn min-h-[34px] px-2.5 font-pixel-ui text-[9.5px] whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
                 realmFilter === 'all'
                   ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)] font-bold'
                   : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -638,7 +706,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
 
                 {/* Enrolled Subjects Badges */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--border-pixel)]/30">
-                  <span className="font-pixel-ui text-[10px] text-[var(--accent-warning)] uppercase shrink-0">
+                  <span className="font-pixel-ui text-[11px] text-[var(--accent-warning)] uppercase shrink-0">
                     Mapel ({heroRealmIds.length}):
                   </span>
                   {heroRealmIds.length > 0 ? (
@@ -684,7 +752,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                         type="button"
                         onClick={() => setClearUsernameTarget(hero)}
                         title="Hapus username jika mengandung kata tidak pantas"
-                        className="pixel-btn min-h-[36px] px-2 font-pixel-ui text-[9.5px] bg-amber-100 text-amber-900 border-2 border-amber-700 flex items-center gap-1 cursor-pointer font-bold"
+                        className="pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[10.5px] bg-amber-100 text-amber-900 border-2 border-amber-700 flex items-center gap-1 cursor-pointer font-bold"
                       >
                         <Eraser size={12} />
                         Hapus Username
@@ -695,7 +763,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                       onClick={() =>
                         onSaveHero({ ...hero, active: !hero.active })
                       }
-                      className="pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[10px] bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
+                      className="pixel-btn min-h-[36px] px-2.5 font-pixel-ui text-[10.5px] bg-[var(--bg-surface-alt)] text-[var(--text-primary)] cursor-pointer"
                     >
                       {hero.active ? 'Set Inactive' : 'Activate'}
                     </button>
@@ -779,25 +847,25 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                       onClick={() =>
                         setEnrolledRealmIds(getDungeonDefaultRealms(selectedDungeon.id))
                       }
-                      className="text-[10px] text-[var(--accent-success)] hover:underline font-pixel-ui cursor-pointer"
+                      className="text-[11px] text-[var(--accent-success)] hover:underline font-pixel-ui cursor-pointer"
                     >
                       Ikuti Kelas
                     </button>
-                    <span className="text-[var(--text-muted)] text-[10px]">·</span>
+                    <span className="text-[var(--text-muted)] text-[11px]">·</span>
                   </>
                 )}
                 <button
                   type="button"
                   onClick={() => setEnrolledRealmIds(state.realms.map((r) => r.id))}
-                  className="text-[10px] text-[var(--accent-warning)] hover:underline font-pixel-ui cursor-pointer"
+                  className="text-[11px] text-[var(--accent-warning)] hover:underline font-pixel-ui cursor-pointer"
                 >
                   Semua
                 </button>
-                <span className="text-[var(--text-muted)] text-[10px]">·</span>
+                <span className="text-[var(--text-muted)] text-[11px]">·</span>
                 <button
                   type="button"
                   onClick={() => setEnrolledRealmIds([])}
-                  className="text-[10px] text-[var(--text-muted)] hover:underline font-pixel-ui cursor-pointer"
+                  className="text-[11px] text-[var(--text-muted)] hover:underline font-pixel-ui cursor-pointer"
                 >
                   Kosongkan
                 </button>
@@ -872,7 +940,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
                   }`}
                 >
                   <PixelAvatar avatar={item.value} size={34} />
-                  <span className="font-pixel-ui text-[10px] text-[var(--text-primary)] capitalize truncate max-w-full">
+                  <span className="font-pixel-ui text-[10.5px] text-[var(--text-primary)] capitalize truncate max-w-full">
                     {item.value}
                   </span>
                 </button>
@@ -1161,7 +1229,7 @@ export const GmHeroes: React.FC<GmHeroesProps> = ({
               {parsedImportRows.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-pixel-ui text-[10px] text-[var(--text-primary)]">
+                    <span className="font-pixel-ui text-[11px] text-[var(--text-primary)]">
                       PRATINJAU ({validImportRows.length} SIAP IMPOR
                       {parsedImportRows.length - validImportRows.length > 0
                         ? ` · ${parsedImportRows.length - validImportRows.length} ERROR`

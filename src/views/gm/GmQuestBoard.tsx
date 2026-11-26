@@ -277,7 +277,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
               key={p}
               type="button"
               onClick={() => setPriorityFilter(p)}
-              className={`pixel-btn min-h-[36px] px-3 font-pixel-ui text-[9.5px] sm:text-[10px] whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`pixel-btn min-h-[38px] px-3 font-pixel-ui text-[11px] sm:text-[11.5px] whitespace-nowrap shrink-0 cursor-pointer ${
                 priorityFilter === p
                   ? 'bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
                   : 'bg-[var(--bg-surface)] text-[var(--text-secondary)]'
@@ -555,7 +555,7 @@ export const GmQuestBoard: React.FC<GmQuestBoardProps> = ({
                     {tierGroups.map((group) => (
                       <div key={group.tier} className="space-y-1">
                         {tierGroups.length > 1 && (
-                          <p className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+                          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
                             {group.tier}
                           </p>
                         )}

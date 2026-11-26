@@ -20,8 +20,8 @@ export const PWAInstallButton: React.FC<{
         onClick={install}
         className={`pixel-btn bg-[var(--comic-gold)] text-[#09090f] font-pixel-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
           compact
-            ? 'min-h-[34px] px-2.5 py-1 text-[10px]'
-            : 'min-h-[42px] px-3.5 py-2 text-[11px] w-full'
+            ? 'min-h-[36px] px-2.5 py-1 text-[11px]'
+            : 'min-h-[42px] px-3.5 py-2 text-[12px] w-full'
         }`}
         title="Pasang aplikasi ke Layar Utama HP"
       >
@@ -41,8 +41,8 @@ export const PWAInstallButton: React.FC<{
           onClick={() => setGuideOpen(true)}
           className={`pixel-btn bg-[var(--comic-gold)] text-[#09090f] font-pixel-ui font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
             compact
-              ? 'min-h-[34px] px-2.5 py-1 text-[10px]'
-              : 'min-h-[42px] px-3.5 py-2 text-[11px] w-full'
+              ? 'min-h-[36px] px-2.5 py-1 text-[11px]'
+              : 'min-h-[42px] px-3.5 py-2 text-[12px] w-full'
           }`}
           title="Panduan pasang ke Layar Utama HP"
         >

@@ -183,11 +183,11 @@ export const HallOfFameView: React.FC<HallOfFameViewProps> = ({
                 {displayName}
               </p>
               {isMe && (
-                <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10px] font-bold text-[#09090f] leading-none">
+                <span className="px-1.5 py-0.5 rounded bg-[var(--comic-gold)] border border-[var(--border-pixel)] font-pixel-ui text-[10.5px] font-bold text-[#09090f] leading-none">
                   KAMU
                 </span>
               )}
-              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[10px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
+              <span className="px-1.5 py-0.5 rounded bg-[var(--bg-inset)] border border-[var(--border-pixel)]/40 font-pixel-ui text-[10.5px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
                 Lv.{entry.level}
               </span>
             </div>

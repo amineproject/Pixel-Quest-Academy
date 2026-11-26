@@ -94,7 +94,7 @@ export const PixelSectionTitle: React.FC<{
     >
       <div className="min-w-0 flex-1">
         <h2
-          className={`font-pixel-display text-[14.5px] sm:text-[15.5px] leading-snug tracking-[0.015em] text-[var(--text-primary)] break-words ${
+          className={`font-pixel-display text-[15px] sm:text-[16px] leading-snug tracking-[0.015em] text-[var(--text-primary)] break-words ${
             theme === 'cyber_retro' ? 'uppercase' : ''
           }`}
         >
@@ -157,14 +157,17 @@ export const PixelFieldLabel: React.FC<{
   </label>
 );
 
-export const PixelInput: React.FC<
+export const PixelInput = React.forwardRef<
+  HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement>
-> = ({ className = '', ...rest }) => (
+>(({ className = '', ...rest }, ref) => (
   <input
+    ref={ref}
     className={`pixel-box-inset pixel-focus w-full min-w-0 min-h-[44px] px-3 py-2 text-[14px] font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] bg-[var(--bg-inset)] outline-none ${className}`}
     {...rest}
   />
-);
+));
+PixelInput.displayName = 'PixelInput';
 
 export const PixelSelect: React.FC<
   React.SelectHTMLAttributes<HTMLSelectElement>
@@ -289,10 +292,10 @@ export const PixelEmptyState: React.FC<{
       }`}
     >
       {illustration}
-      <h3 className="font-pixel-display text-[13px] sm:text-[14px] text-[var(--accent-warning)] leading-snug break-words">
+      <h3 className="font-pixel-display text-[14px] sm:text-[15px] text-[var(--accent-warning)] leading-snug break-words">
         {title}
       </h3>
-      <p className="font-pixel-body text-[13.5px] text-[var(--text-secondary)] max-w-[34ch] leading-relaxed">
+      <p className="font-pixel-body text-[13px] sm:text-[13.5px] text-[var(--text-secondary)] max-w-[34ch] leading-relaxed">
         {description}
       </p>
       {action && <div className="mt-1">{action}</div>}
@@ -339,7 +342,7 @@ export const PixelModal: React.FC<{
           }`}
         >
           <h3
-            className={`font-pixel-display text-[13px] sm:text-[14px] leading-snug line-clamp-2 break-words min-w-0 ${
+            className={`font-pixel-display text-[13.5px] sm:text-[14.5px] leading-snug line-clamp-2 break-words min-w-0 ${
               theme === 'gameboy_green'
                 ? 'text-white uppercase tracking-[0.02em]'
                 : theme === 'cyber_retro'

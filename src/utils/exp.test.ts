@@ -29,6 +29,7 @@ import {
   normalizeQuestCategory,
   parseTargetDungeonIds,
   resolveScoreFromDraft,
+  resolveStudentGradeExp,
   sanitizeScoreDraftInput,
   serializeTargetDungeonIds,
   sortQuestsByCategory,
@@ -1572,6 +1573,85 @@ describe('Student Quest Board Summary Recap', () => {
     assert.equal(bin.terlambat, 1);
     assert.equal(bin.proses, 1);
     assert.equal(bin.questBaru, 1);
+  });
+
+  it('preserves student EXP earned even when numeric scores are hidden or legacy RPC zeroes exp_earned', () => {
+    // Case 1: Updated RPC returns score=0 (masked) and real exp_earned=180
+    assert.equal(
+      resolveStudentGradeExp({
+        rawScore: 0,
+        rawExpEarned: 180,
+        status: 'tuntas',
+        questMaxExp: 200,
+        hideScores: true,
+      }),
+      180
+    );
+
+    // Case 2: Legacy RPC returns score=0 and exp_earned=0 on a completed ('tuntas') quest -> fallback to questMaxExp
+    assert.equal(
+      resolveStudentGradeExp({
+        rawScore: 0,
+        rawExpEarned: 0,
+        status: 'tuntas',
+        questMaxExp: 250,
+        hideScores: true,
+      }),
+      250
+    );
+
+    // Case 3: Unfinished ('belum') quest always grants 0 EXP
+    assert.equal(
+      resolveStudentGradeExp({
+        rawScore: 0,
+        rawExpEarned: 200,
+        status: 'belum',
+        questMaxExp: 200,
+        hideScores: true,
+      }),
+      0
+    );
+
+    // Case 4: Summing EXP for a student with completed quests advances hero level accurately
+    const studentGrades: ExpGrade[] = [
+      {
+        id: 'sg-1',
+        heroId: 'h1',
+        questId: 'q1',
+        realmId: 'r1',
+        score: 0,
+        expEarned: resolveStudentGradeExp({
+          rawScore: 0,
+          rawExpEarned: 180,
+          status: 'tuntas',
+          questMaxExp: 200,
+          hideScores: true,
+        }),
+        status: 'tuntas',
+        feedback: '',
+        gradedDate: '2026-08-10',
+      },
+      {
+        id: 'sg-2',
+        heroId: 'h1',
+        questId: 'q2',
+        realmId: 'r1',
+        score: 0,
+        expEarned: resolveStudentGradeExp({
+          rawScore: 0,
+          rawExpEarned: 0,
+          status: 'tuntas',
+          questMaxExp: 150,
+          hideScores: true,
+        }),
+        status: 'tuntas',
+        feedback: '',
+        gradedDate: '2026-08-11',
+      },
+    ];
+    const total = getHeroTotalExp('h1', studentGrades);
+    assert.equal(total, 330);
+    assert.equal(getHeroLevelProgress(total).level, 2);
   });
 });
 
