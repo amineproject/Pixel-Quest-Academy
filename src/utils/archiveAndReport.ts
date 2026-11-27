@@ -79,6 +79,7 @@ export interface ReportStudentRow {
   prosesCount: number;
   remidialCount: number;
   belumCount: number;
+  assignedCount: number;
   avgScore: number;
   rank: string;
   totalExp: number;
@@ -376,7 +377,11 @@ export function filterSemesterReportData(
         quest.dungeonId,
         hero.dungeonId
       );
-      const enrolled = isRealmAllowed && isQuestForDungeon;
+      const isClassScheduled =
+        quest.scheduledAt !== '__per_class__' ||
+        Boolean(quest.classSchedules?.[hero.dungeonId]) ||
+        Boolean(grade);
+      const enrolled = isRealmAllowed && isQuestForDungeon && isClassScheduled;
 
       if (!enrolled) {
         return {
@@ -405,14 +410,17 @@ export function filterSemesterReportData(
         totalBelum++;
       }
 
-      const score = grade ? (status === 'belum' ? 0 : grade.score) : 0;
-      const expEarned = grade ? (status === 'belum' ? 0 : grade.expEarned) : 0;
+      const clampedGradeScore = grade
+        ? Math.max(0, Math.min(100, Number(grade.score) || 0))
+        : 0;
+      const score = grade && status !== 'belum' ? clampedGradeScore : 0;
+      const expEarned = grade && status !== 'belum' ? grade.expEarned : 0;
 
       if (grade && status !== 'belum') {
         totalGradeRecords++;
-        scoredSum += grade.score;
+        scoredSum += clampedGradeScore;
         scoredCount++;
-        totalGradedScoreSum += grade.score;
+        totalGradedScoreSum += clampedGradeScore;
         totalGradedScoreCount++;
         totalExp += grade.expEarned;
       }
@@ -432,8 +440,12 @@ export function filterSemesterReportData(
       };
     });
 
-    const avgScore = scoredCount > 0 ? Math.round(scoredSum / scoredCount) : 0;
-    const rank = scoredCount > 0 ? getRankFromScore(avgScore) : '-';
+    const assignedCount =
+      tuntasCount + prosesCount + remidialCount + belumCount;
+    const avgScore =
+      assignedCount > 0 ? Math.round(scoredSum / assignedCount) : 0;
+    const rank =
+      assignedCount > 0 && scoredCount > 0 ? getRankFromScore(avgScore) : '-';
 
     return {
       no: idx + 1,
@@ -445,6 +457,7 @@ export function filterSemesterReportData(
       prosesCount,
       remidialCount,
       belumCount,
+      assignedCount,
       avgScore,
       rank,
       totalExp,
@@ -455,9 +468,7 @@ export function filterSemesterReportData(
   const completionPercent =
     totalSlots > 0 ? Math.min(100, Math.round((totalTuntas / totalSlots) * 100)) : 0;
   const averageScore =
-    totalGradedScoreCount > 0
-      ? Math.round(totalGradedScoreSum / totalGradedScoreCount)
-      : 0;
+    totalSlots > 0 ? Math.round(totalGradedScoreSum / totalSlots) : 0;
 
   const eraName = selectedEra?.name || targetEraId;
   const seasonLabel = formatIndonesianSemesterLabel(filter.season);
@@ -622,6 +633,7 @@ export function downloadSemesterReportExcel(report: SemesterReportData) {
     'Nama Siswa',
     'Kelas',
     ...questColTitles,
+    'Jml Tugas',
     'Tuntas',
     'Proses',
     'Remidial',
@@ -643,6 +655,7 @@ export function downloadSemesterReportExcel(report: SemesterReportData) {
       if (c.status === 'proses') return 'Proses';
       return 'Belum';
     }),
+    row.assignedCount,
     row.tuntasCount,
     row.prosesCount,
     row.remidialCount,
@@ -658,6 +671,7 @@ export function downloadSemesterReportExcel(report: SemesterReportData) {
     { wch: 24 },
     { wch: 13 },
     ...questColTitles.map((t) => ({ wch: Math.max(16, Math.min(30, t.length + 4)) })),
+    { wch: 11 },
     { wch: 9 },
     { wch: 9 },
     { wch: 10 },

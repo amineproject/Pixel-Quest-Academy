@@ -43,6 +43,7 @@ export interface RecapRow {
   prosesCount: number;
   remidialCount: number;
   belumCount: number;
+  assignedCount: number;
   avgScore: number;
   totalExp: number;
   rank: string;
@@ -156,7 +157,12 @@ export function buildClassRecapData(
         !allowedRealms || allowedRealms.includes(quest.realmId);
       const isQuestForHeroDungeon =
         doesTargetMatchDungeon(quest.dungeonId, hero.dungeonId);
-      const enrolled = isRealmAllowed && isQuestForHeroDungeon;
+      const isClassScheduled =
+        quest.scheduledAt !== '__per_class__' ||
+        Boolean(quest.classSchedules?.[hero.dungeonId]) ||
+        Boolean(grade);
+      const enrolled =
+        isRealmAllowed && isQuestForHeroDungeon && isClassScheduled;
 
       if (!enrolled) {
         return {
@@ -176,11 +182,14 @@ export function buildClassRecapData(
       else if (status === 'remidial') remidialCount += 1;
       else belumCount += 1;
 
-      const score = grade ? (status === 'belum' ? 0 : grade.score) : 0;
-      const expEarned = grade ? (status === 'belum' ? 0 : grade.expEarned) : 0;
+      const clampedGradeScore = grade
+        ? Math.max(0, Math.min(100, Number(grade.score) || 0))
+        : 0;
+      const score = grade && status !== 'belum' ? clampedGradeScore : 0;
+      const expEarned = grade && status !== 'belum' ? grade.expEarned : 0;
 
       if (grade && status !== 'belum') {
-        scoredSum += grade.score;
+        scoredSum += clampedGradeScore;
         scoredCount += 1;
         totalExp += grade.expEarned;
       }
@@ -193,15 +202,19 @@ export function buildClassRecapData(
         questId: quest.id,
         enrolled: true,
         status,
-        score: grade ? score : null,
+        score: grade && status !== 'belum' ? score : null,
         expEarned,
         feedback: grade?.feedback || '',
         displayText,
       };
     });
 
-    const avgScore = scoredCount > 0 ? Math.round(scoredSum / scoredCount) : 0;
-    const rank = scoredCount > 0 ? getRankFromScore(avgScore) : '-';
+    const assignedCount =
+      tuntasCount + prosesCount + remidialCount + belumCount;
+    const avgScore =
+      assignedCount > 0 ? Math.round(scoredSum / assignedCount) : 0;
+    const rank =
+      assignedCount > 0 && scoredCount > 0 ? getRankFromScore(avgScore) : '-';
 
     return {
       no: idx + 1,
@@ -214,6 +227,7 @@ export function buildClassRecapData(
       prosesCount,
       remidialCount,
       belumCount,
+      assignedCount,
       avgScore,
       totalExp,
       rank,
@@ -805,6 +819,7 @@ export function downloadRecapHtmlReport(state: AcademyState, recap: ClassRecapDa
         <td><strong>${escapeHtml(row.hero.name)}</strong></td>
         <td>${escapeHtml(row.dungeonName)} (${escapeHtml(row.dungeonCode)})</td>
         ${cellsHtml}
+        <td style="text-align:center;font-weight:700;">${row.assignedCount}</td>
         <td style="text-align:center;color:#166534;font-weight:700;">${row.tuntasCount}</td>
         <td style="text-align:center;color:#3f6212;font-weight:700;">${row.prosesCount}</td>
         <td style="text-align:center;color:#b45309;font-weight:700;">${row.remidialCount}</td>
@@ -847,6 +862,7 @@ export function downloadRecapHtmlReport(state: AcademyState, recap: ClassRecapDa
     <div><strong>Periode Akademik:</strong> ${escapeHtml(recap.academicTerm)}</div>
     <div><strong>Guru / Game Master:</strong> ${escapeHtml(recap.gmName)}</div>
     <div><strong>Tanggal Cetak:</strong> ${escapeHtml(recap.generatedAt)}</div>
+    <div><strong>Rumus Rata-rata:</strong> Total Nilai Diperoleh &divide; Jumlah Tugas Diterima Siswa</div>
   </div>
   <table>
     <thead>
@@ -856,6 +872,7 @@ export function downloadRecapHtmlReport(state: AcademyState, recap: ClassRecapDa
         <th>Nama Siswa</th>
         <th>Kelas</th>
         ${questHeadersHtml}
+        <th>Tugas</th>
         <th>Tuntas</th>
         <th>Proses</th>
         <th>Remidial</th>
@@ -866,7 +883,7 @@ export function downloadRecapHtmlReport(state: AcademyState, recap: ClassRecapDa
       </tr>
     </thead>
     <tbody>
-      ${rowsHtml || '<tr><td colspan="12" style="text-align:center;">Belum ada data siswa pada kelas ini.</td></tr>'}
+      ${rowsHtml || '<tr><td colspan="13" style="text-align:center;">Belum ada data siswa pada kelas ini.</td></tr>'}
     </tbody>
   </table>
 </body>

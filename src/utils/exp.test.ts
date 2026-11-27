@@ -42,6 +42,7 @@ import {
 } from './offlineCache';
 import {
   buildAssessmentColumnHeaders,
+  buildClassRecapData,
   buildGradesFromImportEntries,
   parseAssessmentExcelFile,
 } from './exportRecap';
@@ -1654,6 +1655,201 @@ describe('Student Quest Board Summary Recap', () => {
     assert.equal(getHeroLevelProgress(total).level, 2);
   });
 });
+
+describe('Statistics & Recap Score Formula (Nilai Diperoleh / Tugas Diterima)', () => {
+  it('divides earned scores by each student assigned task count and adapts across classes', () => {
+    const realms: Realm[] = [
+      { id: 'rlm-inf', name: 'Informatika', code: 'INF', icon: 'bolt', accentColor: '#0284c7', description: '' },
+    ];
+    const dungeons: Dungeon[] = [
+      {
+        id: 'd-7a',
+        name: 'Kelas VII-A',
+        guildCode: '7A',
+        tier: 'Kelas VII',
+        capacity: 30,
+        description: '',
+        realmIds: ['rlm-inf'],
+        academicYearId: 'era-2026-2027',
+      },
+      {
+        id: 'd-7b',
+        name: 'Kelas VII-B',
+        guildCode: '7B',
+        tier: 'Kelas VII',
+        capacity: 30,
+        description: '',
+        realmIds: ['rlm-inf'],
+        academicYearId: 'era-2026-2027',
+      },
+    ];
+    const heroes: HeroStudent[] = [
+      {
+        id: 'h-7a',
+        name: 'Andi Kelas 7A',
+        username: 'andi7a',
+        studentCode: '7001',
+        dungeonId: 'd-7a',
+        avatar: 'knight',
+        heroClass: 'Knight',
+        active: true,
+        joinedDate: '2026-07-15',
+      },
+      {
+        id: 'h-7b',
+        name: 'Bima Kelas 7B',
+        username: 'bima7b',
+        studentCode: '7002',
+        dungeonId: 'd-7b',
+        avatar: 'mage',
+        heroClass: 'Mage',
+        active: true,
+        joinedDate: '2026-07-15',
+      },
+    ];
+    // 4 quests given to 7A (q1..q4), while only 2 quests given to 7B (q1..q2)
+    const quests: ActiveQuest[] = [
+      {
+        id: 'q1',
+        realmId: 'rlm-inf',
+        dungeonId: 'all',
+        title: 'Tugas 1',
+        instructions: '',
+        deadline: '2026-08-10',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Main',
+        academicYearId: 'era-2026-2027',
+        season: 'ganjil',
+      },
+      {
+        id: 'q2',
+        realmId: 'rlm-inf',
+        dungeonId: 'all',
+        title: 'Tugas 2',
+        instructions: '',
+        deadline: '2026-08-15',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Main',
+        academicYearId: 'era-2026-2027',
+        season: 'ganjil',
+      },
+      {
+        id: 'q3',
+        realmId: 'rlm-inf',
+        dungeonId: 'd-7a',
+        title: 'Tugas 3 Khusus 7A',
+        instructions: '',
+        deadline: '2026-08-20',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Main',
+        academicYearId: 'era-2026-2027',
+        season: 'ganjil',
+      },
+      {
+        id: 'q4',
+        realmId: 'rlm-inf',
+        dungeonId: 'all',
+        title: 'Tugas 4 Per-Kelas 7A',
+        instructions: '',
+        deadline: '2026-08-25',
+        maxExp: 100,
+        difficulty: 'Normal',
+        category: 'Party',
+        scheduledAt: '__per_class__',
+        classSchedules: { 'd-7a': '2026-08-01T08:00' },
+        academicYearId: 'era-2026-2027',
+        season: 'ganjil',
+      },
+    ];
+    // Both Andi (7A) and Bima (7B) only completed 1 quest with score 80
+    const grades: ExpGrade[] = [
+      {
+        id: 'gr-7a-1',
+        heroId: 'h-7a',
+        questId: 'q1',
+        realmId: 'rlm-inf',
+        score: 80,
+        expEarned: 80,
+        status: 'tuntas',
+        feedback: '',
+        gradedDate: '2026-08-11',
+      },
+      {
+        id: 'gr-7b-1',
+        heroId: 'h-7b',
+        questId: 'q1',
+        realmId: 'rlm-inf',
+        score: 80,
+        expEarned: 80,
+        status: 'tuntas',
+        feedback: '',
+        gradedDate: '2026-08-11',
+      },
+    ];
+
+    const state: AcademyState = {
+      gmProfile: { name: 'GM', title: 'Guru', specialty: 'INF', avatar: 'guild_master' },
+      settings: { theme: 'sunny_quest', crtScanlines: false, soundEnabled: false, academicTerm: '2026/2027', activeSeason: 'ganjil' },
+      academicYears: [{ id: 'era-2026-2027', name: '2026/2027', startDate: '2026-07-01', endDate: '2027-06-30', isActive: true }],
+      realms,
+      dungeons,
+      heroes,
+      tomes: [],
+      quests,
+      notices: [],
+      grades,
+    };
+
+    // 1. Menu Statistik / Laporan Semester (filterSemesterReportData)
+    const reportAll = filterSemesterReportData(state, {
+      academicYearId: 'era-2026-2027',
+      season: 'ganjil',
+      dungeonId: 'all',
+      realmId: 'all',
+    });
+    const row7a = reportAll.studentRows.find((r) => r.hero.id === 'h-7a')!;
+    const row7b = reportAll.studentRows.find((r) => r.hero.id === 'h-7b')!;
+    // 7A receives 4 tasks, 1 tuntas (80) -> 80 / 4 = 20
+    assert.equal(row7a.assignedCount, 4);
+    assert.equal(row7a.tuntasCount, 1);
+    assert.equal(row7a.avgScore, 20);
+    // 7B receives 2 tasks, 1 tuntas (80) -> 80 / 2 = 40
+    assert.equal(row7b.assignedCount, 2);
+    assert.equal(row7b.tuntasCount, 1);
+    assert.equal(row7b.avgScore, 40);
+    // Overall summary across 4 + 2 = 6 slots, 160 earned -> round(160/6) = 27
+    assert.equal(reportAll.summary.averageScore, 27);
+    assert.equal(reportAll.summary.completionPercent, 33);
+
+    // 2. Class Recap (buildClassRecapData)
+    const recap7a = buildClassRecapData(state, 'd-7a', 'all');
+    assert.equal(recap7a.rows[0].assignedCount, 4);
+    assert.equal(recap7a.rows[0].avgScore, 20);
+    const recap7b = buildClassRecapData(state, 'd-7b', 'all');
+    assert.equal(recap7b.rows[0].assignedCount, 2);
+    assert.equal(recap7b.rows[0].avgScore, 40);
+
+    // 3. Cek Progres Siswa (computeHeroesQuestProgress)
+    const progress = computeHeroesQuestProgress({
+      heroes,
+      quests,
+      grades,
+      dungeons,
+      realms,
+      now: new Date('2026-08-12T10:00:00'),
+    });
+    const prog7a = progress.find((p) => p.hero.id === 'h-7a')!;
+    const prog7b = progress.find((p) => p.hero.id === 'h-7b')!;
+    assert.equal(prog7a.totalQuests, 4);
+    assert.equal(prog7a.averageScore, 20);
+    assert.equal(prog7b.totalQuests, 2);
+    assert.equal(prog7b.averageScore, 40);
+  });
+});
+
 
 
 

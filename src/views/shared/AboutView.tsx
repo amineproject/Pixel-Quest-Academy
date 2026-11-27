@@ -21,7 +21,7 @@ interface AboutViewProps {
   currentTheme: PixelTheme;
 }
 
-const APP_VERSION = '3.15';
+const APP_VERSION = '3.16';
 const APP_DEVELOPER = 'Amin Wayudi, S.Pd.';
 
 interface VersionLog {
@@ -34,10 +34,19 @@ interface VersionLog {
 
 const CHANGELOG: VersionLog[] = [
   {
-    version: '3.15',
-    title: 'Perbaikan Perolehan EXP Siswa & Tombol Pencarian Nama di Penilaian dan Siswa',
+    version: '3.16',
+    title: 'Rumus Nilai Rata-rata Statistik Berdasarkan Jumlah Tugas Diterima per Kelas',
     badge: 'TERBARU · SAAT INI',
     isCurrent: true,
+    changes: [
+      'Rumus Rekap Nilai & Ketuntasan Siswa (Menu Statistik & Penilaian): rata-rata nilai siswa kini dihitung dari total nilai yang diperoleh dibagi jumlah tugas yang diterima siswa pada kelas dan mata pelajarannya (misal menerima 4 tugas dan baru tuntas 1 tugas bernilai 80, maka rata-rata = 80 ÷ 4 = 20).',
+      'Penyesuaian Otomatis Antar Kelas & Tampilan Kolom Tugas: kelas atau siswa dengan jumlah tugas berbeda otomatis menggunakan pembagi sesuai tugas yang diterima masing-masing, lengkap dengan kolom jumlah Tugas di tabel Rekapitulasi, ringkasan Statistik Cepat, ekspor Excel/CSV, serta laporan cetak.',
+    ],
+  },
+  {
+    version: '3.15',
+    title: 'Perbaikan Perolehan EXP Siswa & Tombol Pencarian Nama di Penilaian dan Siswa',
+    badge: 'PEMBARUAN BESAR',
     changes: [
       'Perbaikan Akumulasi EXP Akun Siswa: memperbaiki sinkronisasi dan pemetaan nilai pada akun siswa agar EXP dari tugas/quest yang sudah selesai (Tuntas) langsung masuk ke total EXP dan level siswa secara akurat, dengan tetap menjaga kerahasiaan skor angka ujian (0–100).',
       'Tombol Pencarian Nama di Menu Penilaian & Siswa (Akun Guru): menambahkan tombol "Cari Nama", tombol hapus cepat, dan tombol Reset pada menu Siswa (Heroes) serta pada kedua tab menu Penilaian (Input Nilai per Tugas & Cek Progres Siswa) yang mendukung pencarian nama, username, maupun NIS.',

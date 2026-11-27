@@ -60,7 +60,7 @@ export const GM_NAV_ITEMS: GmNavItem[] = [
   { id: 'guild_chronicles', label: 'Guild Chronicles', shortLabel: 'Chronicles', standardName: 'Statistik' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'settings', label: 'System Settings', shortLabel: 'Config', standardName: 'Pengaturan' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.15' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.16' },
 ];
 
 export const HERO_NAV_ITEMS: {
@@ -75,7 +75,7 @@ export const HERO_NAV_ITEMS: {
   { id: 'my_guild', label: 'My Guild / Party', shortLabel: 'My Guild', standardName: 'Kelas' },
   { id: 'hall_of_fame', label: 'Hall of Fame', shortLabel: 'Fame', standardName: 'Peringkat' },
   { id: 'hero_log', label: 'Hero Log / Status', shortLabel: 'Hero Log', standardName: 'Status' },
-  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.15' },
+  { id: 'about', label: 'Tentang Aplikasi', shortLabel: 'Tentang', standardName: 'Info v3.16' },
 ];
 
 export function getGmMenuIcon(id: GmMenuId, size = 18) {

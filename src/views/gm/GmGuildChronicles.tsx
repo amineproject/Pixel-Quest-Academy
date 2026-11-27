@@ -27,11 +27,13 @@ import {
 import { ThemedPanelCard } from '../../components/ThemePrimitives';
 import {
   buildAcademicPeriodLabel,
+  doesTargetMatchDungeon,
   escapeCsvCell,
   getEffectiveGradeStatus,
+  getHeroEffectiveRealmIds,
   getHeroLevelProgress,
   getHeroTotalExp,
-  parseTargetDungeonIds,
+  getRankFromScore,
   sortDungeonsAlphabetically,
 } from '../../utils/exp';
 import {
@@ -153,7 +155,9 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
     classHeroes,
     activeHeroes,
     questSelesaiCount,
+    totalAssignedSlots,
     completionPercent,
+    averageScore,
     averageExp,
     heroSummaries,
   } = useMemo(() => {
@@ -163,44 +167,81 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
         )
       : overviewState.heroes;
     const active = filteredHeroes.filter((h) => h.active);
-    const activeIds = new Set(active.map((h) => h.id));
 
-    const classGrades = overviewState.grades.filter((g) =>
-      activeIds.has(g.heroId)
+    const gradeMap = new Map(
+      overviewState.grades.map((g) => [`${g.heroId}__${g.questId}`, g])
     );
-    const tuntasCount = classGrades.filter(
-      (g) => getEffectiveGradeStatus(g) === 'tuntas'
-    ).length;
-
-    const relevantQuests = overviewState.quests.filter((q) => {
-      if (!scope.isFiltered) return true;
-      const targetIds = parseTargetDungeonIds(q.dungeonId);
-      return (
-        targetIds.length === 0 ||
-        targetIds.some((id) => scope.activeDungeonIdSet.has(id))
-      );
-    });
-    const possibleCompletions = active.length * relevantQuests.length;
-    const pct =
-      possibleCompletions > 0
-        ? Math.min(100, Math.round((tuntasCount / possibleCompletions) * 100))
-        : 0;
 
     let totalExpSum = 0;
+    let totalTuntasActive = 0;
+    let totalAssignedActive = 0;
+    let totalEarnedScoreActive = 0;
+
     const summaries = filteredHeroes
       .map((hero) => {
         const exp = getHeroTotalExp(hero.id, overviewState.grades);
-        if (hero.active) totalExpSum += exp;
         const lvl = getHeroLevelProgress(exp);
-        const selesai = overviewState.grades.filter(
-          (g) => g.heroId === hero.id && getEffectiveGradeStatus(g) === 'tuntas'
-        ).length;
+        const allowedRealms = getHeroEffectiveRealmIds(
+          hero,
+          overviewState.dungeons
+        );
+
+        let assignedCount = 0;
+        let selesai = 0;
+        let scoredSum = 0;
+        let gradedCount = 0;
+
+        overviewState.quests.forEach((quest) => {
+          const grade = gradeMap.get(`${hero.id}__${quest.id}`);
+          const isRealmAllowed =
+            !allowedRealms || allowedRealms.includes(quest.realmId);
+          const isQuestForDungeon = doesTargetMatchDungeon(
+            quest.dungeonId,
+            hero.dungeonId
+          );
+          const isClassScheduled =
+            quest.scheduledAt !== '__per_class__' ||
+            Boolean(quest.classSchedules?.[hero.dungeonId]) ||
+            Boolean(grade);
+
+          if (!isRealmAllowed || !isQuestForDungeon || !isClassScheduled) {
+            return;
+          }
+
+          assignedCount++;
+          const status = getEffectiveGradeStatus(grade);
+          if (status === 'tuntas') {
+            selesai++;
+          }
+          if (grade && status !== 'belum') {
+            scoredSum += Math.max(0, Math.min(100, Number(grade.score) || 0));
+            gradedCount++;
+          }
+        });
+
+        const avgScore =
+          assignedCount > 0 ? Math.round(scoredSum / assignedCount) : 0;
+        const rank =
+          assignedCount > 0 && gradedCount > 0
+            ? getRankFromScore(avgScore)
+            : '-';
+
+        if (hero.active) {
+          totalExpSum += exp;
+          totalTuntasActive += selesai;
+          totalAssignedActive += assignedCount;
+          totalEarnedScoreActive += scoredSum;
+        }
+
         return {
           hero,
           exp,
           level: lvl.level,
           title: lvl.title,
           selesai,
+          assignedCount,
+          avgScore,
+          rank,
         };
       })
       .sort(
@@ -208,19 +249,33 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
           b.exp - a.exp || a.hero.name.localeCompare(b.hero.name, 'id')
       );
 
+    const pct =
+      totalAssignedActive > 0
+        ? Math.min(
+            100,
+            Math.round((totalTuntasActive / totalAssignedActive) * 100)
+          )
+        : 0;
+    const avgScoreOverall =
+      totalAssignedActive > 0
+        ? Math.round(totalEarnedScoreActive / totalAssignedActive)
+        : 0;
     const avgExp =
       active.length > 0 ? Math.round(totalExpSum / active.length) : 0;
 
     return {
       classHeroes: filteredHeroes,
       activeHeroes: active,
-      questSelesaiCount: tuntasCount,
+      questSelesaiCount: totalTuntasActive,
+      totalAssignedSlots: totalAssignedActive,
       completionPercent: pct,
+      averageScore: avgScoreOverall,
       averageExp: avgExp,
       heroSummaries: summaries,
     };
   }, [
     overviewState.heroes,
+    overviewState.dungeons,
     overviewState.grades,
     overviewState.quests,
     scope,
@@ -242,7 +297,10 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
       'Level',
       'Gelar',
       'Total EXP',
+      'Tugas Diberikan',
       'Quest Selesai',
+      'Rata-rata Nilai',
+      'Predikat',
       'Status Akun',
     ];
 
@@ -259,7 +317,10 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
           `Lv.${row.level}`,
           row.title,
           row.exp,
+          row.assignedCount,
           row.selesai,
+          row.avgScore,
+          row.rank,
           row.hero.active ? 'Aktif' : 'Nonaktif',
         ]
           .map(escapeCsvCell)
@@ -742,13 +803,18 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
 
             {/* Section C: Rekapitulasi Nilai & Ketuntasan Siswa */}
             <section className="space-y-2">
-              <h3 className="text-[13.5px] font-extrabold uppercase tracking-wide text-slate-900 border-b border-slate-400 pb-1 flex items-center gap-1.5">
-                <Award size={15} className="shrink-0" />
-                <span>
-                  C. Rekapitulasi Nilai &amp; Ketuntasan Siswa (
-                  {report.studentRows.length})
-                </span>
-              </h3>
+              <div className="border-b border-slate-400 pb-1 space-y-0.5">
+                <h3 className="text-[13.5px] font-extrabold uppercase tracking-wide text-slate-900 flex items-center gap-1.5">
+                  <Award size={15} className="shrink-0" />
+                  <span>
+                    C. Rekapitulasi Nilai &amp; Ketuntasan Siswa (
+                    {report.studentRows.length})
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-600">
+                  Rumus Rata-rata = Total Nilai Diperoleh &divide; Jumlah Tugas yang Diterima Siswa (menyesuaikan jumlah tugas per kelas &amp; mapel).
+                </p>
+              </div>
               {report.studentRows.length === 0 ? (
                 <p className="text-[12.5px] text-slate-600 italic py-2">
                   Belum ada data siswa pada kelas atau mata pelajaran yang dipilih.
@@ -769,6 +835,9 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
                         </th>
                         <th className="border border-slate-400 px-2 py-1.5 text-left">
                           Kelas
+                        </th>
+                        <th className="border border-slate-400 px-2 py-1.5 text-center">
+                          Tugas
                         </th>
                         <th className="border border-slate-400 px-2 py-1.5 text-center">
                           Tuntas
@@ -814,6 +883,9 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
                             {row.dungeonCode !== '-'
                               ? row.dungeonCode
                               : row.dungeonName}
+                          </td>
+                          <td className="border border-slate-300 px-2 py-1.5 text-center tabular-nums font-semibold text-slate-800">
+                            {row.assignedCount}
                           </td>
                           <td className="border border-slate-300 px-2 py-1.5 text-center tabular-nums font-semibold text-emerald-800">
                             {row.tuntasCount}
@@ -950,6 +1022,9 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
               </div>
               <p className="font-pixel-display text-[16px] sm:text-[18px] leading-tight text-[var(--accent-success)] tabular-nums">
                 {questSelesaiCount}
+                <span className="text-[12px] font-normal text-[var(--text-secondary)]">
+                  /{totalAssignedSlots}
+                </span>
               </p>
               <p className="text-[12.5px] sm:text-[13px] text-[var(--text-secondary)]">
                 Tingkat ketuntasan:{' '}
@@ -962,7 +1037,7 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
             <ThemedPanelCard className="p-4 space-y-1.5 bg-[var(--surface-tint)]">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-pixel-ui text-[11px] uppercase text-[var(--text-secondary)]">
-                  Rata-rata EXP
+                  Rata-rata Nilai &amp; EXP
                 </span>
                 <Award
                   size={17}
@@ -970,10 +1045,13 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
                 />
               </div>
               <p className="font-pixel-display text-[16px] sm:text-[18px] leading-tight text-[var(--accent-warning)] tabular-nums">
-                {averageExp}
+                {averageScore}
               </p>
               <p className="text-[12.5px] sm:text-[13px] text-[var(--text-secondary)]">
-                Rata-rata per Hero aktif
+                Nilai &divide; tugas diberikan ·{' '}
+                <strong className="text-[var(--text-primary)]">
+                  {averageExp} EXP
+                </strong>
               </p>
             </ThemedPanelCard>
 
@@ -1008,9 +1086,14 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
             />
           ) : (
             <ThemedPanelCard className="p-3.5 sm:p-4 space-y-2.5">
-              <h3 className="font-pixel-display text-[13px] text-[var(--text-primary)]">
-                Ringkasan Heroes ({heroSummaries.length})
-              </h3>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-pixel-display text-[13px] text-[var(--text-primary)]">
+                  Ringkasan Heroes ({heroSummaries.length})
+                </h3>
+                <p className="text-[11.5px] text-[var(--text-secondary)]">
+                  Nilai rata-rata = Nilai diperoleh &divide; tugas diterima
+                </p>
+              </div>
               <div className="space-y-2">
                 {heroSummaries.map((item, idx) => {
                   const dng = dungeonMap.get(item.hero.dungeonId);
@@ -1025,7 +1108,8 @@ export const GmGuildChronicles: React.FC<GmGuildChroniclesProps> = ({
                         </p>
                         <p className="text-[12px] text-[var(--text-secondary)] truncate">
                           {dng ? `${dng.name} (${dng.tier})` : 'Tanpa Kelas'} ·
-                          Lv.{item.level} · {item.selesai} Quest Tuntas
+                          Lv.{item.level} · {item.selesai}/{item.assignedCount}{' '}
+                          Tugas Tuntas · Rata-rata: {item.avgScore} ({item.rank})
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">

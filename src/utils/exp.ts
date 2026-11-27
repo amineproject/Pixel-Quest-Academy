@@ -1735,7 +1735,8 @@ export function computeHeroesQuestProgress(params: {
       totalQuests > 0
         ? Math.min(100, Math.round((tuntasCount / totalQuests) * 100))
         : 0;
-    const averageScore = scoredCount > 0 ? Math.round(scoredSum / scoredCount) : 0;
+    const averageScore =
+      totalQuests > 0 ? Math.round(scoredSum / totalQuests) : 0;
 
     return {
       hero,
